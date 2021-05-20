@@ -1174,7 +1174,7 @@ const TypeFunc* OptoRuntime::base64_encodeBlock_Type() {
 }
 // Base64 decode function
 const TypeFunc* OptoRuntime::base64_decodeBlock_Type() {
-  int argcnt = 6;
+  int argcnt = 7;
 
   const Type** fields = TypeTuple::fields(argcnt);
   int argp = TypeFunc::Parms;
@@ -1184,6 +1184,7 @@ const TypeFunc* OptoRuntime::base64_decodeBlock_Type() {
   fields[argp++] = TypePtr::NOTNULL;    // dest array
   fields[argp++] = TypeInt::INT;        // dest offset
   fields[argp++] = TypeInt::BOOL;       // isURL
+  fields[argp++] = TypeInt::BOOL;       // isMIME
   assert(argp == TypeFunc::Parms + argcnt, "correct decoding");
   const TypeTuple* domain = TypeTuple::make(TypeFunc::Parms+argcnt, fields);
 
