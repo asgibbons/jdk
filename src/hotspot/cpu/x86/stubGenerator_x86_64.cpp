@@ -5901,10 +5901,10 @@ address generate_avx_ghash_processBlocks() {
     Label L_process256, L_process64, L_exit, L_processdata, L_loadURL, L_continue, L_finalBit, L_padding, L_donePadding;
 
     // calculate length from offsets
-    __ movl(length, end_offset);
-    __ subl(length, start_offset);
+    __ movq(length, end_offset);
+    __ subq(length, start_offset);
     __ push(dest);          // Save for return value calc
-    __ cmpl(length, 0);
+    __ cmpq(length, 0);
     __ jcc(Assembler::lessEqual, L_exit);
 
     // Load lookup tables based on isURL
@@ -5924,7 +5924,7 @@ address generate_avx_ghash_processBlocks() {
     __ movl(r15, 0x00011000);
     __ evpbroadcastd(pack32_op, r15, Assembler::AVX_512bit);
 
-    __ cmpl(length, 0xff);
+    __ cmpq(length, 0xff);
     __ jcc(Assembler::lessEqual, L_process64);
 
     // load masks required for decoding data
@@ -6043,7 +6043,6 @@ address generate_avx_ghash_processBlocks() {
     __ vpmaddwd(merged0, merge_ab_bc0, pack32_op, Assembler::AVX_512bit);
     __ vpermb(merged0, pack24bits, merged0, Assembler::AVX_512bit);
 
-//    __ evmovdquq(xmm3, xmm7, Assembler::AVX_512bit);
     __ evmovdquq(Address(dest, dp, Address::times_1, 0x00), merged0, Assembler::AVX_512bit);
 
     __ subq(length, 64);
@@ -6053,19 +6052,24 @@ address generate_avx_ghash_processBlocks() {
     __ cmpq(length, 64);
     __ jcc(Assembler::greaterEqual, L_process64);
 
+    __ cmpq(length, 0);
+    __ jcc(Assembler::lessEqual, L_exit);
+
     __ BIND(L_finalBit);
     // Now have < 64 bytes left to decode
 
     // I was going to let Java take care of the final fragment
     // however it will repeatedly call this routine for every 4 bytes
     // of input data, so handle the rest here.
-    __ movl(output_size, 0x40);
-    __ subl(output_size, length);
+    __ movq(output_size, 0x40);
+    __ subq(output_size, length);
     __ movq(rax, -1);
     __ shrxq(rax, rax, output_size);    // Input mask in rax
 
+    __ evmovdquq(pack24bits, ExternalAddress(StubRoutines::x86::base64_vbmi_pack_vec_addr()), Assembler::AVX_512bit, r13);
+
     __ movq(output_size, length);
-    __ shrl(output_size, 2);   // Find (len / 4) * 3 (output length)
+    __ shrq(output_size, 2);   // Find (len / 4) * 3 (output length)
     __ lea(output_size, Address(output_size, output_size, Address::times_2, 0));
     // output_size in r13
 
