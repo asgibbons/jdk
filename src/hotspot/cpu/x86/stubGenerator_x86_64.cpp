@@ -7149,7 +7149,7 @@ address generate_avx_ghash_processBlocks() {
       StubRoutines::x86::_right_shift_mask = base64_right_shift_mask_addr();
       StubRoutines::_base64_encodeBlock = generate_base64_encodeBlock();
       StubRoutines::x86::_decoding_table = base64_decoding_table_addr();
-      StubRoutines::_base64_decodeBlock = generate_base64_encodeBlock();
+      StubRoutines::_base64_decodeBlock = generate_base64_decodeBlock();
     }
 
     BarrierSetNMethod* bs_nm = BarrierSet::barrier_set()->barrier_set_nmethod();
