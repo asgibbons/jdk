@@ -5831,7 +5831,8 @@ address generate_avx_ghash_processBlocks() {
     __ jcc(Assembler::lessEqual, L_exit);
 
     __ shll(isURL, 8);    // index into decode table based on isURL
-    __ lea(decode_table, Address(ExternalAddress(StubRoutines::x86::base64_decoding_table_addr()), isURL, Address::times_1, 0));
+    __ lea(decode_table, ExternalAddress(StubRoutines::x86::base64_decoding_table_addr()));
+    __ addq(decode_table, isURL);
 
     // Set up src and dst pointers properly
     __ addq(source, start_offset);     // Initial offset
