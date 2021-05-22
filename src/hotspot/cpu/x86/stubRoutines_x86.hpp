@@ -169,6 +169,7 @@ class x86 {
   static address _left_shift_mask;
   static address _and_mask;
   static address _url_charset;
+  static address _decoding_table;
 #endif
   // byte flip mask for sha256
   static address _pshuffle_byte_flip_mask_addr;
@@ -313,6 +314,7 @@ class x86 {
   static address base64_left_shift_mask_addr() { return _left_shift_mask; }
   static address base64_and_mask_addr() { return _and_mask; }
   static address counter_mask_addr() { return _counter_mask_addr; }
+  static address base64_decoding_table_addr() { return _decoding_table; }
 #endif
   static address pshuffle_byte_flip_mask_addr() { return _pshuffle_byte_flip_mask_addr; }
   static void generate_CRC32C_table(bool is_pclmulqdq_supported);
