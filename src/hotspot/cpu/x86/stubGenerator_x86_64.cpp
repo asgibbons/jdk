@@ -5770,6 +5770,7 @@ address generate_avx_ghash_processBlocks() {
     __ push(r13);
     __ push(r14);
     __ push(r15);
+    __ push(rbx);
 
     // arguments
     const Register source = c_rarg0; // Source Array
@@ -5881,6 +5882,7 @@ address generate_avx_ghash_processBlocks() {
 
     __ BIND(L_exit);
     __ subq(working_dest, dest);
+    __ pop(rbx);
     __ pop(r15);
     __ pop(r14);
     __ pop(r13);
