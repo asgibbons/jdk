@@ -5791,7 +5791,7 @@ address generate_avx_ghash_processBlocks() {
 
     const Register length = r14;
     const Register decode_table = r11;
-    const Register working_dest = rax;
+    const Register working_src = rax;
     const Register tmp = rbx;
     const Register byte1 = r13;
     const Register byte2 = r15;
@@ -5837,7 +5837,7 @@ address generate_avx_ghash_processBlocks() {
     // Set up src and dst pointers properly
     __ addq(source, start_offset);     // Initial offset
     __ addq(dest, dp);
-    __ movq(working_dest, dest);
+    __ movq(working_src, source);
 
     __ decrementl(length, 1);         // Bottom-entry loop
     __ jmp(L_bottomLoop);
@@ -5853,13 +5853,13 @@ address generate_avx_ghash_processBlocks() {
 
     __ incrementq(source, 4);
 
-    __ movb(Address(working_dest, RegisterOrConstant(), Address::times_1, 2), byte1);
+    __ movb(Address(dest, RegisterOrConstant(), Address::times_1, 2), byte1);
     __ shrl(byte1, 8);
-    __ movb(Address(working_dest, RegisterOrConstant(), Address::times_1, 1), byte1);
+    __ movb(Address(dest, RegisterOrConstant(), Address::times_1, 1), byte1);
     __ shrl(byte1, 8);
-    __ movb(Address(working_dest, RegisterOrConstant(), Address::times_1, 0), byte1);
+    __ movb(Address(dest, RegisterOrConstant(), Address::times_1, 0), byte1);
 
-    __ incrementq(working_dest, 3);
+    __ incrementq(dest, 3);
     __ decrementl(length, 1);
     __ jcc(Assembler::zero, L_exit);
 
@@ -5880,7 +5880,7 @@ address generate_avx_ghash_processBlocks() {
     __ jcc(Assembler::positive, L_forceLoop);
 
     __ BIND(L_exit);
-    __ subq(working_dest, dest);
+    __ subq(working_src, source);
     __ pop(r15);
     __ pop(r14);
     __ pop(r13);
