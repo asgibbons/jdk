@@ -5851,6 +5851,8 @@ address generate_avx_ghash_processBlocks() {
     __ orl(byte1, byte3);
     __ orl(byte1, byte4);
 
+    __ incrementq(working_src, 4);
+
     __ movb(Address(dest, RegisterOrConstant(), Address::times_1, 2), byte1);
     __ shrl(byte1, 8);
     __ movb(Address(dest, RegisterOrConstant(), Address::times_1, 1), byte1);
@@ -5861,15 +5863,13 @@ address generate_avx_ghash_processBlocks() {
     __ decrementl(length, 1);
     __ jcc(Assembler::zero, L_exit);
 
-    __ incrementq(source, 4);
-
     __ BIND(L_bottomLoop);
-    __ load_signed_byte(byte1, Address(source, RegisterOrConstant(), Address::times_1, 0));
-    __ load_signed_byte(byte2, Address(source, RegisterOrConstant(), Address::times_1, 1));
+    __ load_signed_byte(byte1, Address(working_src, RegisterOrConstant(), Address::times_1, 0));
+    __ load_signed_byte(byte2, Address(working_src, RegisterOrConstant(), Address::times_1, 1));
     __ load_signed_byte(byte1, Address(decode_table, byte1, Address::times_1, 0));
     __ load_signed_byte(byte2, Address(decode_table, byte2, Address::times_1, 0));
-    __ load_signed_byte(byte3, Address(source, RegisterOrConstant(), Address::times_1, 2));
-    __ load_signed_byte(byte4, Address(source, RegisterOrConstant(), Address::times_1, 3));
+    __ load_signed_byte(byte3, Address(working_src, RegisterOrConstant(), Address::times_1, 2));
+    __ load_signed_byte(byte4, Address(working_src, RegisterOrConstant(), Address::times_1, 3));
     __ load_signed_byte(byte3, Address(decode_table, byte3, Address::times_1, 0));
     __ load_signed_byte(byte4, Address(decode_table, byte4, Address::times_1, 0));
 
