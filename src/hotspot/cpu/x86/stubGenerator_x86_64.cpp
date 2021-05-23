@@ -5828,7 +5828,7 @@ address generate_avx_ghash_processBlocks() {
     __ movl(length, end_offset);
     __ subl(length, start_offset);
     __ shrl(length, 2);    // Multiple of 4 bytes only - length is # 4-byte chunks
-    __ xorl(rax, rax);
+    __ movq(working_dest, dest);
     __ cmpl(length, 0);
     __ jcc(Assembler::lessEqual, L_exit);
 
