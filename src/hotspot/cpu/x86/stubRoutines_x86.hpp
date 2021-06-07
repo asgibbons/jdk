@@ -169,6 +169,8 @@ class x86 {
   static address _left_shift_mask;
   static address _and_mask;
   static address _url_charset;
+  static address _encoding_table;
+  static address _shuffle;
   static address _lookup_lo;
   static address _lookup_hi;
   static address _lookup_lo_url;
@@ -321,6 +323,8 @@ class x86 {
   static address base64_right_shift_mask_addr() { return _right_shift_mask; }
   static address base64_left_shift_mask_addr() { return _left_shift_mask; }
   static address base64_and_mask_addr() { return _and_mask; }
+  static address base64_encoding_table_addr() { return _encoding_table; }
+  static address base64_shuffle_addr() { return _shuffle; }
   static address counter_mask_addr() { return _counter_mask_addr; }
   static address base64_vbmi_lookup_lo_addr() { return _lookup_lo; }
   static address base64_vbmi_lookup_hi_addr() { return _lookup_hi; }
