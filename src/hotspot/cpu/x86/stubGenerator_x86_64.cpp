@@ -5512,13 +5512,21 @@ address generate_avx_ghash_processBlocks() {
 
     const Register length = r14;
     const Register encode_table = r13;
-    Label L_process80, L_process32, L_process3, L_exit, L_processdata, L_loadURL, L_vbmiLoop, L_continue;
+    Label L_process80, L_process32, L_process3, L_exit, L_processdata, L_vbmiLoop, L_continue;
 
     // calculate length from offsets
     __ movl(length, end_offset);
     __ subl(length, start_offset);
     __ cmpl(length, 0);
     __ jcc(Assembler::lessEqual, L_exit);
+
+    __ lea(r11, ExternalAddress(StubRoutines::x86::base64_charset_addr()));
+    // check if base64 charset(isURL=0) or base64 url charset(isURL=1) needs to be loaded
+    __ cmpl(isURL, 0);
+    __ jcc(Assembler::equal, L_continue);
+    __ lea(r11, ExternalAddress(StubRoutines::x86::base64url_charset_addr()));
+
+    __ BIND(L_continue);
 
     // Code for 512-bit VBMI encoding.  Encodes 48 input bytes into 64 output bytes.
     // We read 64 input bytes and ignore the last 16, so be sure not to read past the
@@ -5554,20 +5562,7 @@ address generate_avx_ghash_processBlocks() {
       __ jcc(Assembler::aboveEqual, L_vbmiLoop);
 
       __ vzeroupper();
-
-      __ lea(r11, ExternalAddress(StubRoutines::x86::base64_charset_addr()));
-      // check if base64 charset(isURL=0) or base64 url charset(isURL=1) needs to be loaded
-      __ cmpl(isURL, 0);
-      __ jcc(Assembler::equal, L_continue);
-      __ lea(r11, ExternalAddress(StubRoutines::x86::base64url_charset_addr()));
-
-      __ BIND(L_continue);
     } else {
-      __ lea(r11, ExternalAddress(StubRoutines::x86::base64_charset_addr()));
-      // check if base64 charset(isURL=0) or base64 url charset(isURL=1) needs to be loaded
-      __ cmpl(isURL, 0);
-      __ jcc(Assembler::notEqual, L_loadURL);
-
       // load masks required for encoding data
       __ BIND(L_processdata);
       __ movdqu(xmm16, ExternalAddress(StubRoutines::x86::base64_gather_mask_addr()));
@@ -5676,10 +5671,6 @@ address generate_avx_ghash_processBlocks() {
       __ addq(source, 72);
       __ subq(length, 72);
       __ jmp(L_process80);
-
-      __ BIND(L_loadURL);
-      __ lea(r11, ExternalAddress(StubRoutines::x86::base64url_charset_addr()));
-      __ jmp(L_processdata);
     }
 
     // Vector Base64 implementation generating 32 bytes of encoded data
