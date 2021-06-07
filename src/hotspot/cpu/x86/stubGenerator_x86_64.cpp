@@ -5512,7 +5512,7 @@ address generate_avx_ghash_processBlocks() {
 
     const Register length = r14;
     const Register encode_table = r13;
-    Label L_process80, L_process32, L_process3, L_exit, L_processdata, L_vbmiLoop, L_continue;
+    Label L_process80, L_process32, L_process3, L_exit, L_processdata, L_vbmiLoop, L_not512;
 
     // calculate length from offsets
     __ movl(length, end_offset);
@@ -5520,20 +5520,12 @@ address generate_avx_ghash_processBlocks() {
     __ cmpl(length, 0);
     __ jcc(Assembler::lessEqual, L_exit);
 
-    __ lea(r11, ExternalAddress(StubRoutines::x86::base64_charset_addr()));
-    // check if base64 charset(isURL=0) or base64 url charset(isURL=1) needs to be loaded
-    __ cmpl(isURL, 0);
-    __ jcc(Assembler::equal, L_continue);
-    __ lea(r11, ExternalAddress(StubRoutines::x86::base64url_charset_addr()));
-
-    __ BIND(L_continue);
-
     // Code for 512-bit VBMI encoding.  Encodes 48 input bytes into 64 output bytes.
     // We read 64 input bytes and ignore the last 16, so be sure not to read past the
     // end of the input buffer.
     if(VM_Version::supports_avx512_vbmi()) {
       __ cmpl(length, 64);  // Do not overrun input buffer.
-      __ jcc(Assembler::below, L_process32);
+      __ jcc(Assembler::below, L_not512);
 
       __ shll(isURL, 6);    // index into decode table based on isURL
       __ lea(encode_table, ExternalAddress(StubRoutines::x86::base64_encoding_table_addr()));
@@ -5562,116 +5554,123 @@ address generate_avx_ghash_processBlocks() {
       __ jcc(Assembler::aboveEqual, L_vbmiLoop);
 
       __ vzeroupper();
-    } else {
-      // load masks required for encoding data
-      __ BIND(L_processdata);
-      __ movdqu(xmm16, ExternalAddress(StubRoutines::x86::base64_gather_mask_addr()));
-      // Set 64 bits of K register.
-      __ evpcmpeqb(k3, xmm16, xmm16, Assembler::AVX_512bit);
-      __ evmovdquq(xmm12, ExternalAddress(StubRoutines::x86::base64_bswap_mask_addr()), Assembler::AVX_256bit, r13);
-      __ evmovdquq(xmm13, ExternalAddress(StubRoutines::x86::base64_right_shift_mask_addr()), Assembler::AVX_512bit, r13);
-      __ evmovdquq(xmm14, ExternalAddress(StubRoutines::x86::base64_left_shift_mask_addr()), Assembler::AVX_512bit, r13);
-      __ evmovdquq(xmm15, ExternalAddress(StubRoutines::x86::base64_and_mask_addr()), Assembler::AVX_512bit, r13);
-
-      // Vector Base64 implementation, producing 96 bytes of encoded data
-      __ BIND(L_process80);
-      __ cmpl(length, 80);
-      __ jcc(Assembler::below, L_process32);
-      __ evmovdquq(xmm0, Address(source, start_offset, Address::times_1, 0), Assembler::AVX_256bit);
-      __ evmovdquq(xmm1, Address(source, start_offset, Address::times_1, 24), Assembler::AVX_256bit);
-      __ evmovdquq(xmm2, Address(source, start_offset, Address::times_1, 48), Assembler::AVX_256bit);
-
-      //permute the input data in such a manner that we have continuity of the source
-      __ vpermq(xmm3, xmm0, 148, Assembler::AVX_256bit);
-      __ vpermq(xmm4, xmm1, 148, Assembler::AVX_256bit);
-      __ vpermq(xmm5, xmm2, 148, Assembler::AVX_256bit);
-
-      //shuffle input and group 3 bytes of data and to it add 0 as the 4th byte.
-      //we can deal with 12 bytes at a time in a 128 bit register
-      __ vpshufb(xmm3, xmm3, xmm12, Assembler::AVX_256bit);
-      __ vpshufb(xmm4, xmm4, xmm12, Assembler::AVX_256bit);
-      __ vpshufb(xmm5, xmm5, xmm12, Assembler::AVX_256bit);
-
-      //convert byte to word. Each 128 bit register will have 6 bytes for processing
-      __ vpmovzxbw(xmm3, xmm3, Assembler::AVX_512bit);
-      __ vpmovzxbw(xmm4, xmm4, Assembler::AVX_512bit);
-      __ vpmovzxbw(xmm5, xmm5, Assembler::AVX_512bit);
-
-      // Extract bits in the following pattern 6, 4+2, 2+4, 6 to convert 3, 8 bit numbers to 4, 6 bit numbers
-      __ evpsrlvw(xmm0, xmm3, xmm13,  Assembler::AVX_512bit);
-      __ evpsrlvw(xmm1, xmm4, xmm13, Assembler::AVX_512bit);
-      __ evpsrlvw(xmm2, xmm5, xmm13, Assembler::AVX_512bit);
-
-      __ evpsllvw(xmm3, xmm3, xmm14, Assembler::AVX_512bit);
-      __ evpsllvw(xmm4, xmm4, xmm14, Assembler::AVX_512bit);
-      __ evpsllvw(xmm5, xmm5, xmm14, Assembler::AVX_512bit);
-
-      __ vpsrlq(xmm0, xmm0, 8, Assembler::AVX_512bit);
-      __ vpsrlq(xmm1, xmm1, 8, Assembler::AVX_512bit);
-      __ vpsrlq(xmm2, xmm2, 8, Assembler::AVX_512bit);
-
-      __ vpsllq(xmm3, xmm3, 8, Assembler::AVX_512bit);
-      __ vpsllq(xmm4, xmm4, 8, Assembler::AVX_512bit);
-      __ vpsllq(xmm5, xmm5, 8, Assembler::AVX_512bit);
-
-      __ vpandq(xmm3, xmm3, xmm15, Assembler::AVX_512bit);
-      __ vpandq(xmm4, xmm4, xmm15, Assembler::AVX_512bit);
-      __ vpandq(xmm5, xmm5, xmm15, Assembler::AVX_512bit);
-
-      // Get the final 4*6 bits base64 encoding
-      __ vporq(xmm3, xmm3, xmm0, Assembler::AVX_512bit);
-      __ vporq(xmm4, xmm4, xmm1, Assembler::AVX_512bit);
-      __ vporq(xmm5, xmm5, xmm2, Assembler::AVX_512bit);
-
-      // Shift
-      __ vpsrlq(xmm3, xmm3, 8, Assembler::AVX_512bit);
-      __ vpsrlq(xmm4, xmm4, 8, Assembler::AVX_512bit);
-      __ vpsrlq(xmm5, xmm5, 8, Assembler::AVX_512bit);
-
-      // look up 6 bits in the base64 character set to fetch the encoding
-      // we are converting word to dword as gather instructions need dword indices for looking up encoding
-      __ vextracti64x4(xmm6, xmm3, 0);
-      __ vpmovzxwd(xmm0, xmm6, Assembler::AVX_512bit);
-      __ vextracti64x4(xmm6, xmm3, 1);
-      __ vpmovzxwd(xmm1, xmm6, Assembler::AVX_512bit);
-
-      __ vextracti64x4(xmm6, xmm4, 0);
-      __ vpmovzxwd(xmm2, xmm6, Assembler::AVX_512bit);
-      __ vextracti64x4(xmm6, xmm4, 1);
-      __ vpmovzxwd(xmm3, xmm6, Assembler::AVX_512bit);
-
-      __ vextracti64x4(xmm4, xmm5, 0);
-      __ vpmovzxwd(xmm6, xmm4, Assembler::AVX_512bit);
-
-      __ vextracti64x4(xmm4, xmm5, 1);
-      __ vpmovzxwd(xmm7, xmm4, Assembler::AVX_512bit);
-
-      __ kmovql(k2, k3);
-      __ evpgatherdd(xmm4, k2, Address(r11, xmm0, Address::times_4, 0), Assembler::AVX_512bit);
-      __ kmovql(k2, k3);
-      __ evpgatherdd(xmm5, k2, Address(r11, xmm1, Address::times_4, 0), Assembler::AVX_512bit);
-      __ kmovql(k2, k3);
-      __ evpgatherdd(xmm8, k2, Address(r11, xmm2, Address::times_4, 0), Assembler::AVX_512bit);
-      __ kmovql(k2, k3);
-      __ evpgatherdd(xmm9, k2, Address(r11, xmm3, Address::times_4, 0), Assembler::AVX_512bit);
-      __ kmovql(k2, k3);
-      __ evpgatherdd(xmm10, k2, Address(r11, xmm6, Address::times_4, 0), Assembler::AVX_512bit);
-      __ kmovql(k2, k3);
-      __ evpgatherdd(xmm11, k2, Address(r11, xmm7, Address::times_4, 0), Assembler::AVX_512bit);
-
-      //Down convert dword to byte. Final output is 16*6 = 96 bytes long
-      __ evpmovdb(Address(dest, dp, Address::times_1, 0), xmm4, Assembler::AVX_512bit);
-      __ evpmovdb(Address(dest, dp, Address::times_1, 16), xmm5, Assembler::AVX_512bit);
-      __ evpmovdb(Address(dest, dp, Address::times_1, 32), xmm8, Assembler::AVX_512bit);
-      __ evpmovdb(Address(dest, dp, Address::times_1, 48), xmm9, Assembler::AVX_512bit);
-      __ evpmovdb(Address(dest, dp, Address::times_1, 64), xmm10, Assembler::AVX_512bit);
-      __ evpmovdb(Address(dest, dp, Address::times_1, 80), xmm11, Assembler::AVX_512bit);
-
-      __ addq(dest, 96);
-      __ addq(source, 72);
-      __ subq(length, 72);
-      __ jmp(L_process80);
     }
+
+    __ BIND(L_not512);
+    __ lea(r11, ExternalAddress(StubRoutines::x86::base64_charset_addr()));
+    // check if base64 charset(isURL=0) or base64 url charset(isURL=1) needs to be loaded
+    __ cmpl(isURL, 0);
+    __ jcc(Assembler::equal, L_processdata);
+    __ lea(r11, ExternalAddress(StubRoutines::x86::base64url_charset_addr()));
+
+    // load masks required for encoding data
+    __ BIND(L_processdata);
+    __ movdqu(xmm16, ExternalAddress(StubRoutines::x86::base64_gather_mask_addr()));
+    // Set 64 bits of K register.
+    __ evpcmpeqb(k3, xmm16, xmm16, Assembler::AVX_512bit);
+    __ evmovdquq(xmm12, ExternalAddress(StubRoutines::x86::base64_bswap_mask_addr()), Assembler::AVX_256bit, r13);
+    __ evmovdquq(xmm13, ExternalAddress(StubRoutines::x86::base64_right_shift_mask_addr()), Assembler::AVX_512bit, r13);
+    __ evmovdquq(xmm14, ExternalAddress(StubRoutines::x86::base64_left_shift_mask_addr()), Assembler::AVX_512bit, r13);
+    __ evmovdquq(xmm15, ExternalAddress(StubRoutines::x86::base64_and_mask_addr()), Assembler::AVX_512bit, r13);
+
+    // Vector Base64 implementation, producing 96 bytes of encoded data
+    __ BIND(L_process80);
+    __ cmpl(length, 80);
+    __ jcc(Assembler::below, L_process32);
+    __ evmovdquq(xmm0, Address(source, start_offset, Address::times_1, 0), Assembler::AVX_256bit);
+    __ evmovdquq(xmm1, Address(source, start_offset, Address::times_1, 24), Assembler::AVX_256bit);
+    __ evmovdquq(xmm2, Address(source, start_offset, Address::times_1, 48), Assembler::AVX_256bit);
+
+    //permute the input data in such a manner that we have continuity of the source
+    __ vpermq(xmm3, xmm0, 148, Assembler::AVX_256bit);
+    __ vpermq(xmm4, xmm1, 148, Assembler::AVX_256bit);
+    __ vpermq(xmm5, xmm2, 148, Assembler::AVX_256bit);
+
+    //shuffle input and group 3 bytes of data and to it add 0 as the 4th byte.
+    //we can deal with 12 bytes at a time in a 128 bit register
+    __ vpshufb(xmm3, xmm3, xmm12, Assembler::AVX_256bit);
+    __ vpshufb(xmm4, xmm4, xmm12, Assembler::AVX_256bit);
+    __ vpshufb(xmm5, xmm5, xmm12, Assembler::AVX_256bit);
+
+    //convert byte to word. Each 128 bit register will have 6 bytes for processing
+    __ vpmovzxbw(xmm3, xmm3, Assembler::AVX_512bit);
+    __ vpmovzxbw(xmm4, xmm4, Assembler::AVX_512bit);
+    __ vpmovzxbw(xmm5, xmm5, Assembler::AVX_512bit);
+
+    // Extract bits in the following pattern 6, 4+2, 2+4, 6 to convert 3, 8 bit numbers to 4, 6 bit numbers
+    __ evpsrlvw(xmm0, xmm3, xmm13,  Assembler::AVX_512bit);
+    __ evpsrlvw(xmm1, xmm4, xmm13, Assembler::AVX_512bit);
+    __ evpsrlvw(xmm2, xmm5, xmm13, Assembler::AVX_512bit);
+
+    __ evpsllvw(xmm3, xmm3, xmm14, Assembler::AVX_512bit);
+    __ evpsllvw(xmm4, xmm4, xmm14, Assembler::AVX_512bit);
+    __ evpsllvw(xmm5, xmm5, xmm14, Assembler::AVX_512bit);
+
+    __ vpsrlq(xmm0, xmm0, 8, Assembler::AVX_512bit);
+    __ vpsrlq(xmm1, xmm1, 8, Assembler::AVX_512bit);
+    __ vpsrlq(xmm2, xmm2, 8, Assembler::AVX_512bit);
+
+    __ vpsllq(xmm3, xmm3, 8, Assembler::AVX_512bit);
+    __ vpsllq(xmm4, xmm4, 8, Assembler::AVX_512bit);
+    __ vpsllq(xmm5, xmm5, 8, Assembler::AVX_512bit);
+
+    __ vpandq(xmm3, xmm3, xmm15, Assembler::AVX_512bit);
+    __ vpandq(xmm4, xmm4, xmm15, Assembler::AVX_512bit);
+    __ vpandq(xmm5, xmm5, xmm15, Assembler::AVX_512bit);
+
+    // Get the final 4*6 bits base64 encoding
+    __ vporq(xmm3, xmm3, xmm0, Assembler::AVX_512bit);
+    __ vporq(xmm4, xmm4, xmm1, Assembler::AVX_512bit);
+    __ vporq(xmm5, xmm5, xmm2, Assembler::AVX_512bit);
+
+    // Shift
+    __ vpsrlq(xmm3, xmm3, 8, Assembler::AVX_512bit);
+    __ vpsrlq(xmm4, xmm4, 8, Assembler::AVX_512bit);
+    __ vpsrlq(xmm5, xmm5, 8, Assembler::AVX_512bit);
+
+    // look up 6 bits in the base64 character set to fetch the encoding
+    // we are converting word to dword as gather instructions need dword indices for looking up encoding
+    __ vextracti64x4(xmm6, xmm3, 0);
+    __ vpmovzxwd(xmm0, xmm6, Assembler::AVX_512bit);
+    __ vextracti64x4(xmm6, xmm3, 1);
+    __ vpmovzxwd(xmm1, xmm6, Assembler::AVX_512bit);
+
+    __ vextracti64x4(xmm6, xmm4, 0);
+    __ vpmovzxwd(xmm2, xmm6, Assembler::AVX_512bit);
+    __ vextracti64x4(xmm6, xmm4, 1);
+    __ vpmovzxwd(xmm3, xmm6, Assembler::AVX_512bit);
+
+    __ vextracti64x4(xmm4, xmm5, 0);
+    __ vpmovzxwd(xmm6, xmm4, Assembler::AVX_512bit);
+
+    __ vextracti64x4(xmm4, xmm5, 1);
+    __ vpmovzxwd(xmm7, xmm4, Assembler::AVX_512bit);
+
+    __ kmovql(k2, k3);
+    __ evpgatherdd(xmm4, k2, Address(r11, xmm0, Address::times_4, 0), Assembler::AVX_512bit);
+    __ kmovql(k2, k3);
+    __ evpgatherdd(xmm5, k2, Address(r11, xmm1, Address::times_4, 0), Assembler::AVX_512bit);
+    __ kmovql(k2, k3);
+    __ evpgatherdd(xmm8, k2, Address(r11, xmm2, Address::times_4, 0), Assembler::AVX_512bit);
+    __ kmovql(k2, k3);
+    __ evpgatherdd(xmm9, k2, Address(r11, xmm3, Address::times_4, 0), Assembler::AVX_512bit);
+    __ kmovql(k2, k3);
+    __ evpgatherdd(xmm10, k2, Address(r11, xmm6, Address::times_4, 0), Assembler::AVX_512bit);
+    __ kmovql(k2, k3);
+    __ evpgatherdd(xmm11, k2, Address(r11, xmm7, Address::times_4, 0), Assembler::AVX_512bit);
+
+    //Down convert dword to byte. Final output is 16*6 = 96 bytes long
+    __ evpmovdb(Address(dest, dp, Address::times_1, 0), xmm4, Assembler::AVX_512bit);
+    __ evpmovdb(Address(dest, dp, Address::times_1, 16), xmm5, Assembler::AVX_512bit);
+    __ evpmovdb(Address(dest, dp, Address::times_1, 32), xmm8, Assembler::AVX_512bit);
+    __ evpmovdb(Address(dest, dp, Address::times_1, 48), xmm9, Assembler::AVX_512bit);
+    __ evpmovdb(Address(dest, dp, Address::times_1, 64), xmm10, Assembler::AVX_512bit);
+    __ evpmovdb(Address(dest, dp, Address::times_1, 80), xmm11, Assembler::AVX_512bit);
+
+    __ addq(dest, 96);
+    __ addq(source, 72);
+    __ subq(length, 72);
+    __ jmp(L_process80);
 
     // Vector Base64 implementation generating 32 bytes of encoded data
     __ BIND(L_process32);
