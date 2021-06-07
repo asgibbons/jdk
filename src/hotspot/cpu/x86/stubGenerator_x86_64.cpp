@@ -5511,8 +5511,8 @@ address generate_avx_ghash_processBlocks() {
 #endif
 
     const Register length = r14;
-    const Register encode_table = r11;
-    Label L_process80, L_process32, L_process3, L_exit, L_processdata, L_loadURL, L_vbmiLoop;
+    const Register encode_table = r13;
+    Label L_process80, L_process32, L_process3, L_exit, L_processdata, L_loadURL, L_vbmiLoop, L_continue;
 
     // calculate length from offsets
     __ movl(length, end_offset);
@@ -5555,6 +5555,13 @@ address generate_avx_ghash_processBlocks() {
 
       __ vzeroupper();
 
+      __ lea(r11, ExternalAddress(StubRoutines::x86::base64_charset_addr()));
+      // check if base64 charset(isURL=0) or base64 url charset(isURL=1) needs to be loaded
+      __ cmpl(isURL, 0);
+      __ jcc(Assembler::equal, L_continue);
+      __ lea(r11, ExternalAddress(StubRoutines::x86::base64url_charset_addr()));
+
+      __ BIND(L_continue);
     } else {
       __ lea(r11, ExternalAddress(StubRoutines::x86::base64_charset_addr()));
       // check if base64 charset(isURL=0) or base64 url charset(isURL=1) needs to be loaded
