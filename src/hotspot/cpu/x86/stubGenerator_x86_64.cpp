@@ -5532,9 +5532,9 @@ address generate_avx_ghash_processBlocks() {
       __ addq(encode_table, isURL);
 
       __ mov64(rax, 0x3036242a1016040a);    // Shifts
-      __ evmovdquq(xmm3, ExternalAddress(StubRoutines::x86::base64_shuffle_addr()), Assembler::AVX_512bit);
-      __ evmovdquq(xmm2, Address(encode_table), Assembler::AVX_512bit);
-      __ vpbroadcastq(xmm1, rax);
+      __ evmovdquq(xmm3, ExternalAddress(StubRoutines::x86::base64_shuffle_addr()), Assembler::AVX_512bit, r15);
+      __ evmovdquq(xmm2, Address(encode_table, RegisterOrConstant(), Address::times_1, 0), Assembler::AVX_512bit);
+      __ vpbroadcastq(xmm1, rax, Assembler::AVX_512bit);
 
       __ align(32);
       __ BIND(L_vbmiLoop);
