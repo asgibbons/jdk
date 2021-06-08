@@ -1503,12 +1503,30 @@ public class Utils {
     }
 
     /**
-     * Return true if the given Element is deprecated for removal.
+     * Returns true if the given Element is deprecated for removal.
      *
      * @param e the Element to check.
      * @return true if the given Element is deprecated for removal.
      */
     public boolean isDeprecatedForRemoval(Element e) {
+        Object forRemoval = getDeprecatedElement(e, "forRemoval");
+        return forRemoval != null && (boolean) forRemoval;
+    }
+
+    /**
+     * Returns the value of the {@code Deprecated.since} element if it is set on the given Element.
+     *
+     * @param e the Element to check.
+     * @return the Deprecated.since value for e, or null.
+     */
+    public String getDeprecatedSince(Element e) {
+        return (String) getDeprecatedElement(e, "since");
+    }
+
+    /**
+     * Returns the Deprecated annotation element value of the given element, or null.
+     */
+    private Object getDeprecatedElement(Element e, String elementName) {
         List<? extends AnnotationMirror> annotationList = e.getAnnotationMirrors();
         JavacTypes jctypes = ((DocEnvImpl) configuration.docEnv).toolEnv.typeutils;
         for (AnnotationMirror anno : annotationList) {
@@ -1516,14 +1534,14 @@ public class Utils {
                 Map<? extends ExecutableElement, ? extends AnnotationValue> pairs = anno.getElementValues();
                 if (!pairs.isEmpty()) {
                     for (ExecutableElement element : pairs.keySet()) {
-                        if (element.getSimpleName().contentEquals("forRemoval")) {
-                            return Boolean.parseBoolean((pairs.get(element)).toString());
+                        if (element.getSimpleName().contentEquals(elementName)) {
+                            return (pairs.get(element)).getValue();
                         }
                     }
                 }
             }
         }
-        return false;
+        return null;
     }
 
     /**
@@ -3196,11 +3214,12 @@ public class Utils {
             flags.add(ElementFlag.DEPRECATED);
         }
 
-        if (!previewLanguageFeaturesUsed(el).isEmpty() ||
-            configuration.workArounds.isPreviewAPI(el) ||
-            !previewAPIs.previewAPI.isEmpty() ||
-            !previewAPIs.reflectivePreviewAPI.isEmpty() ||
-            !previewAPIs.declaredUsingPreviewFeature.isEmpty())  {
+        if ((!previewLanguageFeaturesUsed(el).isEmpty() ||
+             configuration.workArounds.isPreviewAPI(el) ||
+             !previewAPIs.previewAPI.isEmpty() ||
+             !previewAPIs.reflectivePreviewAPI.isEmpty() ||
+             !previewAPIs.declaredUsingPreviewFeature.isEmpty()) &&
+            !hasNoProviewAnnotation(el)) {
             flags.add(ElementFlag.PREVIEW);
         }
 
@@ -3216,4 +3235,9 @@ public class Utils {
         PREVIEW
     }
 
+    private boolean hasNoProviewAnnotation(Element el) {
+        return el.getAnnotationMirrors()
+                 .stream()
+                 .anyMatch(am -> "jdk.internal.javac.NoPreview".equals(getQualifiedTypeName(am.getAnnotationType())));
+    }
 }
