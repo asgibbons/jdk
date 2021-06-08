@@ -1537,6 +1537,7 @@ private:
   void evmovdquq(Address dst, KRegister mask, XMMRegister src, bool merge, int vector_len);
   void evmovdquq(XMMRegister dst, KRegister mask, Address src, bool merge, int vector_len);
   void evmovdquq(XMMRegister dst, KRegister mask, XMMRegister src, bool merge, int vector_len);
+  void evpmultishiftqb(XMMRegister dst, XMMRegister ctl, XMMRegister src, int vector_len);
 
   // Move lower 64bit to high 64bit in 128bit register
   void movlhps(XMMRegister dst, XMMRegister src);
@@ -1690,6 +1691,7 @@ private:
   void vpermq(XMMRegister dst, XMMRegister src, int imm8);
   void vpermq(XMMRegister dst, XMMRegister nds, XMMRegister src, int vector_len);
   void vpermb(XMMRegister dst, XMMRegister nds, XMMRegister src, int vector_len);
+  void vpermb(XMMRegister dst, XMMRegister nds, Address src, int vector_len);
   void vpermw(XMMRegister dst,  XMMRegister nds, XMMRegister src, int vector_len);
   void vpermd(XMMRegister dst,  XMMRegister nds, Address src, int vector_len);
   void vpermd(XMMRegister dst,  XMMRegister nds, XMMRegister src, int vector_len);

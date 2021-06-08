@@ -5429,6 +5429,45 @@ address generate_avx_ghash_processBlocks() {
     __ emit_data64(0x3f003f003f000000, relocInfo::none);
     return start;
   }
+  address base64_shuffle_addr() {
+    __ align(64, (unsigned long) __ pc());
+    StubCodeMark mark(this, "StubRoutines", "shuffle");
+    address start = __ pc();
+    assert(((unsigned long)start & 0x3f) == 0, "Alignment problem (0x%08lx)", (unsigned long)start);
+    __ emit_data64(0x0405030401020001, relocInfo::none);
+    __ emit_data64(0x0a0b090a07080607, relocInfo::none);
+    __ emit_data64(0x10110f100d0e0c0d, relocInfo::none);
+    __ emit_data64(0x1617151613141213, relocInfo::none);
+    __ emit_data64(0x1c1d1b1c191a1819, relocInfo::none);
+    __ emit_data64(0x222321221f201e1f, relocInfo::none);
+    __ emit_data64(0x2829272825262425, relocInfo::none);
+    __ emit_data64(0x2e2f2d2e2b2c2a2b, relocInfo::none);
+    return start;
+  }
+
+  address base64_encoding_table_addr() {
+    StubCodeMark mark(this, "StubRoutines", "decoding_table");
+    address start = __ pc();
+    __ emit_data64(0x4847464544434241, relocInfo::none);
+    __ emit_data64(0x504f4e4d4c4b4a49, relocInfo::none);
+    __ emit_data64(0x5857565554535251, relocInfo::none);
+    __ emit_data64(0x6665646362615a59, relocInfo::none);
+    __ emit_data64(0x6e6d6c6b6a696867, relocInfo::none);
+    __ emit_data64(0x767574737271706f, relocInfo::none);
+    __ emit_data64(0x333231307a797877, relocInfo::none);
+    __ emit_data64(0x2f2b393837363534, relocInfo::none);
+
+    // URL table
+    __ emit_data64(0x4847464544434241, relocInfo::none);
+    __ emit_data64(0x504f4e4d4c4b4a49, relocInfo::none);
+    __ emit_data64(0x5857565554535251, relocInfo::none);
+    __ emit_data64(0x6665646362615a59, relocInfo::none);
+    __ emit_data64(0x6e6d6c6b6a696867, relocInfo::none);
+    __ emit_data64(0x767574737271706f, relocInfo::none);
+    __ emit_data64(0x333231307a797877, relocInfo::none);
+    __ emit_data64(0x5f2d393837363534, relocInfo::none);
+    return start;
+  }
 
   address base64_gather_mask_addr() {
     __ align(CodeEntryAlignment);
@@ -5472,7 +5511,8 @@ address generate_avx_ghash_processBlocks() {
 #endif
 
     const Register length = r14;
-    Label L_process80, L_process32, L_process3, L_exit, L_processdata;
+    const Register encode_table = r13;
+    Label L_process80, L_process32, L_process3, L_exit, L_processdata, L_vbmiLoop, L_not512;
 
     // calculate length from offsets
     __ movl(length, end_offset);
@@ -5480,6 +5520,43 @@ address generate_avx_ghash_processBlocks() {
     __ cmpl(length, 0);
     __ jcc(Assembler::lessEqual, L_exit);
 
+    // Code for 512-bit VBMI encoding.  Encodes 48 input bytes into 64 output bytes.
+    // We read 64 input bytes and ignore the last 16, so be sure not to read past the
+    // end of the input buffer.
+    if(VM_Version::supports_avx512_vbmi()) {
+      __ cmpl(length, 64);  // Do not overrun input buffer.
+      __ jcc(Assembler::below, L_not512);
+
+      __ shll(isURL, 6);    // index into decode table based on isURL
+      __ lea(encode_table, ExternalAddress(StubRoutines::x86::base64_encoding_table_addr()));
+      __ addq(encode_table, isURL);
+
+      __ mov64(rax, 0x3036242a1016040a);    // Shifts
+      __ evmovdquq(xmm3, ExternalAddress(StubRoutines::x86::base64_shuffle_addr()), Assembler::AVX_512bit, r15);
+      __ evmovdquq(xmm2, Address(encode_table, RegisterOrConstant(), Address::times_1, 0), Assembler::AVX_512bit);
+      __ evpbroadcastq(xmm1, rax, Assembler::AVX_512bit);
+
+      __ align(32);
+      __ BIND(L_vbmiLoop);
+
+      __ vpermb(xmm0, xmm3, Address(source, start_offset, Address::times_1, 0), Assembler::AVX_512bit);
+      __ subq(length, 48);
+
+      __ evpmultishiftqb(xmm0, xmm1, xmm0, Assembler::AVX_512bit);
+      __ vpermb(xmm0, xmm0, xmm2, Assembler::AVX_512bit);
+
+      // Write to destination
+      __ evmovdquq(Address(dest, dp, Address::times_1, 0), xmm0, Assembler::AVX_512bit);
+
+      __ addq(dest, 64);
+      __ addq(source, 48);
+      __ cmpq(length, 64);
+      __ jcc(Assembler::aboveEqual, L_vbmiLoop);
+
+      __ vzeroupper();
+    }
+
+    __ BIND(L_not512);
     __ lea(r11, ExternalAddress(StubRoutines::x86::base64_charset_addr()));
     // check if base64 charset(isURL=0) or base64 url charset(isURL=1) needs to be loaded
     __ cmpl(isURL, 0);
@@ -5634,6 +5711,7 @@ address generate_avx_ghash_processBlocks() {
     ** dst[dp0++] = (byte)base64[(bits >> > 6) & 0x3f];
     ** dst[dp0++] = (byte)base64[bits & 0x3f];*/
     __ BIND(L_process3);
+    __ vzeroupper();
     __ cmpl(length, 3);
     __ jcc(Assembler::below, L_exit);
     // Read 1 byte at a time
@@ -7623,6 +7701,8 @@ address generate_avx_ghash_processBlocks() {
       StubRoutines::x86::_gather_mask = base64_gather_mask_addr();
       StubRoutines::x86::_left_shift_mask = base64_left_shift_mask_addr();
       StubRoutines::x86::_right_shift_mask = base64_right_shift_mask_addr();
+      StubRoutines::x86::_encoding_table = base64_encoding_table_addr();
+      StubRoutines::x86::_shuffle = base64_shuffle_addr();
       StubRoutines::_base64_encodeBlock = generate_base64_encodeBlock();
       if (VM_Version::supports_avx512_vbmi()) {
         StubRoutines::x86::_lookup_lo = base64_vbmi_lookup_lo_addr();
