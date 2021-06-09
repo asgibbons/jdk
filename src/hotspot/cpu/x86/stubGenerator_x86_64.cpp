@@ -5429,7 +5429,7 @@ address generate_avx_ghash_processBlocks() {
     __ emit_data64(0x3f003f003f000000, relocInfo::none);
     return start;
   }
-  
+
   address base64_shuffle_addr() {
     __ align(64, (unsigned long) __ pc());
     StubCodeMark mark(this, "StubRoutines", "shuffle");
@@ -5445,36 +5445,33 @@ address generate_avx_ghash_processBlocks() {
     __ emit_data64(0x2e2f2d2e2b2c2a2b, relocInfo::none);
     return start;
   }
-  
+
   address base64_avx2_shuffle_addr() {
-    __ align(64, (unsigned long) __ pc());
+    __ align(32);
     StubCodeMark mark(this, "StubRoutines", "avx2_shuffle");
     address start = __ pc();
-    assert(((unsigned long)start & 0x3f) == 0, "Alignment problem (0x%08lx)", (unsigned long)start);
     __ emit_data64(0x0809070805060405, relocInfo::none);
     __ emit_data64(0x0e0f0d0e0b0c0a0b, relocInfo::none);
     __ emit_data64(0x0405030401020001, relocInfo::none);
     __ emit_data64(0x0a0b090a07080607, relocInfo::none);
     return start;
   }
-  
+
   address base64_avx2_input_mask_addr() {
-    __ align(64, (unsigned long) __ pc());
+    __ align(32);
     StubCodeMark mark(this, "StubRoutines", "avx2_input_mask");
     address start = __ pc();
-    assert(((unsigned long)start & 0x3f) == 0, "Alignment problem (0x%08lx)", (unsigned long)start);
     __ emit_data64(0x8000000000000000, relocInfo::none);
     __ emit_data64(0x8000000080000000, relocInfo::none);
     __ emit_data64(0x8000000080000000, relocInfo::none);
     __ emit_data64(0x8000000080000000, relocInfo::none);
     return start;
   }
-  
+
   address base64_avx2_lut_addr() {
-    __ align(64, (unsigned long) __ pc());
+    __ align(32);
     StubCodeMark mark(this, "StubRoutines", "avx2_lut");
     address start = __ pc();
-    assert(((unsigned long)start & 0x3f) == 0, "Alignment problem (0x%08lx)", (unsigned long)start);
     __ emit_data64(0xfcfcfcfcfcfc4741, relocInfo::none);
     __ emit_data64(0x0000f0edfcfcfcfc, relocInfo::none);
     __ emit_data64(0xfcfcfcfcfcfc4741, relocInfo::none);
@@ -5489,7 +5486,9 @@ address generate_avx_ghash_processBlocks() {
   }
 
   address base64_encoding_table_addr() {
+    __ align(64, (unsigned long) __ pc());
     StubCodeMark mark(this, "StubRoutines", "encoding_table");
+    assert(((unsigned long)start & 0x3f) == 0, "Alignment problem (0x%08lx)", (unsigned long)start);
     address start = __ pc();
     __ emit_data64(0x4847464544434241, relocInfo::none);
     __ emit_data64(0x504f4e4d4c4b4a49, relocInfo::none);
@@ -5579,7 +5578,7 @@ address generate_avx_ghash_processBlocks() {
 
       __ mov64(rax, 0x3036242a1016040a);    // Shifts
       __ evmovdquq(xmm3, ExternalAddress(StubRoutines::x86::base64_shuffle_addr()), Assembler::AVX_512bit, r15);
-      __ evmovdquq(xmm2, Address(encode_table, RegisterOrConstant(), Address::times_1, 0), Assembler::AVX_512bit);
+      __ evmovdquq(xmm2, Address(encode_table, 0), Assembler::AVX_512bit);
       __ evpbroadcastq(xmm1, rax, Assembler::AVX_512bit);
 
       __ align(32);
@@ -5690,8 +5689,9 @@ address generate_avx_ghash_processBlocks() {
       __ jcc(Assembler::above, L_32byteLoop);
 
       __ vzeroupper();
+      __ addl(dp, 32);
 
-#if 0
+#ifdef USE_OLD_ENCODER
       __ lea(r11, ExternalAddress(StubRoutines::x86::base64_charset_addr()));
       // check if base64 charset(isURL=0) or base64 url charset(isURL=1) needs to be loaded
       __ cmpl(isURL, 0);
@@ -5841,6 +5841,63 @@ address generate_avx_ghash_processBlocks() {
     }
 
     __ BIND(L_process3);
+    __ cmpl(length, 3);
+    __ jcc(Assembler::below, L_exit);
+
+    __ lea(r11, ExternalAddress(StubRoutines::x86::base64_encoding_table_addr()));
+    __ movl(r15, isURL);
+    __ shll(r15, 5);
+    __ addptr(r11, r15);
+
+    __ BIND(L_processdata);
+
+    __ load_unsigned_byte(r15, Address(source, start_offset));
+    __ load_unsigned_byte(r10, Address(source, start_offset, Address::times_1, 1));
+    __ load_unsigned_byte(r13, Address(source, start_offset, Address::times_1, 2));
+
+    __ movl(rax, r10);
+    __ shll(r10, 24);
+    __ orl(rax, r10);
+
+    __ subl(length, 3);
+    
+    __ shll(r15, 8);
+    __ shll(r13, 16);
+    __ orl(rax, r15);
+
+    __ addl(start_offset, 3);
+
+    __ orl(rax, r13);
+    __ shrl(r13, 16);
+    __ andl(r13, 0x3f);
+    __ shrl(r15, 10);
+
+    __ load_unsigned_byte(r13, Address(r11, r13));
+    __ load_unsigned_byte(r15, Address(r11, r15));
+
+    __ movb(Address(dest, dp, Address::times_1, 2), r13);
+    
+    __ shrl(rax, 4);
+    __ movl(r10, rax);
+    __ andl(rax, 0x3f);
+
+    __ movb(Address(dest, dp, Address::times_1, 0), r15);
+
+    __ load_unsigned_byte(rax, Address(r11, rax));
+
+    __ shrl(r10, 12);
+    __ andl(r10, 0x3f);
+
+    __ load_unsigned_byte(r10, Address(r11, r10));
+
+    __ movb(Address(dest, dp, Address::times_1, 1), rax);
+    __ movb(Address(dest, dp, Address::times_1, 3), r10);
+
+    __ addl(dp, 4);
+    __ cmpl(length, 3);
+    __ jcc(Assembler::aboveEqual, L_processdata);
+
+#ifdef USE_OLD_ENCODER
     // load masks required for encoding data
     __ lea(r11, ExternalAddress(StubRoutines::x86::base64_charset_addr()));
     // check if base64 charset(isURL=0) or base64 url charset(isURL=1) needs to be loaded
@@ -5896,6 +5953,7 @@ address generate_avx_ghash_processBlocks() {
     __ addq(dest, 4);
     __ addq(source, 3);
     __ jmp(L_process3);
+#endif
     __ BIND(L_exit);
     __ pop(r15);
     __ pop(r14);
