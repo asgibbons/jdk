@@ -5448,7 +5448,7 @@ address generate_avx_ghash_processBlocks() {
   
   address base64_avx2_shuffle_addr() {
     __ align(64, (unsigned long) __ pc());
-    StubCodeMark mark(this, "StubRoutines", "shuffle");
+    StubCodeMark mark(this, "StubRoutines", "avx2_shuffle");
     address start = __ pc();
     assert(((unsigned long)start & 0x3f) == 0, "Alignment problem (0x%08lx)", (unsigned long)start);
     __ emit_data64(0x0809070805060405, relocInfo::none);
@@ -5460,7 +5460,7 @@ address generate_avx_ghash_processBlocks() {
   
   address base64_avx2_input_mask_addr() {
     __ align(64, (unsigned long) __ pc());
-    StubCodeMark mark(this, "StubRoutines", "shuffle");
+    StubCodeMark mark(this, "StubRoutines", "avx2_input_mask");
     address start = __ pc();
     assert(((unsigned long)start & 0x3f) == 0, "Alignment problem (0x%08lx)", (unsigned long)start);
     __ emit_data64(0x8000000000000000, relocInfo::none);
@@ -5472,7 +5472,7 @@ address generate_avx_ghash_processBlocks() {
   
   address base64_avx2_lut_addr() {
     __ align(64, (unsigned long) __ pc());
-    StubCodeMark mark(this, "StubRoutines", "shuffle");
+    StubCodeMark mark(this, "StubRoutines", "avx2_lut");
     address start = __ pc();
     assert(((unsigned long)start & 0x3f) == 0, "Alignment problem (0x%08lx)", (unsigned long)start);
     __ emit_data64(0xfcfcfcfcedf00000, relocInfo::none);
@@ -7849,7 +7849,7 @@ address generate_avx_ghash_processBlocks() {
       StubRoutines::x86::_shuffle = base64_shuffle_addr();
       StubRoutines::x86::_avx2_shuffle = base64_avx2_shuffle_addr();
       StubRoutines::x86::_avx2_input_mask = base64_avx2_input_mask_addr();
-      StubRoutines::x86::_avx2_lut_addr = base64_avx2_lut_addr();
+      StubRoutines::x86::_avx2_lut = base64_avx2_lut_addr();
       StubRoutines::_base64_encodeBlock = generate_base64_encodeBlock();
       if (VM_Version::supports_avx512_vbmi()) {
         StubRoutines::x86::_lookup_lo = base64_vbmi_lookup_lo_addr();

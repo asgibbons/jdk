@@ -193,6 +193,9 @@ class x86 {
   static address _url_charset;
   static address _encoding_table;
   static address _shuffle;
+  static address _avx2_shuffle;
+  static address _avx2_input_mask;
+  static address _avx2_lut;
   static address _lookup_lo;
   static address _lookup_hi;
   static address _lookup_lo_url;
