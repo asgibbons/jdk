@@ -5475,16 +5475,16 @@ address generate_avx_ghash_processBlocks() {
     StubCodeMark mark(this, "StubRoutines", "avx2_lut");
     address start = __ pc();
     assert(((unsigned long)start & 0x3f) == 0, "Alignment problem (0x%08lx)", (unsigned long)start);
-    __ emit_data64(0xfcfcfcfcedf00000, relocInfo::none);
-    __ emit_data64(0x4147fcfcfcfcfcfc, relocInfo::none);
-    __ emit_data64(0xfcfcfcfcedf00000, relocInfo::none);
-    __ emit_data64(0x4147fcfcfcfcfcfc, relocInfo::none);
+    __ emit_data64(0xfcfcfcfcfcfc4741, relocInfo::none);
+    __ emit_data64(0x0000f0edfcfcfcfc, relocInfo::none);
+    __ emit_data64(0xfcfcfcfcfcfc4741, relocInfo::none);
+    __ emit_data64(0x0000f0edfcfcfcfc, relocInfo::none);
 
     // URL LUT
-    __ emit_data64(0xfcfcfcfcef200000, relocInfo::none);
-    __ emit_data64(0x4147fcfcfcfcfcfc, relocInfo::none);
-    __ emit_data64(0xfcfcfcfcef200000, relocInfo::none);
-    __ emit_data64(0x4147fcfcfcfcfcfc, relocInfo::none);
+    __ emit_data64(0xfcfcfcfcfcfc4741, relocInfo::none);
+    __ emit_data64(0x000020effcfcfcfc, relocInfo::none);
+    __ emit_data64(0xfcfcfcfcfcfc4741, relocInfo::none);
+    __ emit_data64(0x000020effcfcfcfc, relocInfo::none);
     return start;
   }
 
@@ -5608,11 +5608,10 @@ address generate_avx_ghash_processBlocks() {
       __ cmpl(length, 31);
       __ jcc(Assembler::belowEqual, L_process3);
 
-      __ evmovdquq(xmm9, ExternalAddress(StubRoutines::x86::base64_avx2_shuffle_addr()), Assembler::AVX_256bit, r13);
+      __ vmovdqu(xmm9, ExternalAddress(StubRoutines::x86::base64_avx2_shuffle_addr()));
       __ movl(rax, 0x0fc0fc00);
       __ evpbroadcastd(xmm8, rax, Assembler::AVX_256bit);
-      // __ evmovdquq(xmm8, ExternalAddress(StubRoutines::x86::base64_avx2_and_mask_addr()), Assembler::AVX_256bit, r13);
-      __ evmovdquq(xmm1, ExternalAddress(StubRoutines::x86::base64_avx2_input_mask_addr()), Assembler::AVX_256bit, r13);
+      __ vmovdqu(xmm1, ExternalAddress(StubRoutines::x86::base64_avx2_input_mask_addr()));
 
       __ subl(length, 24);
 
@@ -5648,21 +5647,24 @@ address generate_avx_ghash_processBlocks() {
       __ lea(r11, ExternalAddress(StubRoutines::x86::base64_avx2_lut_addr()));
       __ movl(r15, isURL);
       __ shll(r15, 5);
-      __ evmovdquq(xmm2, Address(r11, r15, Address::times_1, 0), Assembler::AVX_256bit);
+      __ vmovdqu(xmm2, Address(r11, r15));
       __ vpshufb(xmm1, xmm2, xmm1, Assembler::AVX_256bit);
       __ vpaddb(xmm0, xmm1, xmm0, Assembler::AVX_256bit);
 
       // Store the encoded bytes
-      __ evmovdquq(Address(dest, dp, Address::times_1, 0), xmm0, Assembler::AVX_256bit);
+      __ vmovdqu(Address(dest, dp), xmm0);
+      __ addl(dp, 32);
 
       __ cmpl(length, 31);
       __ jcc(Assembler::belowEqual, L_process3);
+
+      __ subl(dp, 32);    // Offset for add below
 
       __ align(32);
       __ BIND(L_32byteLoop);
 
       // Get next 32 bytes
-      __ evmovdquq(xmm1, Address(source, start_offset, Address::times_1, -4), Assembler::AVX_256bit);
+      __ vmovdqu(xmm1, Address(source, start_offset, Address::times_1, -4));
 
       __ subl(length, 24);
       __ addl(start_offset, 24);
@@ -5682,7 +5684,7 @@ address generate_avx_ghash_processBlocks() {
       __ vpaddb(xmm0, xmm1, xmm0, Assembler::AVX_256bit);
 
       // Store the encoded bytes
-      __ evmovdquq(Address(dest, dp, Address::times_1, 0), xmm0, Assembler::AVX_256bit);
+      __ vmovdqu(Address(dest, dp), xmm0);
 
       __ cmpl(length, 31);
       __ jcc(Assembler::above, L_32byteLoop);
