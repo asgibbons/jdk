@@ -5666,7 +5666,7 @@ address generate_avx_ghash_processBlocks() {
 
       __ subl(length, 24);
       __ addl(start_offset, 24);
-      __ addl(dp, 32);)
+      __ addl(dp, 32);
 
       __ vpshufb(xmm1, xmm1, xmm9, Assembler::AVX_256bit);
 
