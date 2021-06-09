@@ -5610,14 +5610,14 @@ address generate_avx_ghash_processBlocks() {
 
       __ evmovdquq(xmm9, ExternalAddress(StubRoutines::x86::base64_avx2_shuffle_addr()), Assembler::AVX_256bit, r13);
       __ movl(rax, 0x0fc0fc00);
-      __ vpbroadcastd(xmm8, rax, , Assembler::AVX_256bit);
+      __ evpbroadcastd(xmm8, rax, Assembler::AVX_256bit);
       // __ evmovdquq(xmm8, ExternalAddress(StubRoutines::x86::base64_avx2_and_mask_addr()), Assembler::AVX_256bit, r13);
       __ evmovdquq(xmm1, ExternalAddress(StubRoutines::x86::base64_avx2_input_mask_addr()), Assembler::AVX_256bit, r13);
 
       __ subl(length, 24);
 
       __ movl(rax, 0x04000040);
-      __ vpbroadcastd(xmm7, rax, Assembler::AVX_256bit);
+      __ evpbroadcastd(xmm7, rax, Assembler::AVX_256bit);
 
       // Load input bytes - only 28 bytes
       __ vpmaskmovd(xmm1, xmm1, Address(source, start_offset, Address::times_1, -4), Assembler::AVX_256bit);
@@ -5626,16 +5626,16 @@ address generate_avx_ghash_processBlocks() {
       __ addl(start_offset, 24);
 
       __ movl(rax, 0x003f03f0);
-      __ vpbroadcastd(xmm6, rax, Assembler::AVX_256bit);
+      __ evpbroadcastd(xmm6, rax, Assembler::AVX_256bit);
       __ movl(rax, 0x01000010);
-      __ vpbroadcastd(xmm5, rax, Assembler::AVX_256bit);
+      __ evpbroadcastd(xmm5, rax, Assembler::AVX_256bit);
 
       __ vpand(xmm0, xmm8, xmm1, Assembler::AVX_256bit);
 
       __ movl(rax, 0x19191919);
-      __ vpbroadcastd(xmm3, rax, Assembler::AVX_256bit);
+      __ evpbroadcastd(xmm3, rax, Assembler::AVX_256bit);
       __ movl(rax, 0x33333333);
-      __ vpbroadcastd(xmm4, rax, Assembler::AVX_256bit);
+      __ evpbroadcastd(xmm4, rax, Assembler::AVX_256bit);
 
       __ vpmulhuw(xmm2, xmm0, xmm7, Assembler::AVX_256bit);
       __ vpand(xmm0, xmm6, xmm1, Assembler::AVX_256bit);
@@ -5648,12 +5648,12 @@ address generate_avx_ghash_processBlocks() {
       __ lea(r11, ExternalAddress(StubRoutines::x86::base64_avx2_lut_addr()));
       __ movl(r15, isURL);
       __ shll(r15, 5);
-      __ evmovdquq(xmm2, Address(r11, r15, Address::times_1, 0), Assembler::AVX_256bit, r13);
+      __ evmovdquq(xmm2, Address(r11, r15, Address::times_1, 0), Assembler::AVX_256bit);
       __ vpshufb(xmm1, xmm2, xmm1, Assembler::AVX_256bit);
       __ vpaddb(xmm0, xmm1, xmm0, Assembler::AVX_256bit);
 
       // Store the encoded bytes
-      __ evpmovdquq(Address(dest, dp, Address::times_1, 0), xmm0, Assembler::AVX_256bit);
+      __ evmovdquq(Address(dest, dp, Address::times_1, 0), xmm0, Assembler::AVX_256bit);
 
       __ cmpl(length, 31);
       __ jcc(Assembler::belowEqual, L_process3);
@@ -5662,7 +5662,7 @@ address generate_avx_ghash_processBlocks() {
       __ BIND(L_32byteLoop);
 
       // Get next 32 bytes
-      __ vpmovdquq(xmm1, Address(source, start_offset, Address::times_1, -4), Assembler::AVX_256bit);
+      __ evmovdquq(xmm1, Address(source, start_offset, Address::times_1, -4), Assembler::AVX_256bit);
 
       __ subl(length, 24);
       __ addl(start_offset, 24);
@@ -5682,7 +5682,7 @@ address generate_avx_ghash_processBlocks() {
       __ vpaddb(xmm0, xmm1, xmm0, Assembler::AVX_256bit);
 
       // Store the encoded bytes
-      __ evpmovdquq(Address(dest, dp, Address::times_1, 0), xmm0, Assembler::AVX_256bit);
+      __ evmovdquq(Address(dest, dp, Address::times_1, 0), xmm0, Assembler::AVX_256bit);
 
       __ cmpl(length, 31);
       __ jcc(Assembler::above, L_32byteLoop);
