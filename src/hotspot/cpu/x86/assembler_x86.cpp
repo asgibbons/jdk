@@ -4154,8 +4154,8 @@ void Assembler::vpmovmskb(Register dst, XMMRegister src, int vec_enc) {
 }
 
 void Assembler::vpmaskmovd(XMMRegister dst, XMMRegister nds, Address src, int vector_len) {
-  assert((VM_Version::supports_avx() && vec_enc == AVX_128bit) ||
-         (VM_Version::supports_avx2() && vec_enc  == AVX_256bit), "");
+  assert((VM_Version::supports_avx() && vector_len == AVX_128bit) ||
+         (VM_Version::supports_avx2() && vector_len == AVX_256bit), "");
   InstructionMark im(this);
   InstructionAttr attributes(vector_len, /* vex_w */ false, /* legacy_mode */ false, /* no_mask_reg */ false, /* uses_vl */ true);
   vex_prefix(src, nds->encoding(), dst->encoding(), VEX_SIMD_66, VEX_OPCODE_0F_38, &attributes);
