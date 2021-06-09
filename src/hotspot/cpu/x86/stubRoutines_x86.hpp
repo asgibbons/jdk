@@ -348,6 +348,9 @@ class x86 {
   static address base64_and_mask_addr() { return _and_mask; }
   static address base64_encoding_table_addr() { return _encoding_table; }
   static address base64_shuffle_addr() { return _shuffle; }
+  static address base64_avx2_shuffle_addr() { return _avx2_shuffle; }
+  static address base64_avx2_input_mask_addr() { return _avx2_input_mask; }
+  static address base64_avx2_lut_addr() { return _avx2_lut; }
   static address counter_mask_addr() { return _counter_mask_addr; }
   static address base64_vbmi_lookup_lo_addr() { return _lookup_lo; }
   static address base64_vbmi_lookup_hi_addr() { return _lookup_hi; }
