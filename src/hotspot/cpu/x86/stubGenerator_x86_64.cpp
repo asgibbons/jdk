@@ -7549,7 +7549,6 @@ address generate_avx_ghash_processBlocks() {
         StubRoutines::x86::_avx2_lut_base64 = base64_avx2_lut_addr();
       }
       StubRoutines::x86::_encoding_table_base64 = base64_encoding_table_addr();
-      StubRoutines::_base64_encodeBlock = generate_base64_encodeBlock();
       if (VM_Version::supports_avx512_vbmi()) {
         StubRoutines::x86::_shuffle_base64 = base64_shuffle_addr();
         StubRoutines::x86::_lookup_lo = base64_vbmi_lookup_lo_addr();
@@ -7562,6 +7561,7 @@ address generate_avx_ghash_processBlocks() {
         StubRoutines::x86::_join_2_3 = base64_vbmi_join_2_3_addr();
       }
       StubRoutines::x86::_decoding_table = base64_decoding_table_addr();
+      StubRoutines::_base64_encodeBlock = generate_base64_encodeBlock();
       StubRoutines::_base64_decodeBlock = generate_base64_decodeBlock();
     }
 
