@@ -5451,10 +5451,18 @@ address generate_avx_ghash_processBlocks() {
     if(VM_Version::supports_avx2() &&
        VM_Version::supports_avx512bw() &&
        VM_Version::supports_avx512vl()) {
+      /*
+      ** This AVX2 encoder is based off the paper at:
+      **      https://dl.acm.org/doi/10.1145/3132709
+      **
+      ** We use AVX2 SIMD instructions to encode 24 bytes into 32 output bytes.
+      **
+      */
       // Lengths under 32 bytes are done with scalar routine
       __ cmpl(length, 31);
       __ jcc(Assembler::belowEqual, L_process3);
 
+      // Set up supporting constant table data
       __ vmovdqu(xmm9, ExternalAddress(StubRoutines::x86::base64_avx2_shuffle_addr()));
       __ movl(rax, 0x0fc0fc00);
       __ vmovdqu(xmm1, ExternalAddress(StubRoutines::x86::base64_avx2_input_mask_addr()));
@@ -5465,7 +5473,74 @@ address generate_avx_ghash_processBlocks() {
       __ subl(length, 24);
       __ evpbroadcastd(xmm7, rax, Assembler::AVX_256bit);
 
-      // Load input bytes - only 28 bytes
+      // For the first load, we mask off reading of the first 4 bytes into the register.
+      // This is so we can get 4 3-byte chunks into each lane of the register, avoiding having
+      // to handle end conditions.  We then shuffle these bytes into a specific order
+      // so that manipulation is easier.
+      //
+      // The initial read loads the XMM register like this:
+      //
+      // Lower 128-bit lane:
+      // +----+----+----+----+----+----+----+----+----+----+----+----+----+----+----+----+
+      // | XX | XX | XX | XX | A0 | A1 | A2 | B0 | B1 | B2 | C0 | C1 | C2 | D0 | D1 | D2 |
+      // +----+----+----+----+----+----+----+----+----+----+----+----+----+----+----+----+
+      //
+      // Upper 128-bit lane:
+      // +----+----+----+----+----+----+----+----+----+----+----+----+----+----+----+----+
+      // | E0 | E1 | E2 | F0 | F1 | F2 | G0 | G1 | G2 | H0 | H1 | H2 | XX | XX | XX | XX |
+      // +----+----+----+----+----+----+----+----+----+----+----+----+----+----+----+----+
+      //
+      // Where A0 is the first input byte, B0 is the fourth, etc.  The alphabetical significance
+      // denotes the 3 bytes to be consumed and encoded into 4 bytes.
+      //
+      // We then shuffle the register so each 32-bit word contains the sequence:
+      //    A1 A0 A2 A1, B1, B0, B2, B1, etc.
+      // Each of these byte sequences are then manipulated into 4 6-bit values ready for encoding.
+      //
+      // If we focus on one set of 3-byte chunks, changing the nomenclature such that A0 => a,
+      // A1 => b, and A2 => c, we shuffle such that each 24-bit chunk contains:
+      //
+      // b3 b2 b1 b0 c5 c4 c3 c2 c1 c0 d5 d4 d3 d2 d1 d0 a5 a4 a3 a2 a1 a0 b5 b4 b3 b2 b1 b0 c5 c4 c3 c2
+      //
+      // W first and off all but bits 4-9 and 16-21 (c5..c0 and a5..a0) and shift them using
+      // a vector multiplication operation (vpmulhuw) which effectively shifts c right by 6 bits
+      // and a right by 10 bits.  We similarly mask bits 10-15 (d5..d0) and 22-27 (b5..b0) and
+      // shift them left by 8 and 4 bits respecively.  This is done using vpmullw.  We end up with
+      // 4 6-bit values, thus splitting the 3 input bytes, ready for encoding:
+      //    0 0 d5..d0 0 0 c5..c0 0 0 b5..b0 0 0 a5..a0
+      //
+      // For translation, we recognize that there are 5 distinct ranges of legal Base64
+      // characters as below:
+      //
+      //   +-------------+-------------+------------+
+      //   | 6-bit value | ASCII range |   offset   |
+      //   +-------------+-------------+------------+
+      //   |    0..25    |    A..Z     |     65     |
+      //   |   26..51    |    a..z     |     71     |
+      //   |   52..61    |    0..9     |     -4     |
+      //   |     62      |   + or -    | -19 or -17 |
+      //   |     63      |   / or _    | -16 or 32  |
+      //   +-------------+-------------+------------+
+      //
+      // We note that vpshufb does a parallel lookup in a destination register using
+      // the lower 4 bits of bytes from a source register.  If we use a saturated subtraction
+      // and subtract 51 from each 6-bit value, bytes from [0,51] saturate to 0, and [52,63]
+      // map to a range of [1,12].  We distinguish the [0,25] and [26,51] ranges by
+      // assigning a value of 13 for all 6-bit values less than 26.  We end up with:
+      //
+      //   +-------------+-------------+------------+
+      //   | 6-bit value |   Reduced   |   offset   |
+      //   +-------------+-------------+------------+
+      //   |    0..25    |     13      |     65     |
+      //   |   26..51    |      0      |     71     |
+      //   |   52..61    |    0..9     |     -4     |
+      //   |     62      |     11      | -19 or -17 |
+      //   |     63      |     12      | -16 or 32  |
+      //   +-------------+-------------+------------+
+      //
+      // We then use a final vpshufb to add the appropriate offset, translating the bytes.
+      // 
+      // Load input bytes - only 28 bytes.  Mask the first load to not load into the full register.
       __ vpmaskmovd(xmm1, xmm1, Address(source, start_offset, Address::times_1, -4), Assembler::AVX_256bit);
       __ vpshufb(xmm1, xmm1, xmm9, Assembler::AVX_256bit);
 
