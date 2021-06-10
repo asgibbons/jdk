@@ -65,7 +65,6 @@ address StubRoutines::x86::_k256_W_adr = NULL;
 address StubRoutines::x86::_k512_W_addr = NULL;
 address StubRoutines::x86::_pshuffle_byte_flip_mask_addr_sha512 = NULL;
 // Base64 masks
-address StubRoutines::x86::_bswap_mask = NULL;
 address StubRoutines::x86::_encoding_table_base64 = NULL;
 address StubRoutines::x86::_shuffle_base64 = NULL;
 address StubRoutines::x86::_avx2_shuffle_base64 = NULL;

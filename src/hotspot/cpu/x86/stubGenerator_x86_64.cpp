@@ -5449,8 +5449,8 @@ address generate_avx_ghash_processBlocks() {
 
     __ BIND(L_not512);
     if(VM_Version::supports_avx2() &&
-       VM_VERSION::supports_avx512bw() &&
-       VM_VERSION::supports_avx512vl()) {
+       VM_Version::supports_avx512bw() &&
+       VM_Version::supports_avx512vl()) {
       // Lengths under 32 bytes are done with scalar routine
       __ cmpl(length, 31);
       __ jcc(Assembler::belowEqual, L_process3);
@@ -7542,8 +7542,8 @@ address generate_avx_ghash_processBlocks() {
 
     if (UseBASE64Intrinsics) {
       if(VM_Version::supports_avx2() &&
-         VM_VERSION::supports_avx512bw() &&
-         VM_VERSION::supports_avx512vl()) {
+         VM_Version::supports_avx512bw() &&
+         VM_Version::supports_avx512vl()) {
         StubRoutines::x86::_avx2_shuffle_base64 = base64_avx2_shuffle_addr();
         StubRoutines::x86::_avx2_input_mask_base64 = base64_avx2_input_mask_addr();
         StubRoutines::x86::_avx2_lut_base64 = base64_avx2_lut_addr();
