@@ -5488,8 +5488,8 @@ address generate_avx_ghash_processBlocks() {
   address base64_encoding_table_addr() {
     __ align(64, (unsigned long) __ pc());
     StubCodeMark mark(this, "StubRoutines", "encoding_table");
-    assert(((unsigned long)start & 0x3f) == 0, "Alignment problem (0x%08lx)", (unsigned long)start);
     address start = __ pc();
+    assert(((unsigned long)start & 0x3f) == 0, "Alignment problem (0x%08lx)", (unsigned long)start);
     __ emit_data64(0x4847464544434241, relocInfo::none);
     __ emit_data64(0x504f4e4d4c4b4a49, relocInfo::none);
     __ emit_data64(0x5857565554535251, relocInfo::none);
@@ -5860,7 +5860,7 @@ address generate_avx_ghash_processBlocks() {
     __ orl(rax, r10);
 
     __ subl(length, 3);
-    
+
     __ shll(r15, 8);
     __ shll(r13, 16);
     __ orl(rax, r15);
@@ -5875,7 +5875,7 @@ address generate_avx_ghash_processBlocks() {
     __ load_unsigned_byte(r13, Address(r11, r13));
     __ load_unsigned_byte(r15, Address(r11, r15));
 
-    __ movb(Address(dest, dp, Address::times_1, 2), r13);
+    __ movb(Address(dest, dp, Address::times_1, 3), r13);
     
     __ shrl(rax, 4);
     __ movl(r10, rax);
@@ -5885,13 +5885,13 @@ address generate_avx_ghash_processBlocks() {
 
     __ load_unsigned_byte(rax, Address(r11, rax));
 
-    __ shrl(r10, 12);
+    __ shrl(r10, 18);
     __ andl(r10, 0x3f);
 
     __ load_unsigned_byte(r10, Address(r11, r10));
 
     __ movb(Address(dest, dp, Address::times_1, 1), rax);
-    __ movb(Address(dest, dp, Address::times_1, 3), r10);
+    __ movb(Address(dest, dp, Address::times_1, 2), r10);
 
     __ addl(dp, 4);
     __ cmpl(length, 3);
