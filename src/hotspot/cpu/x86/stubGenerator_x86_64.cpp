@@ -6364,6 +6364,7 @@ address generate_avx_ghash_processBlocks() {
     __ subq(dest, rax);      // Number of bytes converted
     __ movq(rax, dest);
     __ pop(rbx);
+
     __ pop(r15);
     __ pop(r14);
     __ pop(r13);
