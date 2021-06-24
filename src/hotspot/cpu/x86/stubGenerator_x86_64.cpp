@@ -5402,7 +5402,7 @@ address generate_avx_ghash_processBlocks() {
 
     const Register length = r14;
     const Register encode_table = r13;
-    Label L_process80, L_process32, L_process3, L_exit, L_processdata, L_vbmiLoop, L_not512, L_32byteLoop;
+    Label L_process3, L_exit, L_processdata, L_vbmiLoop, L_not512, L_32byteLoop;
 
     // calculate length from offsets
     __ movl(length, end_offset);
@@ -5433,6 +5433,7 @@ address generate_avx_ghash_processBlocks() {
       __ vpermb(xmm0, xmm3, Address(source, start_offset), Assembler::AVX_512bit);
       __ subl(length, 48);
 
+      // Put the input bytes into the proper lanes for writing, then encode them.
       __ evpmultishiftqb(xmm0, xmm1, xmm0, Assembler::AVX_512bit);
       __ vpermb(xmm0, xmm0, xmm2, Assembler::AVX_512bit);
 
@@ -5449,8 +5450,7 @@ address generate_avx_ghash_processBlocks() {
 
     __ BIND(L_not512);
     if(VM_Version::supports_avx2() &&
-       VM_Version::supports_avx512bw() &&
-       VM_Version::supports_avx512vl()) {
+       VM_Version::supports_avx512vlbw()) {
       /*
       ** This AVX2 encoder is based off the paper at:
       **      https://dl.acm.org/doi/10.1145/3132709
@@ -5464,10 +5464,12 @@ address generate_avx_ghash_processBlocks() {
 
       // Set up supporting constant table data
       __ vmovdqu(xmm9, ExternalAddress(StubRoutines::x86::base64_avx2_shuffle_addr()));
+      // 6-bit mask for 2nd and 4th (and multiples) 6-bit values
       __ movl(rax, 0x0fc0fc00);
       __ vmovdqu(xmm1, ExternalAddress(StubRoutines::x86::base64_avx2_input_mask_addr()));
       __ evpbroadcastd(xmm8, rax, Assembler::AVX_256bit);
 
+      // Multiplication constant for "shifting" right by 6 and 10 bits
       __ movl(rax, 0x04000040);
 
       __ subl(length, 24);
@@ -5500,7 +5502,9 @@ address generate_avx_ghash_processBlocks() {
       // If we focus on one set of 3-byte chunks, changing the nomenclature such that A0 => a,
       // A1 => b, and A2 => c, we shuffle such that each 24-bit chunk contains:
       //
-      // b3 b2 b1 b0 c5 c4 c3 c2 c1 c0 d5 d4 d3 d2 d1 d0 a5 a4 a3 a2 a1 a0 b5 b4 b3 b2 b1 b0 c5 c4 c3 c2
+      // b7 b6 b5 b4 b3 b2 b1 b0 | a7 a6 a5 a4 a3 a2 a1 a0 | c7 c6 c5 c4 c3 c2 c1 c0 | b7 b6 b5 b4 b3 b2 b1 b0
+      //Explain this step.
+      // b3 b2 b1 b0 c5 c4 c3 c2 | c1 c0 d5 d4 d3 d2 d1 d0 | a5 a4 a3 a2 a1 a0 b5 b4 | b3 b2 b1 b0 c5 c4 c3 c2
       //
       // W first and off all but bits 4-9 and 16-21 (c5..c0 and a5..a0) and shift them using
       // a vector multiplication operation (vpmulhuw) which effectively shifts c right by 6 bits
@@ -5542,34 +5546,53 @@ address generate_avx_ghash_processBlocks() {
       // 
       // Load input bytes - only 28 bytes.  Mask the first load to not load into the full register.
       __ vpmaskmovd(xmm1, xmm1, Address(source, start_offset, Address::times_1, -4), Assembler::AVX_256bit);
+
+      // Move 3-byte chunks of input (12 bytes) into 16 bytes, ordering by:
+      //   1, 0, 2, 1; 4, 3, 5, 4; etc.  This groups 6-bit chunks for easy masking
       __ vpshufb(xmm1, xmm1, xmm9, Assembler::AVX_256bit);
 
       __ addl(start_offset, 24);
 
+      // Load masking register for first and third (and multiples) 6-bit values.
       __ movl(rax, 0x003f03f0);
       __ evpbroadcastd(xmm6, rax, Assembler::AVX_256bit);
+      // Multiplication constant for "shifting" left by 4 and 8 bits
       __ movl(rax, 0x01000010);
       __ evpbroadcastd(xmm5, rax, Assembler::AVX_256bit);
 
+      // Isolate 6-bit chunks of interest
       __ vpand(xmm0, xmm8, xmm1, Assembler::AVX_256bit);
 
+      // Load constants for encoding
       __ movl(rax, 0x19191919);
       __ evpbroadcastd(xmm3, rax, Assembler::AVX_256bit);
       __ movl(rax, 0x33333333);
       __ evpbroadcastd(xmm4, rax, Assembler::AVX_256bit);
 
+      // Shift output bytes 0 and 2 into proper lanes
       __ vpmulhuw(xmm2, xmm0, xmm7, Assembler::AVX_256bit);
+
+      // Mask and shift output bytes 1 and 3 into proper lanes and combine
       __ vpand(xmm0, xmm6, xmm1, Assembler::AVX_256bit);
       __ vpmullw(xmm0, xmm5, xmm0, Assembler::AVX_256bit);
       __ vpor(xmm0, xmm0, xmm2, Assembler::AVX_256bit);
+
+      // Find out which are 0..25.  This indicates which input values
+      // fall in the range of 'A'-'Z', which require an additional offset
+      // (see comments above)
       __ vpcmpgtb(xmm2, xmm0, xmm3, Assembler::AVX_256bit);
       __ vpsubusb(xmm1, xmm0, xmm4, Assembler::AVX_256bit);
       __ vpsubb(xmm1, xmm1, xmm2, Assembler::AVX_256bit);
 
+      // Load the proper lookup table
       __ lea(r11, ExternalAddress(StubRoutines::x86::base64_avx2_lut_addr()));
       __ movl(r15, isURL);
       __ shll(r15, 5);
       __ vmovdqu(xmm2, Address(r11, r15));
+
+      // Shuffle the offsets based on the range calculation done above.
+      // This allows us to add the correct offset to the 6-bit value
+      // corresponding to the range documented above.
       __ vpshufb(xmm1, xmm2, xmm1, Assembler::AVX_256bit);
       __ vpaddb(xmm0, xmm1, xmm0, Assembler::AVX_256bit);
 
@@ -5580,8 +5603,6 @@ address generate_avx_ghash_processBlocks() {
       __ cmpl(length, 31);
       __ jcc(Assembler::belowEqual, L_process3);
 
-      __ subl(dp, 32);    // Offset for add below
-
       __ align(32);
       __ BIND(L_32byteLoop);
 
@@ -5590,8 +5611,10 @@ address generate_avx_ghash_processBlocks() {
 
       __ subl(length, 24);
       __ addl(start_offset, 24);
-      __ addl(dp, 32);
 
+      // This logic is identical to the above, with only constant register
+      // loads removed.  Shuffle the input, mask off 6-bit chunks, shift
+      // them into place, then add the offset to encode.
       __ vpshufb(xmm1, xmm1, xmm9, Assembler::AVX_256bit);
 
       __ vpand(xmm0, xmm8, xmm1, Assembler::AVX_256bit);
@@ -5607,6 +5630,7 @@ address generate_avx_ghash_processBlocks() {
 
       // Store the encoded bytes
       __ vmovdqu(Address(dest, dp), xmm0);
+      __ addl(dp, 32);
 
       __ cmpl(length, 31);
       __ jcc(Assembler::above, L_32byteLoop);
@@ -5619,6 +5643,7 @@ address generate_avx_ghash_processBlocks() {
     __ cmpl(length, 3);
     __ jcc(Assembler::below, L_exit);
 
+    // Load the encoding table based on isURL
     __ lea(r11, ExternalAddress(StubRoutines::x86::base64_encoding_table_addr()));
     __ movl(r15, isURL);
     __ shll(r15, 5);
@@ -5626,10 +5651,12 @@ address generate_avx_ghash_processBlocks() {
 
     __ BIND(L_processdata);
 
+    // Load 3 bytes
     __ load_unsigned_byte(r15, Address(source, start_offset));
     __ load_unsigned_byte(r10, Address(source, start_offset, Address::times_1, 1));
     __ load_unsigned_byte(r13, Address(source, start_offset, Address::times_1, 2));
 
+    // Build a 32-bit word with bytes 1, 2, 0, 1
     __ movl(rax, r10);
     __ shll(r10, 24);
     __ orl(rax, r10);
@@ -5643,8 +5670,14 @@ address generate_avx_ghash_processBlocks() {
     __ addl(start_offset, 3);
 
     __ orl(rax, r13);
+    // At this point, rax contains | byte1 | byte2 | byte0 | byte1
+    // r13 has byte2 << 16 - need low-order 6 bits to translate.
+    // This translated byte is the fourth output byte.
     __ shrl(r13, 16);
     __ andl(r13, 0x3f);
+
+    // The high-order 6 bits of r15 (byte0) is translated.
+    // The translated byte is the first output byte.
     __ shrl(r15, 10);
 
     __ load_unsigned_byte(r13, Address(r11, r13));
@@ -5652,6 +5685,8 @@ address generate_avx_ghash_processBlocks() {
 
     __ movb(Address(dest, dp, Address::times_1, 3), r13);
     
+    // Extract high-order 4 bits of byte1 and low-order 2 bits of byte0.
+    // This translated byte is the second output byte.
     __ shrl(rax, 4);
     __ movl(r10, rax);
     __ andl(rax, 0x3f);
@@ -5660,6 +5695,8 @@ address generate_avx_ghash_processBlocks() {
 
     __ load_unsigned_byte(rax, Address(r11, rax));
 
+    // Extract low-order 2 bits of byte1 and high-order 4 bits of byte2.
+    // This translated byte is the third output byte.
     __ shrl(r10, 18);
     __ andl(r10, 0x3f);
 
