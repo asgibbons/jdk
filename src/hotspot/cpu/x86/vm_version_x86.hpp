@@ -219,7 +219,9 @@ class VM_Version : public Abstract_VM_Version {
                avx512dq : 1,
                         : 1,
                     adx : 1,
-                        : 3,
+                        : 1,
+             avx512ifma : 1,
+                        : 1,
              clflushopt : 1,
                    clwb : 1,
                         : 1,
@@ -361,7 +363,9 @@ protected:
     decl(AVX512_VBMI2,      "avx512_vbmi2",      44) /* VBMI2 shift left double instructions */ \
     decl(AVX512_VBMI,       "avx512_vbmi",       45) /* Vector BMI instructions */ \
     decl(HV,                "hv",                46) /* Hypervisor instructions */ \
-    decl(SERIALIZE,         "serialize",         47) /* CPU SERIALIZE */
+    decl(SERIALIZE,         "serialize",         47) /* CPU SERIALIZE */ \
+                                                     \
+    decl(AVX512_IFMA,       "avx512_ifma",       48) /* Integer 52-bit FMA instructions */
 
 #define DECLARE_CPU_FEATURE_FLAG(id, name, bit) CPU_##id = (1ULL << bit),
     CPU_FEATURE_FLAGS(DECLARE_CPU_FEATURE_FLAG)
@@ -577,6 +581,8 @@ protected:
           result |= CPU_AVX512CD;
         if (_cpuid_info.sef_cpuid7_ebx.bits.avx512dq != 0)
           result |= CPU_AVX512DQ;
+        if (_cpuid_info.sef_cpuid7_ebx.bits.avx512ifma != 0)
+          result |= CPU_AVX512_IFMA;
         if (_cpuid_info.sef_cpuid7_ebx.bits.avx512pf != 0)
           result |= CPU_AVX512PF;
         if (_cpuid_info.sef_cpuid7_ebx.bits.avx512er != 0)
@@ -877,6 +883,7 @@ public:
   static bool supports_adx()          { return (_features & CPU_ADX) != 0; }
   static bool supports_evex()         { return (_features & CPU_AVX512F) != 0; }
   static bool supports_avx512dq()     { return (_features & CPU_AVX512DQ) != 0; }
+  static bool supports_avx512ifma()   { return (_features & CPU_AVX512_IFMA) != 0; }
   static bool supports_avx512pf()     { return (_features & CPU_AVX512PF) != 0; }
   static bool supports_avx512er()     { return (_features & CPU_AVX512ER) != 0; }
   static bool supports_avx512cd()     { return (_features & CPU_AVX512CD) != 0; }
