@@ -347,13 +347,13 @@
 #endif // CHECK_UNHANDLED_OOPS
 
 #ifdef ASSERT
-#define DEBUG_ONLY(code) code
+#define DEBUG_ONLY(...) __VA_ARGS__
 #define NOT_DEBUG(code)
 #define NOT_DEBUG_RETURN  /*next token must be ;*/
 // Historical.
 #define debug_only(code) code
 #else // ASSERT
-#define DEBUG_ONLY(code)
+#define DEBUG_ONLY(...)
 #define NOT_DEBUG(code) code
 #define NOT_DEBUG_RETURN {}
 #define debug_only(code)

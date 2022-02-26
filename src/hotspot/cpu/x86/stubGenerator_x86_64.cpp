@@ -6622,6 +6622,209 @@ address generate_avx_ghash_processBlocks() {
 
 
   /***
+   *  Convert array to base-52.
+   *
+   *  Inputs:
+   *   src    - int   *radix-64
+   *   dst    - int   *radix-52
+   *   offset - int   offset into dst
+   *   len    - int   length of src array in 32-bit words
+   *
+   * Output:
+   *   lomg long *dst - result
+   */
+
+  void transform_r52(Register src, Register dst, int offset, Register len) {
+  }
+
+
+  /***
+   *  Convert base-52 back into big-endian base-64.
+   *
+   *  Inputs:
+   *   src    - int   *radix-64
+   *   dst    - int   *radix-52
+   *   len    - int   length of src array in 32-bit words
+   *
+   * Output:
+   *   lomg long *dst - result
+   */
+
+  void transform_r64(Register src, Register dst, Register len) {
+  }
+
+
+  /***
+   *  Arguments:
+   *  void SharedRuntime::montgomery_multiply(jint *a_ints, jint *b_ints, jint *n_ints,
+   *                                          jint len, jlong inv,
+   *                                          jint *m_ints) {
+   *
+   *  Inputs:
+   *   c_rarg0   - int   *a
+   *   c_rarg1   - int   *b   - not if squaring
+   *   c_rarg2   - int   *n
+   *   c_rarg3   - int   len
+   *   c_rarg4   - int   inv
+   *   c_rarg5   - int   *m
+   *
+   * Output:
+   *   int *m result
+   */
+
+  // Windows regs    |  Linux regs
+  // c_rarg0 (rcx)   |  c_rarg0 (rdi)
+  // c_rarg1 (rdx)   |  c_rarg1 (rsi)
+  // c_rarg2 (r8)    |  c_rarg2 (rdx)
+  // c_rarg3 (r9)    |  c_rarg3 (rcx)
+  // r10             |  c_rarg4 (r8)
+  // r13             |  c_rarg5 (r9)
+
+
+  address generate_montgomeryMultiply(bool is_square) {
+        __ align(CodeEntryAlignment);
+      StubCodeMark mark(this, "StubRoutines", "montgomeryMultiply");
+
+      DEBUG_ONLY(
+        Label L_broken_inv, L_broken_MM, L_odd_len;
+        __ BIND(L_broken_inv);
+        __ stop("broken inverse in Montgomery multiply (gen)");
+        __ BIND(L_broken_MM);
+        __ stop("broken Montgomery multiply (gen)");
+        __ BIND(L_odd_len);
+        __ stop("array length in montgomery_multiply must be even (gen)");
+      );
+
+      address start = __ pc();
+
+      BLOCK_COMMENT("Entry:");
+      __ enter(); // required for proper stackwalking of RuntimeStub frame
+
+      Label L_exit, L_revert, L_30, L_40, L_trans_result;
+
+      Register a;
+      Register b;
+      Register n;
+      Register len;
+      Register inv;
+      Register m;
+      const Register tmp_result = r14;
+
+      // Save callee-saved registers before using them
+      __ push(rbx);
+      __ push(r12);
+      __ push(r13);
+      __ push(r14);
+      __ push(r15);
+
+      if (!is_square)
+      {
+	      a = c_rarg0;
+	      b = c_rarg1;
+	      n = c_rarg2;
+	      len = c_rarg3;
+	      // and updated with the incremented counter in the end
+#ifndef _WIN64
+	      inv = c_rarg4;
+	      m = c_rarg5;
+#else
+	      const Address inv_mem(rbp, 6 * wordSize);
+	      inv = r10;
+	      const Address m_mem(rbp, 7 * wordSize);
+	      m = r13;
+	      __ movq(inv, inv_mem);
+	      __ movptr(m, m_mem);
+#endif
+      } else {
+	      a = c_rarg0;
+	      b = c_rarg0;
+	      n = c_rarg1;
+	      len = c_rarg2;
+	      inv = c_rarg3;
+	      // and updated with the incremented counter in the end
+#ifndef _WIN64
+	      m = c_rarg4;
+#else
+	      const Address m_mem(rbp, 6 * wordSize);
+	      m = r13;
+	      __ movptr(m, m_mem);
+#endif
+      }
+
+      assert_different_registers(a, n, len, inv, m);
+
+      DEBUG_ONLY(
+      __ push(rdx);
+      __ movq(rax, Address(n, len, Address::times_4, -1 * wordSize));
+      __ rorq(rax, 32);
+      __ mulq(inv);
+      __ cmpq(rax, 0xffffffff);
+      __ jcc(Assembler::notEqual, L_broken_inv);
+      __ pop(rdx);
+
+      __ testq(len, 1);
+      __ jcc(Assembler::notZero, L_odd_len);
+      );
+
+      __ cmpl(len, 32);
+      __ jcc(Assembler::greater, L_revert);
+
+      // Make room on the stack for transformed data.  Need to convert from radix-64 to radix-52.
+      // Maximum size is 40 qwords for 2K bit integer.
+      __ subq(rsp, 40 * wordSize * 4);    // Need 4 transformed arrays
+      __ movptr(tmp_result, rsp);
+
+      // Transform to radix-52
+      transform_r52(a, tmp_result, 1 * 40 * wordSize, len);
+      transform_r52(b, tmp_result, 2 * 40 * wordSize, len);
+      transform_r52(n, tmp_result, 3 * 40 * wordSize, len);
+
+      __ cmpl(len, 16);
+      __ jcc(Assembler::greater, L_30);
+      __ montgomeryMultiply52x20(tmp_result, inv);
+      __ jmp(L_trans_result);
+
+      __ BIND(L_30);
+      __ cmpl(len, 24);
+      __ jcc(Assembler::greater, L_40);
+      __ montgomeryMultiply52x30(tmp_result, inv);
+      __ jmp(L_trans_result);
+
+      __ BIND(L_40);
+      __ montgomeryMultiply52x40(tmp_result, inv);
+
+      __ BIND(L_trans_result);
+      transform_r64(tmp_result, m, len);
+
+      __ BIND(L_exit);
+      __ pop(r15);
+      __ pop(r14);
+      __ pop(r13);
+      __ pop(r12);
+      __ pop(rbx);
+      __ leave();
+      __ ret(0);
+
+      __ BIND(L_revert);
+      // Tail jump if outside our range.  Revert to SharedRuntime.
+      if (is_square) {
+        __ movptr(r11, RuntimeAddress((address) SharedRuntime::montgomery_square));
+      } else {
+        __ movptr(r11, RuntimeAddress((address) SharedRuntime::montgomery_multiply));
+      }
+      __ pop(r15);
+      __ pop(r14);
+      __ pop(r13);
+      __ pop(r12);
+      __ pop(rbx);
+      __ leave();
+      __ jmp(r10);
+
+
+      return start;
+}
+
+  /***
    *  Arguments:
    *
    *  Inputs:
@@ -7846,12 +8049,20 @@ address generate_avx_ghash_processBlocks() {
       StubRoutines::_bigIntegerLeftShiftWorker = generate_bigIntegerLeftShift();
     }
     if (UseMontgomeryMultiplyIntrinsic) {
-      StubRoutines::_montgomeryMultiply
-        = CAST_FROM_FN_PTR(address, SharedRuntime::montgomery_multiply);
+      if (!VM_Version::supports_avx512ifma()) {
+        StubRoutines::_montgomeryMultiply = generate_montgomeryMultiply(false);
+      } else {
+        StubRoutines::_montgomeryMultiply
+          = CAST_FROM_FN_PTR(address, SharedRuntime::montgomery_multiply);
+      }
     }
     if (UseMontgomerySquareIntrinsic) {
-      StubRoutines::_montgomerySquare
-        = CAST_FROM_FN_PTR(address, SharedRuntime::montgomery_square);
+      if (!VM_Version::supports_avx512ifma()) {
+        StubRoutines::_montgomerySquare = generate_montgomeryMultiply(true);
+      } else {
+        StubRoutines::_montgomerySquare
+          = CAST_FROM_FN_PTR(address, SharedRuntime::montgomery_square);
+      }
     }
 
     // Get svml stub routine addresses
