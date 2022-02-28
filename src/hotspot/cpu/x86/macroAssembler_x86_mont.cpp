@@ -130,15 +130,15 @@ void MacroAssembler::montgomeryMultiply52x20(Register out, Register k0)
 
 
    4:	55                   	push   rbp
-   5:	c5 d1 ef ed          	vpxor  xmm5,xmm5,xmm5
+   5:	c5 d1 ef ed          	vpxor  xmm5,xmm5,xmm5   // R1h
    9:	31 c0                	xor    eax,eax
    b:	48 89 e5             	mov    rbp,rsp
    e:	41 57                	push   r15
-  10:	62 f1 fd 28 6f fd    	vmovdqa64 ymm7,ymm5
+  10:	62 f1 fd 28 6f fd    	vmovdqa64 ymm7,ymm5     // R0h
   16:	62 f1 fd 28 6f e5    	vmovdqa64 ymm4,ymm5
   1c:	41 56                	push   r14
-  1e:	62 f1 fd 28 6f f5    	vmovdqa64 ymm6,ymm5
-  24:	62 f1 fd 28 6f c5    	vmovdqa64 ymm0,ymm5
+  1e:	62 f1 fd 28 6f f5    	vmovdqa64 ymm6,ymm5     // R1
+  24:	62 f1 fd 28 6f c5    	vmovdqa64 ymm0,ymm5     // R0
   2a:	41 55                	push   r13
   2c:	49 b9 ff ff ff ff ff 	movabs r9,0xfffffffffffff
   33:	ff 0f 00 
@@ -153,11 +153,11 @@ void MacroAssembler::montgomeryMultiply52x20(Register out, Register k0)
   55:	66 66 2e 0f 1f 84 00 	data16 nop WORD PTR cs:[rax+rax*1+0x0]
   5c:	00 00 00 00 
   60:	48 8b 54 24 f8       	mov    rdx,QWORD PTR [rsp-0x8]
-  65:	62 f1 fd 28 6f cc    	vmovdqa64 ymm1,ymm4
+  65:	62 f1 fd 28 6f cc    	vmovdqa64 ymm1,ymm4     // R2
   6b:	4c 8b 12             	mov    r10,QWORD PTR [rdx]
   6e:	4c 89 d2             	mov    rdx,r10
-  71:	62 d2 fd 28 7c da    	vpbroadcastq ymm3,r10
-  77:	c4 42 ab f6 dc       	mulx   r11,r10,r12
+  71:	62 d2 fd 28 7c da    	vpbroadcastq ymm3,r10   // Bi
+  77:	c4 42 ab f6 dc       	mulx   r11,r10,r12    // r11:r10 = rdx * r12
   7c:	4c 01 d0             	add    rax,r10
   7f:	4d 89 de             	mov    r14,r11
   82:	49 89 c2             	mov    r10,rax
@@ -166,7 +166,7 @@ void MacroAssembler::montgomeryMultiply52x20(Register out, Register k0)
   8d:	45 31 ff             	xor    r15d,r15d
   90:	4d 21 ca             	and    r10,r9
   93:	4c 89 d2             	mov    rdx,r10
-  96:	62 d2 fd 28 7c d2    	vpbroadcastq ymm2,r10
+  96:	62 d2 fd 28 7c d2    	vpbroadcastq ymm2,r10   // Yi
   9c:	c4 42 ab f6 dd       	mulx   r11,r10,r13
   a1:	4c 01 d0             	add    rax,r10
   a4:	41 0f 92 c7          	setb   r15b
@@ -213,7 +213,7 @@ void MacroAssembler::montgomeryMultiply52x20(Register out, Register k0)
  194:	c5 b5 73 d7 34       	vpsrlq ymm9,ymm7,0x34
  199:	c5 ad 73 d6 34       	vpsrlq ymm10,ymm6,0x34
  19e:	62 d3 ed 28 03 da 03 	valignq ymm3,ymm2,ymm10,0x3
- 1a5:	62 f2 fd 28 7c c8    	vpbroadcastq ymm1,rax
+ 1a5:	62 f2 fd 28 7c c8    	vpbroadcastq ymm1,rax         // ymm1 = Bi, rax = acc0
  1ab:	62 53 ad 28 03 d1 03 	valignq ymm10,ymm10,ymm9,0x3
  1b2:	c4 e3 7d 02 c1 03    	vpblendd ymm0,ymm0,ymm1,0x3
  1b8:	c5 a5 73 d0 34       	vpsrlq ymm11,ymm0,0x34

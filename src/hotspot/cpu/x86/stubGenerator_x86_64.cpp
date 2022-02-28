@@ -6764,6 +6764,9 @@ address generate_avx_ghash_processBlocks() {
 
       assert_different_registers(a, n, len, inv, m);
 
+      __ cmpl(len, 32);
+      __ jcc(Assembler::greater, L_revert);
+
       DEBUG_ONLY(
       __ push(rdx);
       __ movq(rax, Address(n, len, Address::times_4, -1 * wordSize));
@@ -6776,9 +6779,6 @@ address generate_avx_ghash_processBlocks() {
       __ testq(len, 1);
       __ jcc(Assembler::notZero, L_odd_len);
       );
-
-      __ cmpl(len, 32);
-      __ jcc(Assembler::greater, L_revert);
 
       // Make room on the stack for transformed data.  Need to convert from radix-64 to radix-52.
       // Maximum size is 40 qwords for 2K bit integer.
@@ -6807,6 +6807,8 @@ address generate_avx_ghash_processBlocks() {
       __ BIND(L_trans_result);
       transform_r64(tmp_result, m, len);
 
+      __ addq(rsp, 40 * wordSize * 4);
+
       __ BIND(L_exit);
       __ pop(r15);
       __ pop(r14);
@@ -6819,9 +6821,9 @@ address generate_avx_ghash_processBlocks() {
       __ BIND(L_revert);
       // Tail jump if outside our range.  Revert to SharedRuntime.
       if (is_square) {
-        __ movptr(r11, RuntimeAddress((address) SharedRuntime::montgomery_square));
+        __ lea(r11, RuntimeAddress((address) SharedRuntime::montgomery_square));
       } else {
-        __ movptr(r11, RuntimeAddress((address) SharedRuntime::montgomery_multiply));
+        __ lea(r11, RuntimeAddress((address) SharedRuntime::montgomery_multiply));
       }
       __ pop(r15);
       __ pop(r14);
@@ -6829,7 +6831,7 @@ address generate_avx_ghash_processBlocks() {
       __ pop(r12);
       __ pop(rbx);
       __ leave();
-      __ jmp(r10);
+      __ jmp(r11);
 
 
       return start;
