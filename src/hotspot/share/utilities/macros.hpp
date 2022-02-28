@@ -348,15 +348,15 @@
 
 #ifdef ASSERT
 #define DEBUG_ONLY(...) __VA_ARGS__
-#define NOT_DEBUG(code)
+#define NOT_DEBUG(...)
 #define NOT_DEBUG_RETURN  /*next token must be ;*/
 // Historical.
-#define debug_only(code) code
+#define debug_only(...) __VA_ARGS__
 #else // ASSERT
 #define DEBUG_ONLY(...)
-#define NOT_DEBUG(code) code
+#define NOT_DEBUG(...) __VA_ARGS__
 #define NOT_DEBUG_RETURN {}
-#define debug_only(code)
+#define debug_only(...)
 #endif // ASSERT
 
 #ifdef  _LP64
