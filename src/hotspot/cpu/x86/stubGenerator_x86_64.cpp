@@ -6635,7 +6635,18 @@ address generate_avx_ghash_processBlocks() {
    */
 
   void transform_r52(Register src, Register dst, int offset, Register len) {
-  }
+//   	reverse_words((julong *)src, (julong *)dst, 16);
+// 00007FF76B3C10CE  lea         ecx,[r14+10h]              // ecx is length in qwords
+// 00007FF76B3C10D2  lea         rdx,[dst+80h (07FF76B3C50C0h)]     // &dst[len]
+// 00007FF76B3C10D9  mov         rax,qword ptr [rsi]        // rsi has ptr to src
+// 00007FF76B3C10DC  lea         rdx,[rdx-8]  
+// 00007FF76B3C10E0  rol         rax,20h  
+// 00007FF76B3C10E4  lea         rsi,[rsi+8]  
+// 00007FF76B3C10E8  dec         ecx  
+// 00007FF76B3C10EA  mov         qword ptr [rdx],rax  
+// 00007FF76B3C10ED  test        ecx,ecx  
+// 00007FF76B3C10EF  jg          main+7Dh (07FF76B3C10D9h)  
+}
 
 
   /***
