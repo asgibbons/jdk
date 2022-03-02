@@ -30,7 +30,7 @@
 #include "macroAssembler_x86.hpp"
 
 #ifdef _LP64
-void MacroAssembler::montgomeryMultiply52x20(Register out, Register k0)
+void MacroAssembler::montgomeryMultiply52x20(Register out, Register kk0)
 {
 	const int LIMIT = 5552;
 	const int BASE = 65521;
@@ -127,58 +127,114 @@ void MacroAssembler::montgomeryMultiply52x20(Register out, Register k0)
    storeu64(out + 2*4, R1);
    storeu64(out + 3*4, R1h);
    storeu64(out + 4*4, R2);
+#endif
+
+   // On entry:
+   //  out points to where the result should be stored (20 qwords)
+   //  out + 40 qwords is a
+   //  out + 80 qwords is b
+   //  out + 120 qwords is m
+   //  kk0 is the inverse (-(1/p) mod b)
+   //  out + 160 is space for a qword (loop index)
+   //
+   // This routine uses all GP registers, and ymm0 - ymm12
+   // Need to save r8, r14 and r13
 
 
-   4:	55                   	push   rbp
-   5:	c5 d1 ef ed          	vpxor  xmm5,xmm5,xmm5   // R1h
-   9:	31 c0                	xor    eax,eax
-   b:	48 89 e5             	mov    rbp,rsp
-   e:	41 57                	push   r15
-  10:	62 f1 fd 28 6f fd    	vmovdqa64 ymm7,ymm5     // R0h
-  16:	62 f1 fd 28 6f e5    	vmovdqa64 ymm4,ymm5
-  1c:	41 56                	push   r14
-  1e:	62 f1 fd 28 6f f5    	vmovdqa64 ymm6,ymm5     // R1
-  24:	62 f1 fd 28 6f c5    	vmovdqa64 ymm0,ymm5     // R0
-  2a:	41 55                	push   r13
-  2c:	49 b9 ff ff ff ff ff 	movabs r9,0xfffffffffffff
-  33:	ff 0f 00 
-  36:	62 71 fd 28 6f c5    	vmovdqa64 ymm8,ymm5
-  3c:	41 54                	push   r12
-  3e:	53                   	push   rbx
-  3f:	48 8d 9a a0 00 00 00 	lea    rbx,[rdx+0xa0]
-  46:	48 83 e4 e0          	and    rsp,0xffffffffffffffe0
-  4a:	48 89 54 24 f8       	mov    QWORD PTR [rsp-0x8],rdx
-  4f:	4c 8b 29             	mov    r13,QWORD PTR [rcx]
-  52:	4c 8b 26             	mov    r12,QWORD PTR [rsi]
-  55:	66 66 2e 0f 1f 84 00 	data16 nop WORD PTR cs:[rax+rax*1+0x0]
-  5c:	00 00 00 00 
-  60:	48 8b 54 24 f8       	mov    rdx,QWORD PTR [rsp-0x8]
-  65:	62 f1 fd 28 6f cc    	vmovdqa64 ymm1,ymm4     // R2
-  6b:	4c 8b 12             	mov    r10,QWORD PTR [rdx]
-  6e:	4c 89 d2             	mov    rdx,r10
-  71:	62 d2 fd 28 7c da    	vpbroadcastq ymm3,r10   // Bi
-  77:	c4 42 ab f6 dc       	mulx   r11,r10,r12    // r11:r10 = rdx * r12
-  7c:	4c 01 d0             	add    rax,r10
-  7f:	4d 89 de             	mov    r14,r11
-  82:	49 89 c2             	mov    r10,rax
-  85:	49 83 d6 00          	adc    r14,0x0
-  89:	4d 0f af d0          	imul   r10,r8
-  8d:	45 31 ff             	xor    r15d,r15d
-  90:	4d 21 ca             	and    r10,r9
-  93:	4c 89 d2             	mov    rdx,r10
-  96:	62 d2 fd 28 7c d2    	vpbroadcastq ymm2,r10   // Yi
-  9c:	c4 42 ab f6 dd       	mulx   r11,r10,r13
-  a1:	4c 01 d0             	add    rax,r10
-  a4:	41 0f 92 c7          	setb   r15b
-  a8:	62 f2 e5 28 b4 06    	vpmadd52luq ymm0,ymm3,YMMWORD PTR [rsi]
-  ae:	62 f2 e5 28 b4 7e 01 	vpmadd52luq ymm7,ymm3,YMMWORD PTR [rsi+0x20]
-  b5:	62 f2 ed 28 b4 01    	vpmadd52luq ymm0,ymm2,YMMWORD PTR [rcx]
-  bb:	62 f2 ed 28 b4 79 01 	vpmadd52luq ymm7,ymm2,YMMWORD PTR [rcx+0x20]
-  c2:	62 f3 c5 28 03 c0 01 	valignq ymm0,ymm7,ymm0,0x1
-  c9:	48 83 44 24 f8 08    	add    QWORD PTR [rsp-0x8],0x8
-  cf:	62 f2 e5 28 b4 4e 04 	vpmadd52luq ymm1,ymm3,YMMWORD PTR [rsi+0x80]
-  d6:	62 f2 ed 28 b4 49 04 	vpmadd52luq ymm1,ymm2,YMMWORD PTR [rcx+0x80]
-  dd:	62 f3 bd 28 03 e1 01 	valignq ymm4,ymm8,ymm1,0x1
+  //  4:	55                   	push   rbp
+  //  5:	c5 d1 ef ed          	vpxor  xmm5,xmm5,xmm5   // R1h
+  //  9:	31 c0                	xor    eax,eax
+  //  b:	48 89 e5             	mov    rbp,rsp
+  //  e:	41 57                	push   r15
+  // 10:	62 f1 fd 28 6f fd    	vmovdqa64 ymm7,ymm5     // R0h
+  // 16:	62 f1 fd 28 6f e5    	vmovdqa64 ymm4,ymm5
+  // 1c:	41 56                	push   r14
+  // 1e:	62 f1 fd 28 6f f5    	vmovdqa64 ymm6,ymm5     // R1
+  // 24:	62 f1 fd 28 6f c5    	vmovdqa64 ymm0,ymm5     // R0
+  // 2a:	41 55                	push   r13
+  // 2c:	49 b9 ff ff ff ff ff 	movabs r9,0xfffffffffffff
+  // 33:	ff 0f 00 
+  // 36:	62 71 fd 28 6f c5    	vmovdqa64 ymm8,ymm5
+  // 3c:	41 54                	push   r12
+  // 3e:	53                   	push   rbx
+  // 3f:	48 8d 9a a0 00 00 00 	lea    rbx,[rdx+0xa0]
+  // 46:	48 83 e4 e0          	and    rsp,0xffffffffffffffe0
+  // 4a:	48 89 54 24 f8       	mov    QWORD PTR [rsp-0x8],rdx
+  // 4f:	4c 8b 29             	mov    r13,QWORD PTR [rcx]
+  // 52:	4c 8b 26             	mov    r12,QWORD PTR [rsi]
+  push(r8);
+  push(r14);
+  push(r13);
+  movq(r8, kk0);    // r8 gets inv
+  vpxor(xmm5, xmm5, xmm5, Assembler::AVX_256bit);
+  vmovdqu(xmm7, xmm5);
+  vmovdqu(xmm4, xmm5);
+  vmovdqu(xmm6, xmm5);
+  vmovdqu(xmm0, xmm5);
+  vmovdqu(xmm8, xmm5);
+  mov64(r9, 0xfffffffffffff);
+  lea(rdx, Address(out, 2 * 40 * wordSize));    // Points to b[0]
+  lea(rbx, Address(out, 0xa0 + 2 * 40 * wordSize));    // Points to b[20] - loop terminator
+#define LOOP_TERM Address(out, 4 * 40 * wordSize)
+  movq(LOOP_TERM, rdx);
+  lea(r13, Address(out, 3 * 40 * wordSize));    // Points to m[0]
+  lea(r12, Address(out, 1 * 40 * wordSize));    // Points to a[0]
+  xorq(rax, rax);
+
+  align32();
+  Label L_loop;
+  bind(L_loop);
+
+  // 55:	66 66 2e 0f 1f 84 00 	data16 nop WORD PTR cs:[rax+rax*1+0x0]
+  // 5c:	00 00 00 00 
+  // 60:	48 8b 54 24 f8       	mov    rdx,QWORD PTR [rsp-0x8]
+  // 65:	62 f1 fd 28 6f cc    	vmovdqa64 ymm1,ymm4     // R2
+  // 6b:	4c 8b 12             	mov    r10,QWORD PTR [rdx]
+  // 6e:	4c 89 d2             	mov    rdx,r10
+  // 71:	62 d2 fd 28 7c da    	vpbroadcastq ymm3,r10   // Bi
+  // 77:	c4 42 ab f6 dc       	mulx   r11,r10,r12    // r11:r10 = rdx(b[i]) * r12(a[0])
+  // 7c:	4c 01 d0             	add    rax,r10
+  // 7f:	4d 89 de             	mov    r14,r11
+  // 82:	49 89 c2             	mov    r10,rax
+  // 85:	49 83 d6 00          	adc    r14,0x0
+  // 89:	4d 0f af d0          	imul   r10,r8       // r8 is k0
+  // 8d:	45 31 ff             	xor    r15d,r15d
+  // 90:	4d 21 ca             	and    r10,r9
+  // 93:	4c 89 d2             	mov    rdx,r10
+  // 96:	62 d2 fd 28 7c d2    	vpbroadcastq ymm2,r10   // Yi
+  // 9c:	c4 42 ab f6 dd       	mulx   r11,r10,r13
+  // a1:	4c 01 d0             	add    rax,r10
+  // a4:	41 0f 92 c7          	setb   r15b
+  movq(rdx, LOOP_TERM);
+  vmovdqu(xmm1, xmm4);
+  movq(r10, Address(rdx, 0));
+  movq(rdx, r10);
+  evpbroadcastq(xmm3, r10, Assembler::AVX_256bit);
+  mulxq(r11, r10, r12);
+  addq(rax, r10);
+  movq(r14, r11);
+  movq(r10, rax);
+  adcq(r14, 0);
+  imulq(r10, r8);
+  xorl(r15, r15);
+  andq(r10, r9);
+  movq(rdx, r10);
+  evpbroadcastq(xmm2, r10, Assembler::AVX_256bit);
+  mulxq(r11, r10, r13);
+  addq(rax, r10);
+  setb(Assembler::below, r15);
+
+  // a8:	62 f2 e5 28 b4 06    	vpmadd52luq ymm0,ymm3,YMMWORD PTR [rsi]
+  // ae:	62 f2 e5 28 b4 7e 01 	vpmadd52luq ymm7,ymm3,YMMWORD PTR [rsi+0x20]
+  // b5:	62 f2 ed 28 b4 01    	vpmadd52luq ymm0,ymm2,YMMWORD PTR [rcx]
+  // bb:	62 f2 ed 28 b4 79 01 	vpmadd52luq ymm7,ymm2,YMMWORD PTR [rcx+0x20]
+  // c2:	62 f3 c5 28 03 c0 01 	valignq ymm0,ymm7,ymm0,0x1
+  // c9:	48 83 44 24 f8 08    	add    QWORD PTR [rsp-0x8],0x8
+  // cf:	62 f2 e5 28 b4 4e 04 	vpmadd52luq ymm1,ymm3,YMMWORD PTR [rsi+0x80]
+  // d6:	62 f2 ed 28 b4 49 04 	vpmadd52luq ymm1,ymm2,YMMWORD PTR [rcx+0x80]
+  // dd:	62 f3 bd 28 03 e1 01 	valignq ymm4,ymm8,ymm1,0x1
+  vpmadd52luq(xmm0, xmm3, Address(rsi, 0), Assembler::AVX_256bit);
+#if 0
   e4:	4d 89 da             	mov    r10,r11
   e7:	4d 01 f2             	add    r10,r14
   ea:	4d 01 fa             	add    r10,r15
@@ -318,7 +374,7 @@ void MacroAssembler::montgomeryMultiply52x20(Register out, Register k0)
 }
 
 
-void MacroAssembler::montgomeryMultiply52x30(Register out, Register k0)
+void MacroAssembler::montgomeryMultiply52x30(Register out, Register kk0)
 {
 	const int LIMIT = 5552;
 	const int BASE = 65521;
@@ -703,7 +759,7 @@ void MacroAssembler::montgomeryMultiply52x30(Register out, Register k0)
 }
 
 
-void MacroAssembler::montgomeryMultiply52x40(Register out, Register k0)
+void MacroAssembler::montgomeryMultiply52x40(Register out, Register kk0)
 {
 	const int LIMIT = 5552;
 	const int BASE = 65521;

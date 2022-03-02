@@ -7017,7 +7017,7 @@ __ movq(rax, r15);
 
       // Make room on the stack for transformed data.  Need to convert from radix-64 to radix-52.
       // Maximum size is 40 qwords for 2K bit integer.
-      __ subq(rsp, 40 * wordSize * 4);    // Need 4 transformed arrays
+      __ subptr(rsp, 40 * wordSize * 4 + 8);    // Need 4 transformed arrays and one word of index storage
       __ movptr(tmp_result, rsp);
 
       __ cmpl(len, 16);
