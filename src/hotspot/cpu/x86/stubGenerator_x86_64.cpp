@@ -6634,7 +6634,7 @@ address generate_avx_ghash_processBlocks() {
    *   lomg long *dst - result
    */
 
-  void transform_r52(Register src, Register dst, int offset, Register len) {
+  void transform_r52x20(Register src_in, Register dst_in, int offset) {
 //   	reverse_words((julong *)src, (julong *)dst, 16);
 // 00007FF76B3C10CE  lea         ecx,[r14+10h]              // ecx is length in qwords
 // 00007FF76B3C10D2  lea         rdx,[dst+80h (07FF76B3C50C0h)]     // &dst[len]
@@ -6646,7 +6646,236 @@ address generate_avx_ghash_processBlocks() {
 // 00007FF76B3C10EA  mov         qword ptr [rdx],rax  
 // 00007FF76B3C10ED  test        ecx,ecx  
 // 00007FF76B3C10EF  jg          main+7Dh (07FF76B3C10D9h)  
-}
+
+__ lea(r11, Address(src_in, 15 * wordSize));  // End of src array
+__ lea(r12, Address(dst_in, offset));        // Destination array
+
+Register src = r11;
+Register dst = r12;
+
+__ movq(r10, rcx);   // Save registers
+__ movq(r15, rax);
+
+// 00007FF75A60114A  mov         ecx,dword ptr [rbx-8]  
+// 00007FF75A60114D  mov         eax,dword ptr [rbx-4]  
+// 00007FF75A601150  shl         ecx,0Ch  
+// 00007FF75A601153  shr         eax,14h  
+// 00007FF75A601156  or          ecx,eax  
+// 00007FF75A601158  mov         dword ptr [dst (07FF75A605040h)],ecx  
+__ movl(rcx, Address(src, -8));
+__ movl(rax, Address(src, -4));
+__ shll(rcx, 12);
+__ shrl(rax, 20);
+__ orl(rcx, rax);
+__ movl(Address(dst, 0), rcx);
+
+// 00007FF75A60115E  mov         eax,dword ptr [rbx-8]  
+// 00007FF75A601161  shr         eax,14h  
+// 00007FF75A601164  mov         dword ptr [dst+4h (07FF75A605044h)],eax  
+__ movl(rax, Address(src, -8));
+__ shrl(rax, 20);
+__ movl(Address(dst, 4), rax);
+
+// 00007FF75A60116A  mov         eax,dword ptr [rbx-10h]  
+// 00007FF75A60116D  mov         dword ptr [dst+8h (07FF75A605048h)],eax  
+__ movl(rax, Address(src, -16));
+__ movl(Address(dst, 8), rax);
+
+// 00007FF75A601173  mov         eax,dword ptr [rbx-4]  
+// 00007FF75A601176  and         eax,0FFFFFh  
+// 00007FF75A60117B  mov         dword ptr [dst+0Ch (07FF75A60504Ch)],eax  
+__ movl(rax, Address(src, -4));
+__ andl(rax, 0xffff);
+__ movl(Address(dst, 0xc), rax);
+
+// 00007FF75A601181  mov         ecx,dword ptr [rbx-0Ch]  
+// 00007FF75A601184  mov         eax,dword ptr [rbx-18h]  
+// 00007FF75A601187  shl         ecx,14h  
+// 00007FF75A60118A  shr         eax,0Ch  
+// 00007FF75A60118D  or          ecx,eax  
+// 00007FF75A60118F  mov         dword ptr [dst+10h (07FF75A605050h)],ecx
+__ movl(rcx, Address(src, -0xc));
+__ movl(rax, Address(src, -0x18));
+__ shll(rcx, 20);
+__ shrl(rax, 12);
+__ orl(rcx, rax);
+__ movl(Address(dst, 0xc), rcx);
+
+
+// 00007FF75A601195  mov         eax,dword ptr [rbx-0Ch]  
+// 00007FF75A601198  shr         eax,0Ch  
+// 00007FF75A60119B  mov         dword ptr [dst+14h (07FF75A605054h)],eax  
+__ movl(rax, Address(src, -0xc));
+__ shrl(rax, 12);
+__ movl(Address(dst, 0x14), rax);
+
+
+// 00007FF75A6011A1  mov         eax,dword ptr [rbx-14h]  
+// 00007FF75A6011A4  movzx       ecx,byte ptr [rbx-1Dh]  
+// 00007FF75A6011A8  shl         eax,8  
+// 00007FF75A6011AB  or          ecx,eax  
+// 00007FF75A6011AD  mov         dword ptr [dst+18h (07FF75A605058h)],ecx  
+__ movl(rax, Address(src, -0x14));
+__ movzwl(rcx, Address(src, -0x1d));
+__ shll(rax, 8);
+__ orl(rcx, rax);
+__ movw(Address(dst, 0x18), rcx);
+
+// 00007FF75A6011B3  movzx       eax,byte ptr [rbx-11h]  
+// 00007FF75A6011B7  mov         ecx,dword ptr [rbx-18h]  
+// 00007FF75A6011BA  and         ecx,0FFFh  
+// 00007FF75A6011C0  shl         ecx,8  
+// 00007FF75A6011C3  or          ecx,eax  
+// 00007FF75A6011C5  mov         dword ptr [dst+1Ch (07FF75A60505Ch)],ecx
+__ movzwl(rax, Address(src, -0x11));
+__ movl(rcx, Address(src, -0x18));
+__ andl(rcx, 0xfff);
+__ shll(rcx, 8);
+__ orl(rcx, rax);
+__ movw(Address(dst, 0x1c), rcx);
+
+// 00007FF75A6011CB  mov         ecx,dword ptr [rbx-1Ch]  
+// 00007FF75A6011CE  mov         eax,dword ptr [rbx-20h]  
+// 00007FF75A6011D1  shr         ecx,4  
+// 00007FF75A6011D4  shl         eax,1Ch  
+// 00007FF75A6011D7  or          ecx,eax  
+// 00007FF75A6011D9  mov         dword ptr [dst+20h (07FF75A605060h)],ecx
+__ movl(rcx, Address(src, -0x1c));
+__ movl(rax, Address(src, -0x20));
+__ shrl(rcx, 4);
+__ shll(rax, 20);
+__ orl(rcx, rax);
+__ movl(Address(dst, 0x20), rcx);
+
+// 00007FF75A6011DF  mov         eax,dword ptr [rbx-20h]
+// 00007FF75A6011E2  shr         eax,4
+// 00007FF75A6011E5  and         eax,0FFFFFh
+// 00007FF75A6011EA  mov         dword ptr [dst+24h (07FF75A605064h)],eax
+__ movl(rax, Address(src, -0x20));
+__ shrl(rax, 4);
+__ andl(rax, 0xffff);
+__ movl(Address(dst, 0x24), rax);
+
+// 00007FF75A6011F0  mov         eax,dword ptr [rbx-28h]
+// 00007FF75A6011F3  movzx       ecx,word ptr [rbx-22h]
+// 00007FF75A6011F7  shl         eax,10h
+// 00007FF75A6011FA  or          ecx,eax
+// 00007FF75A6011FC  mov         dword ptr [dst+28h (07FF75A605068h)],ecx
+__ movl(rax, Address(src, -0x28));
+__ movzwl(rcx, Address(src, -0x22));
+__ shll(rax, 16);
+__ orl(rcx, rax);
+__ movw(Address(dst, 0x28), rcx);
+
+// 00007FF75A601202  movzx       eax,word ptr [rbx-26h]
+// 00007FF75A601206  mov         ecx,dword ptr [rbx-1Ch]
+// 00007FF75A601209  and         ecx,0Fh
+// 00007FF75A60120C  shl         ecx,10h
+// 00007FF75A60120F  or          ecx,eax
+// 00007FF75A601211  mov         dword ptr [dst+2Ch (07FF75A60506Ch)],ecx
+__ movzwl(rax, Address(src, -0x26));
+__ movl(rcx, Address(src, -0x1c));
+__ andl(rcx, 0xf);
+__ shll(rcx, 16);
+__ orl(rcx, rax);
+__ movw(Address(dst, 0x2c), rcx);
+
+// 00007FF75A601217  mov         ecx,dword ptr [rbx-2Ch]
+// 00007FF75A60121A  mov         eax,dword ptr [rbx-30h]
+// 00007FF75A60121D  shr         ecx,1Ch
+// 00007FF75A601220  shl         eax,4
+// 00007FF75A601223  or          ecx,eax
+// 00007FF75A601225  mov         dword ptr [dst+30h (07FF75A605070h)],ecx
+__ movl(rcx, Address(src, -0x2c));
+__ movl(rax, Address(src, -0x30));
+__ shrl(rcx, 28);
+__ shll(rax, 4);
+__ orl(rcx, rax);
+__ movl(Address(dst, 0x30), rcx);
+
+// 00007FF75A60122B  movzx       ecx,word ptr [rbx-24h]
+// 00007FF75A60122F  mov         eax,dword ptr [rbx-30h]
+// 00007FF75A601232  shl         ecx,4
+// 00007FF75A601235  shr         eax,1Ch
+// 00007FF75A601238  or          ecx,eax
+// 00007FF75A60123A  mov         dword ptr [dst+34h (07FF75A605074h)],ecx
+__ movzwl(rcx, Address(src, -0x24));
+__ movl(rax, Address(src, -0x30));
+__ shll(rcx, 4);
+__ shrl(rax, 28);
+__ orl(rcx, rax);
+__ movl(Address(dst, 0x34), rcx);
+
+// 00007FF75A601240  mov         ecx,dword ptr [rbx-2Ch]
+// 00007FF75A601243  mov         eax,dword ptr [rbx-38h]
+// 00007FF75A601246  shl         ecx,18h
+// 00007FF75A601249  shr         eax,8
+// 00007FF75A60124C  or          ecx,eax
+// 00007FF75A60124E  mov         dword ptr [dst+38h (07FF75A605078h)],ecx
+__ movl(rcx, Address(src, -0x2c));
+__ movl(rax, Address(src, -0x38));
+__ shll(rcx, 24);
+__ shrl(rax, 8);
+__ orl(rcx, rax);
+__ movl(Address(dst, 0x38), rcx);
+
+// 00007FF75A601254  mov         eax,dword ptr [rbx-2Ch]
+// 00007FF75A601257  shr         eax,8
+// 00007FF75A60125A  and         eax,0FFFFFh
+// 00007FF75A60125F  mov         dword ptr [dst+3Ch (07FF75A60507Ch)],eax
+__ movl(rax, Address(src, -0x2c));
+__ shrl(rax, 8);
+__ andl(rax, 0xffff);
+__ movl(Address(dst, 0x3c), rax);
+
+// 00007FF75A601265  mov         ecx,dword ptr [rbx-40h]
+// 00007FF75A601268  mov         eax,dword ptr [rbx-34h]
+// 00007FF75A60126B  shl         eax,0Ch
+// 00007FF75A60126E  shr         ecx,14h
+// 00007FF75A601271  or          ecx,eax
+// 00007FF75A601273  mov         dword ptr [dst+40h (07FF75A605080h)],ecx
+__ movl(rcx, Address(src, -0x40));
+__ movl(rax, Address(src, -0x34));
+__ shll(rcx, 12);
+__ shrl(rax, 20);
+__ orl(rcx, rax);
+__ movl(Address(dst, 0x40), rcx);
+
+// 00007FF75A601279  movzx       ecx,byte ptr [rbx-38h]
+// 00007FF75A60127D  mov         eax,dword ptr [rbx-34h]
+// 00007FF75A601280  shr         eax,14h
+// 00007FF75A601283  shl         ecx,0Ch
+// 00007FF75A601286  or          ecx,eax
+// 00007FF75A601288  mov         dword ptr [dst+44h (07FF75A605084h)],ecx
+__ movzwl(rcx, Address(src, -0x38));
+__ movl(rax, Address(src, -0x34));
+__ shrl(rax, 20);
+__ shll(rcx, 12);
+__ orl(rcx, rax);
+__ movl(Address(dst, 0x44), rcx);
+
+// 00007FF75A601295  mov         eax,dword ptr [rbx-3Ch]  
+// 00007FF75A601298  mov         dword ptr [dst+48h (07FF75A605088h)],eax  
+__ movl(rax, Address(src, -0x3c));
+__ movl(Address(dst, 0x48), rax);
+
+// 00007FF75A60129E  mov         eax,dword ptr [rbx-40h]  
+// 00007FF75A6012A8  and         eax,0FFFFFh  
+// 00007FF75A6012AD  mov         dword ptr [dst+4Ch (07FF75A60508Ch)],eax
+__ movl(rax, Address(src, -0x40));
+__ andl(rax, 0xffff);
+__ movl(Address(dst, 0x4c), rax);
+
+
+__ movq(rcx, r10);
+__ movq(rax, r15);
+  }
+
+  void transform_r52x30(Register src, Register dst, int offset) {
+  }
+
+  void transform_r52x40(Register src, Register dst, int offset) {
+  }
 
 
   /***
@@ -6661,7 +6890,13 @@ address generate_avx_ghash_processBlocks() {
    *   lomg long *dst - result
    */
 
-  void transform_r64(Register src, Register dst, Register len) {
+  void transform_r64x20(Register src, Register dst) {
+  }
+
+  void transform_r64x30(Register src, Register dst) {
+  }
+
+  void transform_r64x40(Register src, Register dst) {
   }
 
 
@@ -6785,29 +7020,46 @@ address generate_avx_ghash_processBlocks() {
       __ subq(rsp, 40 * wordSize * 4);    // Need 4 transformed arrays
       __ movptr(tmp_result, rsp);
 
-      // Transform to radix-52
-      transform_r52(a, tmp_result, 1 * 40 * wordSize, len);
-      transform_r52(b, tmp_result, 2 * 40 * wordSize, len);
-      transform_r52(n, tmp_result, 3 * 40 * wordSize, len);
-
       __ cmpl(len, 16);
       __ jcc(Assembler::greater, L_30);
+      // Transform to radix-52
+      transform_r52x20(a, tmp_result, 1 * 40 * wordSize);
+      transform_r52x20(b, tmp_result, 2 * 40 * wordSize);
+      transform_r52x20(n, tmp_result, 3 * 40 * wordSize);
+
       __ montgomeryMultiply52x20(tmp_result, inv);
+
+      transform_r64x20(tmp_result, m);
       __ jmp(L_trans_result);
 
       __ BIND(L_30);
       __ cmpl(len, 24);
       __ jcc(Assembler::greater, L_40);
+      // Transform to radix-52
+      transform_r52x30(a, tmp_result, 1 * 40 * wordSize);
+      transform_r52x30(b, tmp_result, 2 * 40 * wordSize);
+      transform_r52x30(n, tmp_result, 3 * 40 * wordSize);
+
       __ montgomeryMultiply52x30(tmp_result, inv);
+
+      transform_r64x30(tmp_result, m);
       __ jmp(L_trans_result);
 
       __ BIND(L_40);
+      // Transform to radix-52
+      transform_r52x40(a, tmp_result, 1 * 40 * wordSize);
+      transform_r52x40(b, tmp_result, 2 * 40 * wordSize);
+      transform_r52x40(n, tmp_result, 3 * 40 * wordSize);
+
       __ montgomeryMultiply52x40(tmp_result, inv);
 
+      transform_r64x40(tmp_result, m);
+
       __ BIND(L_trans_result);
-      transform_r64(tmp_result, m, len);
 
       __ addq(rsp, 40 * wordSize * 4);
+
+      __ jmp(L_revert);
 
       __ BIND(L_exit);
       __ pop(r15);
