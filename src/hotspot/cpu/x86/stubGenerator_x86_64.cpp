@@ -5059,14 +5059,14 @@ address generate_cipherBlockChaining_decryptVectorAESCrypt() {
     __ evpxorq(B6, S6, RK1, Assembler::AVX_512bit);
     __ evpxorq(B7, S7, RK1, Assembler::AVX_512bit);
 
-    __ evalignq(IV, S0, IV, 0x06);
-    __ evalignq(S0, S1, S0, 0x06);
-    __ evalignq(S1, S2, S1, 0x06);
-    __ evalignq(S2, S3, S2, 0x06);
-    __ evalignq(S3, S4, S3, 0x06);
-    __ evalignq(S4, S5, S4, 0x06);
-    __ evalignq(S5, S6, S5, 0x06);
-    __ evalignq(S6, S7, S6, 0x06);
+    __ evalignq(IV, S0, IV, 0x06, Assembler::AVX_512bit);
+    __ evalignq(S0, S1, S0, 0x06, Assembler::AVX_512bit);
+    __ evalignq(S1, S2, S1, 0x06, Assembler::AVX_512bit);
+    __ evalignq(S2, S3, S2, 0x06, Assembler::AVX_512bit);
+    __ evalignq(S3, S4, S3, 0x06, Assembler::AVX_512bit);
+    __ evalignq(S4, S5, S4, 0x06, Assembler::AVX_512bit);
+    __ evalignq(S5, S6, S5, 0x06, Assembler::AVX_512bit);
+    __ evalignq(S6, S7, S6, 0x06, Assembler::AVX_512bit);
 
     roundDec(RK2);
     roundDec(RK3);
@@ -7057,7 +7057,7 @@ __ movq(rax, r15);
 
       __ BIND(L_trans_result);
 
-      __ addq(rsp, 40 * wordSize * 4);
+      __ addptr(rsp, 40 * wordSize * 4 + 8);
 
       __ jmp(L_revert);
 
@@ -8314,7 +8314,7 @@ __ movq(rax, r15);
       StubRoutines::_bigIntegerLeftShiftWorker = generate_bigIntegerLeftShift();
     }
     if (UseMontgomeryMultiplyIntrinsic) {
-      if (!VM_Version::supports_avx512ifma()) {
+      if (VM_Version::supports_avx512ifma()) {
         StubRoutines::_montgomeryMultiply = generate_montgomeryMultiply(false);
       } else {
         StubRoutines::_montgomeryMultiply
@@ -8322,7 +8322,7 @@ __ movq(rax, r15);
       }
     }
     if (UseMontgomerySquareIntrinsic) {
-      if (!VM_Version::supports_avx512ifma()) {
+      if (VM_Version::supports_avx512ifma()) {
         StubRoutines::_montgomerySquare = generate_montgomeryMultiply(true);
       } else {
         StubRoutines::_montgomerySquare

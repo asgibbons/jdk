@@ -182,7 +182,7 @@ void MacroAssembler::montgomeryMultiply52x20(Register out, Register kk0)
   xorq(rax, rax);
 
   align32();
-  Label L_loop;
+  Label L_loop, L_mask;
   bind(L_loop);
 
   // 55:	66 66 2e 0f 1f 84 00 	data16 nop WORD PTR cs:[rax+rax*1+0x0]
@@ -234,126 +234,271 @@ void MacroAssembler::montgomeryMultiply52x20(Register out, Register kk0)
   // d6:	62 f2 ed 28 b4 49 04 	vpmadd52luq ymm1,ymm2,YMMWORD PTR [rcx+0x80]
   // dd:	62 f3 bd 28 03 e1 01 	valignq ymm4,ymm8,ymm1,0x1
   vpmadd52luq(xmm0, xmm3, Address(rsi, 0), Assembler::AVX_256bit);
+  vpmadd52luq(xmm7, xmm3, Address(rsi, 0x20), Assembler::AVX_256bit);
+  vpmadd52luq(xmm0, xmm2, Address(rcx, 0), Assembler::AVX_256bit);
+  vpmadd52luq(xmm7, xmm2, Address(rcx, 0x20), Assembler::AVX_256bit);
+  evalignq(xmm0, xmm7, xmm0, 1, Assembler::AVX_256bit);
+  addq(LOOP_TERM, 8);
+  vpmadd52luq(xmm1, xmm3, Address(rsi, 0x80), Assembler::AVX_256bit);
+  vpmadd52luq(xmm1, xmm2, Address(rcx, 0x80), Assembler::AVX_256bit);
+  evalignq(xmm4, xmm8, xmm1, 1, Assembler::AVX_256bit);
+
+  // e4:	4d 89 da             	mov    r10,r11
+  // e7:	4d 01 f2             	add    r10,r14
+  // ea:	4d 01 fa             	add    r10,r15
+  // ed:	48 c1 e8 34          	shr    rax,0x34
+  // f1:	49 c1 e2 0c          	shl    r10,0xc
+  // f5:	48 8b 54 24 f8       	mov    rdx,QWORD PTR [rsp-0x8]
+  // fa:	49 09 c2             	or     r10,rax
+  // fd:	c4 e1 f9 7e c0       	vmovq  rax,xmm0
+  movq(r10, r11);
+  addq(r10, r14);
+  addq(r10, r15);
+  shrq(rax, 0x34);
+  shlq(r10, 0xc);
+  movq(rdx, LOOP_TERM);
+  orq(r10, rax);
+  movq(rax, xmm0);
+
+//  102:	62 f2 e5 28 b4 76 02 	vpmadd52luq ymm6,ymm3,YMMWORD PTR [rsi+0x40]
+//  109:	62 f2 e5 28 b4 6e 03 	vpmadd52luq ymm5,ymm3,YMMWORD PTR [rsi+0x60]
+//  110:	62 f2 ed 28 b4 71 02 	vpmadd52luq ymm6,ymm2,YMMWORD PTR [rcx+0x40]
+//  117:	62 f2 ed 28 b4 69 03 	vpmadd52luq ymm5,ymm2,YMMWORD PTR [rcx+0x60]
+//  11e:	62 f3 cd 28 03 ff 01 	valignq ymm7,ymm6,ymm7,0x1
+  vpmadd52luq(xmm6, xmm3, Address(rsi, 0x40), Assembler::AVX_256bit);
+  vpmadd52luq(xmm5, xmm3, Address(rsi, 0x60), Assembler::AVX_256bit);
+  vpmadd52luq(xmm6, xmm2, Address(rcx, 0x40), Assembler::AVX_256bit);
+  vpmadd52luq(xmm5, xmm2, Address(rcx, 0x60), Assembler::AVX_256bit);
+  evalignq(xmm7, xmm6, xmm7, 1, Assembler::AVX_256bit);
+
+//  125:	62 f2 e5 28 b5 06    	vpmadd52huq ymm0,ymm3,YMMWORD PTR [rsi]
+//  12b:	62 f3 d5 28 03 f6 01 	valignq ymm6,ymm5,ymm6,0x1
+//  132:	62 f2 e5 28 b5 7e 01 	vpmadd52huq ymm7,ymm3,YMMWORD PTR [rsi+0x20]
+//  139:	62 f3 f5 28 03 ed 01 	valignq ymm5,ymm1,ymm5,0x1
+//  140:	62 f2 e5 28 b5 76 02 	vpmadd52huq ymm6,ymm3,YMMWORD PTR [rsi+0x40]
+//  147:	62 f1 fd 28 6f cc    	vmovdqa64 ymm1,ymm4
+//  14d:	62 f2 e5 28 b5 6e 03 	vpmadd52huq ymm5,ymm3,YMMWORD PTR [rsi+0x60]
+//  154:	62 f2 e5 28 b5 4e 04 	vpmadd52huq ymm1,ymm3,YMMWORD PTR [rsi+0x80]
+//  15b:	4c 01 d0             	add    rax,r10
+//  15e:	62 f2 ed 28 b5 49 04 	vpmadd52huq ymm1,ymm2,YMMWORD PTR [rcx+0x80]
+//  165:	62 f2 ed 28 b5 01    	vpmadd52huq ymm0,ymm2,YMMWORD PTR [rcx]
+//  16b:	62 f1 fd 28 6f e1    	vmovdqa64 ymm4,ymm1
+//  171:	62 f2 ed 28 b5 79 01 	vpmadd52huq ymm7,ymm2,YMMWORD PTR [rcx+0x20]
+//  178:	62 f2 ed 28 b5 71 02 	vpmadd52huq ymm6,ymm2,YMMWORD PTR [rcx+0x40]
+//  17f:	62 f2 ed 28 b5 69 03 	vpmadd52huq ymm5,ymm2,YMMWORD PTR [rcx+0x60]
+  vpmadd52huq(xmm0, xmm3, Address(rsi, 0x00), Assembler::AVX_256bit);
+  evalignq(xmm6, xmm5, xmm6, 1, Assembler::AVX_256bit);
+  vpmadd52huq(xmm7, xmm3, Address(rsi, 0x20), Assembler::AVX_256bit);
+  evalignq(xmm5, xmm1, xmm5, 1, Assembler::AVX_256bit);
+  vpmadd52huq(xmm6, xmm3, Address(rsi, 0x40), Assembler::AVX_256bit);
+  vmovdqu(xmm1, xmm4);
+  vpmadd52huq(xmm5, xmm3, Address(rsi, 0x60), Assembler::AVX_256bit);
+  vpmadd52huq(xmm1, xmm3, Address(rsi, 0x80), Assembler::AVX_256bit);
+  addq(rax, r10);
+  vpmadd52huq(xmm1, xmm2, Address(rcx, 0x80), Assembler::AVX_256bit);
+  vpmadd52huq(xmm0, xmm2, Address(rcx, 0x00), Assembler::AVX_256bit);
+  vmovdqu(xmm4, xmm1);
+  vpmadd52huq(xmm7, xmm2, Address(rcx, 0x20), Assembler::AVX_256bit);
+  vpmadd52huq(xmm6, xmm2, Address(rcx, 0x40), Assembler::AVX_256bit);
+  vpmadd52huq(xmm5, xmm2, Address(rcx, 0x60), Assembler::AVX_256bit);
+
+//  186:	48 39 d3             	cmp    rbx,rdx
+//  189:	0f 85 d1 fe ff ff    	jne    60 <k1_ifma256_amm52x20+0x60>
+  cmpq(rbx, rdx);
+  jcc(Assembler::notEqual, L_loop);
+
+// NORMALIZATION
+//  18f:	c5 ed 73 d5 34       	vpsrlq ymm2,ymm5,0x34
+//  194:	c5 b5 73 d7 34       	vpsrlq ymm9,ymm7,0x34
+//  199:	c5 ad 73 d6 34       	vpsrlq ymm10,ymm6,0x34
+//  19e:	62 d3 ed 28 03 da 03 	valignq ymm3,ymm2,ymm10,0x3
+//  1a5:	62 f2 fd 28 7c c8    	vpbroadcastq ymm1,rax         // ymm1 = Bi, rax = acc0
+//  1ab:	62 53 ad 28 03 d1 03 	valignq ymm10,ymm10,ymm9,0x3
+//  1b2:	c4 e3 7d 02 c1 03    	vpblendd ymm0,ymm0,ymm1,0x3
+//  1b8:	c5 a5 73 d0 34       	vpsrlq ymm11,ymm0,0x34
+//  1bd:	c5 f5 73 d4 34       	vpsrlq ymm1,ymm4,0x34
+//  1c2:	62 73 f5 28 03 e2 03 	valignq ymm12,ymm1,ymm2,0x3
+//  1c9:	62 53 a5 28 03 c0 03 	valignq ymm8,ymm11,ymm8,0x3
+  vpsrlq(xmm2, xmm5, 0x34, Assembler::AVX_256bit);
+  vpsrlq(xmm9, xmm7, 0x34, Assembler::AVX_256bit);
+  vpsrlq(xmm10, xmm6, 0x34, Assembler::AVX_256bit);
+  evalignq(xmm3, xmm2, xmm10, 3, Assembler::AVX_256bit);
+  evpbroadcastq(xmm1, rax, Assembler::AVX_256bit);
+  evalignq(xmm10, xmm10, xmm9, 3, Assembler::AVX_256bit);
+  vpblendd(xmm0, xmm0, xmm1, 0x3, Assembler::AVX_256bit),
+  vpsrlq(xmm11, xmm0, 0x34, Assembler::AVX_256bit);
+  vpsrlq(xmm1, xmm4, 0x34, Assembler::AVX_256bit);
+  evalignq(xmm12, xmm1, xmm2, 3, Assembler::AVX_256bit);
+  evalignq(xmm8, xmm11, xmm8, 3, Assembler::AVX_256bit);
+
+//  1d0:	62 f1 fd 28 6f 15 00 	vmovdqa64 ymm2,YMMWORD PTR [rip+0x0]        # 1da <k1_ifma256_amm52x20+0x1da> // mask - low-order 52 bits set
+//  1d7:	00 00 00 
+//  1da:	62 53 b5 28 03 cb 03 	valignq ymm9,ymm9,ymm11,0x3
+//  1e1:	c5 cd db f2          	vpand  ymm6,ymm6,ymm2
+//  1e5:	c4 c1 4d d4 f2       	vpaddq ymm6,ymm6,ymm10
+//  1ea:	62 f3 ed 28 1e f6 01 	vpcmpltuq k6,ymm2,ymm6
+//  1f1:	c5 fd db c2          	vpand  ymm0,ymm0,ymm2
+//  1f5:	c5 dd db ca          	vpand  ymm1,ymm4,ymm2
+//  1f9:	c5 d5 db ea          	vpand  ymm5,ymm5,ymm2
+//  1fd:	c4 c1 7d d4 c0       	vpaddq ymm0,ymm0,ymm8
+//  202:	c4 c1 75 d4 cc       	vpaddq ymm1,ymm1,ymm12
+//  207:	c5 d5 d4 eb          	vpaddq ymm5,ymm5,ymm3
+//  20b:	62 f3 ed 28 1e c0 01 	vpcmpltuq k0,ymm2,ymm0
+//  212:	62 f3 ed 28 1e cd 01 	vpcmpltuq k1,ymm2,ymm5
+//  219:	62 f3 ed 28 1e e1 00 	vpcmpequq k4,ymm2,ymm1
+//  220:	62 f3 ed 28 1e f9 01 	vpcmpltuq k7,ymm2,ymm1
+  // vmovdqu(xmm2, ExternalAddress((address) L_mask));
+  evpbroadcastq(xmm2, r9, Assembler::AVX_256bit);
+  evalignq(xmm9, xmm9, xmm11, 3, Assembler::AVX_256bit);
+  vpand(xmm6, xmm6, xmm2, Assembler::AVX_256bit);
+  vpaddq(xmm6, xmm6, xmm10, Assembler::AVX_256bit);
+  evpcmpq(k6, knoreg, xmm2, xmm6, Assembler::less, false, Assembler::AVX_256bit);
+  vpand(xmm0, xmm0, xmm2, Assembler::AVX_256bit);
+  vpand(xmm1, xmm4, xmm2, Assembler::AVX_256bit);
+  vpand(xmm5, xmm5, xmm2, Assembler::AVX_256bit);
+  vpaddq(xmm0, xmm0, xmm8, Assembler::AVX_256bit);
+  vpaddq(xmm1, xmm1, xmm12, Assembler::AVX_256bit);
+  vpaddq(xmm5, xmm5, xmm3, Assembler::AVX_256bit);
+  evpcmpq(k0, knoreg, xmm2, xmm0, Assembler::less, false, Assembler::AVX_256bit);
+  evpcmpq(k1, knoreg, xmm2, xmm5, Assembler::less, false, Assembler::AVX_256bit);
+  evpcmpq(k4, knoreg, xmm2, xmm1, Assembler::equal, false, Assembler::AVX_256bit);
+  evpcmpq(k7, knoreg, xmm2, xmm1, Assembler::less, false, Assembler::AVX_256bit);
+
+//  227:	c5 f9 93 f6          	kmovb  esi,k6
+//  22b:	62 f3 ed 28 1e f5 00 	vpcmpequq k6,ymm2,ymm5
+//  232:	c5 c5 db fa          	vpand  ymm7,ymm7,ymm2
+//  236:	62 f3 ed 28 1e d0 00 	vpcmpequq k2,ymm2,ymm0
+//  23d:	62 f3 ed 28 1e de 00 	vpcmpequq k3,ymm2,ymm6
+//  244:	c4 c1 45 d4 f9       	vpaddq ymm7,ymm7,ymm9
+//  249:	62 f3 ed 28 1e ef 00 	vpcmpequq k5,ymm2,ymm7
+//  250:	c5 79 93 c0          	kmovb  r8d,k0
+//  254:	c5 f9 93 c7          	kmovb  eax,k7
+//  258:	62 f3 ed 28 1e c7 01 	vpcmpltuq k0,ymm2,ymm7
+  kmovbl(rsi, k6);
+  evpcmpq(k6, knoreg, xmm2, xmm5, Assembler::equal, false, Assembler::AVX_256bit);
+  vpand(xmm7, xmm7, xmm2, Assembler::AVX_256bit);
+  evpcmpq(k2, knoreg, xmm2, xmm0, Assembler::equal, false, Assembler::AVX_256bit);
+  evpcmpq(k3, knoreg, xmm2, xmm6, Assembler::equal, false, Assembler::AVX_256bit);
+  vpaddq(xmm7, xmm7, xmm9, Assembler::AVX_256bit);
+  evpcmpq(k5, knoreg, xmm2, xmm7, Assembler::equal, false, Assembler::AVX_256bit);
+  kmovbl(r8, k0);
+  kmovbl(rax, k7);
+  evpcmpq(k0, knoreg, xmm2, xmm7, Assembler::less, false, Assembler::AVX_256bit);
+
+//  25f:	c1 e0 10             	shl    eax,0x10
+//  262:	c5 79 93 c9          	kmovb  r9d,k1
+//  266:	c5 f9 93 d4          	kmovb  edx,k4
+//  26a:	41 c1 e1 0c          	shl    r9d,0xc
+//  26e:	c1 e2 10             	shl    edx,0x10
+//  271:	c5 f9 93 de          	kmovb  ebx,k6
+//  275:	c1 e3 0c             	shl    ebx,0xc
+//  278:	09 da                	or     edx,ebx
+//  27a:	44 09 c8             	or     eax,r9d
+//  27d:	c5 79 93 e2          	kmovb  r12d,k2
+//  281:	44 09 c0             	or     eax,r8d
+//  284:	44 09 e2             	or     edx,r12d
+//  287:	c1 e6 08             	shl    esi,0x8
+//  28a:	c5 79 93 db          	kmovb  r11d,k3
+//  28e:	41 c1 e3 08          	shl    r11d,0x8
+//  292:	44 09 da             	or     edx,r11d
+//  295:	09 f0                	or     eax,esi
+//  297:	c5 f9 93 c8          	kmovb  ecx,k0
+//  29b:	c5 79 93 d5          	kmovb  r10d,k5
+//  29f:	c1 e1 04             	shl    ecx,0x4
+//  2a2:	41 c1 e2 04          	shl    r10d,0x4
+//  2a6:	44 09 d2             	or     edx,r10d
+//  2a9:	09 c8                	or     eax,ecx
+  shll(rax, 0x10);
+  kmovbl(r9, k1);
+  kmovbl(rdx, k4);
+  shll(r9, 0xc);
+  shll(rdx, 0x10);
+  kmovbl(rbx, k6);
+  shll(rbx, 0xc);
+  orl(rdx, rbx);
+  orl(rax, r9);
+  kmovbl(r12, k2);
+  orl(rax, r8);
+  orl(rdx, r12);
+  shll(rsi, 8);
+  kmovbl(r11, k3);
+  shll(r11, 8);
+  orl(rdx, r11);
+  orl(rax, rsi);
+  kmovbl(rcx, k0);
+  kmovbl(r10, k5);
+  shll(rcx, 4);
+  shll(r10, 4);
+  orl(rdx, r10);
+  orl(rax, rcx);
+
+//  2ab:	8d 04 42             	lea    eax,[rdx+rax*2]
+//  2ae:	31 c2                	xor    edx,eax
+//  2b0:	0f b6 c6             	movzx  eax,dh
+//  2b3:	c5 f9 92 d0          	kmovb  k2,eax
+//  2b7:	89 d0                	mov    eax,edx
+//  2b9:	c1 e8 10             	shr    eax,0x10
+//  2bc:	c5 f9 92 d8          	kmovb  k3,eax
+//  2c0:	89 d0                	mov    eax,edx
+//  2c2:	c5 f9 92 ca          	kmovb  k1,edx
+//  2c6:	c1 e8 04             	shr    eax,0x4
+//  2c9:	c1 ea 0c             	shr    edx,0xc
+  leal(rax, Address(rdx, rax, Address::times_2));
+  xorl(rdx, rax);
+  movzwl(rax, rdx);
+  shrl(rax, 8);
+  andl(rax, 0xff);
+  kmovbl(k2, rax);
+  movl(rax, rdx);
+  shrl(rax, 0x10);
+  kmovbl(k3, rax);
+  movl(rax, rdx);
+  kmovbl(k1, rdx);
+  shrl(rax, 4);
+  shrl(rdx, 0xc);
+
+//  2cc:	62 f1 fd 29 fb c2    	vpsubq ymm0{k1},ymm0,ymm2
+//  2d2:	62 f1 cd 2a fb f2    	vpsubq ymm6{k2},ymm6,ymm2
+//  2d8:	62 f1 f5 2b fb ca    	vpsubq ymm1{k3},ymm1,ymm2
+//  2de:	c5 f9 92 e0          	kmovb  k4,eax
+//  2e2:	c5 f9 92 ea          	kmovb  k5,edx
+//  2e6:	62 f1 c5 2c fb fa    	vpsubq ymm7{k4},ymm7,ymm2
+//  2ec:	62 f1 d5 2d fb ea    	vpsubq ymm5{k5},ymm5,ymm2
+//  2f2:	c5 fd db c2          	vpand  ymm0,ymm0,ymm2
+//  2f6:	c5 c5 db fa          	vpand  ymm7,ymm7,ymm2
+//  2fa:	c5 cd db f2          	vpand  ymm6,ymm6,ymm2
+//  2fe:	c5 d5 db ea          	vpand  ymm5,ymm5,ymm2
+//  302:	c5 f5 db ca          	vpand  ymm1,ymm1,ymm2
+//  306:	62 f1 fe 28 7f 07    	vmovdqu64 YMMWORD PTR [rdi],ymm0
+//  30c:	62 f1 fe 28 7f 7f 01 	vmovdqu64 YMMWORD PTR [rdi+0x20],ymm7
+//  313:	62 f1 fe 28 7f 77 02 	vmovdqu64 YMMWORD PTR [rdi+0x40],ymm6
+//  31a:	62 f1 fe 28 7f 6f 03 	vmovdqu64 YMMWORD PTR [rdi+0x60],ymm5
+//  321:	62 f1 fe 28 7f 4f 04 	vmovdqu64 YMMWORD PTR [rdi+0x80],ymm1
+//  328:	c5 f8 77             	vzeroupper 
+  evpsubq(xmm0, k1, xmm0, xmm2, false, Assembler::AVX_256bit);
+  evpsubq(xmm6, k2, xmm6, xmm2, false, Assembler::AVX_256bit);
+  evpsubq(xmm1, k3, xmm1, xmm2, false, Assembler::AVX_256bit);
+  kmovbl(k4, rax);
+  kmovbl(k5, rdx);
+  evpsubq(xmm7, k4, xmm7, xmm2, false, Assembler::AVX_256bit);
+  evpsubq(xmm5, k5, xmm5, xmm2, false, Assembler::AVX_256bit);
+  vpand(xmm0, xmm0, xmm2, Assembler::AVX_256bit);
+  vpand(xmm7, xmm7, xmm2, Assembler::AVX_256bit);
+  vpand(xmm6, xmm6, xmm2, Assembler::AVX_256bit);
+  vpand(xmm5, xmm5, xmm2, Assembler::AVX_256bit);
+  vpand(xmm1, xmm1, xmm2, Assembler::AVX_256bit);
+  evmovdquq(Address(rdi, 0x00), xmm0, Assembler::AVX_256bit);
+  evmovdquq(Address(rdi, 0x20), xmm7, Assembler::AVX_256bit);
+  evmovdquq(Address(rdi, 0x40), xmm6, Assembler::AVX_256bit);
+  evmovdquq(Address(rdi, 0x60), xmm5, Assembler::AVX_256bit);
+  evmovdquq(Address(rdi, 0x80), xmm1, Assembler::AVX_256bit);
+  vzeroupper();
+
+  pop(r13);
+  pop(r14);
+  pop(r8);
+
 #if 0
-  e4:	4d 89 da             	mov    r10,r11
-  e7:	4d 01 f2             	add    r10,r14
-  ea:	4d 01 fa             	add    r10,r15
-  ed:	48 c1 e8 34          	shr    rax,0x34
-  f1:	49 c1 e2 0c          	shl    r10,0xc
-  f5:	48 8b 54 24 f8       	mov    rdx,QWORD PTR [rsp-0x8]
-  fa:	49 09 c2             	or     r10,rax
-  fd:	c4 e1 f9 7e c0       	vmovq  rax,xmm0
- 102:	62 f2 e5 28 b4 76 02 	vpmadd52luq ymm6,ymm3,YMMWORD PTR [rsi+0x40]
- 109:	62 f2 e5 28 b4 6e 03 	vpmadd52luq ymm5,ymm3,YMMWORD PTR [rsi+0x60]
- 110:	62 f2 ed 28 b4 71 02 	vpmadd52luq ymm6,ymm2,YMMWORD PTR [rcx+0x40]
- 117:	62 f2 ed 28 b4 69 03 	vpmadd52luq ymm5,ymm2,YMMWORD PTR [rcx+0x60]
- 11e:	62 f3 cd 28 03 ff 01 	valignq ymm7,ymm6,ymm7,0x1
- 125:	62 f2 e5 28 b5 06    	vpmadd52huq ymm0,ymm3,YMMWORD PTR [rsi]
- 12b:	62 f3 d5 28 03 f6 01 	valignq ymm6,ymm5,ymm6,0x1
- 132:	62 f2 e5 28 b5 7e 01 	vpmadd52huq ymm7,ymm3,YMMWORD PTR [rsi+0x20]
- 139:	62 f3 f5 28 03 ed 01 	valignq ymm5,ymm1,ymm5,0x1
- 140:	62 f2 e5 28 b5 76 02 	vpmadd52huq ymm6,ymm3,YMMWORD PTR [rsi+0x40]
- 147:	62 f1 fd 28 6f cc    	vmovdqa64 ymm1,ymm4
- 14d:	62 f2 e5 28 b5 6e 03 	vpmadd52huq ymm5,ymm3,YMMWORD PTR [rsi+0x60]
- 154:	62 f2 e5 28 b5 4e 04 	vpmadd52huq ymm1,ymm3,YMMWORD PTR [rsi+0x80]
- 15b:	4c 01 d0             	add    rax,r10
- 15e:	62 f2 ed 28 b5 49 04 	vpmadd52huq ymm1,ymm2,YMMWORD PTR [rcx+0x80]
- 165:	62 f2 ed 28 b5 01    	vpmadd52huq ymm0,ymm2,YMMWORD PTR [rcx]
- 16b:	62 f1 fd 28 6f e1    	vmovdqa64 ymm4,ymm1
- 171:	62 f2 ed 28 b5 79 01 	vpmadd52huq ymm7,ymm2,YMMWORD PTR [rcx+0x20]
- 178:	62 f2 ed 28 b5 71 02 	vpmadd52huq ymm6,ymm2,YMMWORD PTR [rcx+0x40]
- 17f:	62 f2 ed 28 b5 69 03 	vpmadd52huq ymm5,ymm2,YMMWORD PTR [rcx+0x60]
- 186:	48 39 d3             	cmp    rbx,rdx
- 189:	0f 85 d1 fe ff ff    	jne    60 <k1_ifma256_amm52x20+0x60>
- 18f:	c5 ed 73 d5 34       	vpsrlq ymm2,ymm5,0x34
- 194:	c5 b5 73 d7 34       	vpsrlq ymm9,ymm7,0x34
- 199:	c5 ad 73 d6 34       	vpsrlq ymm10,ymm6,0x34
- 19e:	62 d3 ed 28 03 da 03 	valignq ymm3,ymm2,ymm10,0x3
- 1a5:	62 f2 fd 28 7c c8    	vpbroadcastq ymm1,rax         // ymm1 = Bi, rax = acc0
- 1ab:	62 53 ad 28 03 d1 03 	valignq ymm10,ymm10,ymm9,0x3
- 1b2:	c4 e3 7d 02 c1 03    	vpblendd ymm0,ymm0,ymm1,0x3
- 1b8:	c5 a5 73 d0 34       	vpsrlq ymm11,ymm0,0x34
- 1bd:	c5 f5 73 d4 34       	vpsrlq ymm1,ymm4,0x34
- 1c2:	62 73 f5 28 03 e2 03 	valignq ymm12,ymm1,ymm2,0x3
- 1c9:	62 53 a5 28 03 c0 03 	valignq ymm8,ymm11,ymm8,0x3
- 1d0:	62 f1 fd 28 6f 15 00 	vmovdqa64 ymm2,YMMWORD PTR [rip+0x0]        # 1da <k1_ifma256_amm52x20+0x1da>
- 1d7:	00 00 00 
- 1da:	62 53 b5 28 03 cb 03 	valignq ymm9,ymm9,ymm11,0x3
- 1e1:	c5 cd db f2          	vpand  ymm6,ymm6,ymm2
- 1e5:	c4 c1 4d d4 f2       	vpaddq ymm6,ymm6,ymm10
- 1ea:	62 f3 ed 28 1e f6 01 	vpcmpltuq k6,ymm2,ymm6
- 1f1:	c5 fd db c2          	vpand  ymm0,ymm0,ymm2
- 1f5:	c5 dd db ca          	vpand  ymm1,ymm4,ymm2
- 1f9:	c5 d5 db ea          	vpand  ymm5,ymm5,ymm2
- 1fd:	c4 c1 7d d4 c0       	vpaddq ymm0,ymm0,ymm8
- 202:	c4 c1 75 d4 cc       	vpaddq ymm1,ymm1,ymm12
- 207:	c5 d5 d4 eb          	vpaddq ymm5,ymm5,ymm3
- 20b:	62 f3 ed 28 1e c0 01 	vpcmpltuq k0,ymm2,ymm0
- 212:	62 f3 ed 28 1e cd 01 	vpcmpltuq k1,ymm2,ymm5
- 219:	62 f3 ed 28 1e e1 00 	vpcmpequq k4,ymm2,ymm1
- 220:	62 f3 ed 28 1e f9 01 	vpcmpltuq k7,ymm2,ymm1
- 227:	c5 f9 93 f6          	kmovb  esi,k6
- 22b:	62 f3 ed 28 1e f5 00 	vpcmpequq k6,ymm2,ymm5
- 232:	c5 c5 db fa          	vpand  ymm7,ymm7,ymm2
- 236:	62 f3 ed 28 1e d0 00 	vpcmpequq k2,ymm2,ymm0
- 23d:	62 f3 ed 28 1e de 00 	vpcmpequq k3,ymm2,ymm6
- 244:	c4 c1 45 d4 f9       	vpaddq ymm7,ymm7,ymm9
- 249:	62 f3 ed 28 1e ef 00 	vpcmpequq k5,ymm2,ymm7
- 250:	c5 79 93 c0          	kmovb  r8d,k0
- 254:	c5 f9 93 c7          	kmovb  eax,k7
- 258:	62 f3 ed 28 1e c7 01 	vpcmpltuq k0,ymm2,ymm7
- 25f:	c1 e0 10             	shl    eax,0x10
- 262:	c5 79 93 c9          	kmovb  r9d,k1
- 266:	c5 f9 93 d4          	kmovb  edx,k4
- 26a:	41 c1 e1 0c          	shl    r9d,0xc
- 26e:	c1 e2 10             	shl    edx,0x10
- 271:	c5 f9 93 de          	kmovb  ebx,k6
- 275:	c1 e3 0c             	shl    ebx,0xc
- 278:	09 da                	or     edx,ebx
- 27a:	44 09 c8             	or     eax,r9d
- 27d:	c5 79 93 e2          	kmovb  r12d,k2
- 281:	44 09 c0             	or     eax,r8d
- 284:	44 09 e2             	or     edx,r12d
- 287:	c1 e6 08             	shl    esi,0x8
- 28a:	c5 79 93 db          	kmovb  r11d,k3
- 28e:	41 c1 e3 08          	shl    r11d,0x8
- 292:	44 09 da             	or     edx,r11d
- 295:	09 f0                	or     eax,esi
- 297:	c5 f9 93 c8          	kmovb  ecx,k0
- 29b:	c5 79 93 d5          	kmovb  r10d,k5
- 29f:	c1 e1 04             	shl    ecx,0x4
- 2a2:	41 c1 e2 04          	shl    r10d,0x4
- 2a6:	44 09 d2             	or     edx,r10d
- 2a9:	09 c8                	or     eax,ecx
- 2ab:	8d 04 42             	lea    eax,[rdx+rax*2]
- 2ae:	31 c2                	xor    edx,eax
- 2b0:	0f b6 c6             	movzx  eax,dh
- 2b3:	c5 f9 92 d0          	kmovb  k2,eax
- 2b7:	89 d0                	mov    eax,edx
- 2b9:	c1 e8 10             	shr    eax,0x10
- 2bc:	c5 f9 92 d8          	kmovb  k3,eax
- 2c0:	89 d0                	mov    eax,edx
- 2c2:	c5 f9 92 ca          	kmovb  k1,edx
- 2c6:	c1 e8 04             	shr    eax,0x4
- 2c9:	c1 ea 0c             	shr    edx,0xc
- 2cc:	62 f1 fd 29 fb c2    	vpsubq ymm0{k1},ymm0,ymm2
- 2d2:	62 f1 cd 2a fb f2    	vpsubq ymm6{k2},ymm6,ymm2
- 2d8:	62 f1 f5 2b fb ca    	vpsubq ymm1{k3},ymm1,ymm2
- 2de:	c5 f9 92 e0          	kmovb  k4,eax
- 2e2:	c5 f9 92 ea          	kmovb  k5,edx
- 2e6:	62 f1 c5 2c fb fa    	vpsubq ymm7{k4},ymm7,ymm2
- 2ec:	62 f1 d5 2d fb ea    	vpsubq ymm5{k5},ymm5,ymm2
- 2f2:	c5 fd db c2          	vpand  ymm0,ymm0,ymm2
- 2f6:	c5 c5 db fa          	vpand  ymm7,ymm7,ymm2
- 2fa:	c5 cd db f2          	vpand  ymm6,ymm6,ymm2
- 2fe:	c5 d5 db ea          	vpand  ymm5,ymm5,ymm2
- 302:	c5 f5 db ca          	vpand  ymm1,ymm1,ymm2
- 306:	62 f1 fe 28 7f 07    	vmovdqu64 YMMWORD PTR [rdi],ymm0
- 30c:	62 f1 fe 28 7f 7f 01 	vmovdqu64 YMMWORD PTR [rdi+0x20],ymm7
- 313:	62 f1 fe 28 7f 77 02 	vmovdqu64 YMMWORD PTR [rdi+0x40],ymm6
- 31a:	62 f1 fe 28 7f 6f 03 	vmovdqu64 YMMWORD PTR [rdi+0x60],ymm5
- 321:	62 f1 fe 28 7f 4f 04 	vmovdqu64 YMMWORD PTR [rdi+0x80],ymm1
- 328:	c5 f8 77             	vzeroupper 
  32b:	48 8d 65 d8          	lea    rsp,[rbp-0x28]
  32f:	5b                   	pop    rbx
  330:	41 5c                	pop    r12
@@ -371,7 +516,7 @@ void MacroAssembler::montgomeryMultiply52x20(Register out, Register kk0)
  34a:	48 89 f2             	mov    rdx,rsi
  34d:	e9 00 00 00 00       	jmp    352 <k1_ifma256_ams52x20+0x12>
 #endif
-}
+  }
 
 
 void MacroAssembler::montgomeryMultiply52x30(Register out, Register kk0)
