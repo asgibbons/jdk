@@ -6636,7 +6636,7 @@ address generate_avx_ghash_processBlocks() {
 
   void transform_r52x20(Register src_in, Register dst_in, int offset) {
 //   	reverse_words((julong *)src, (julong *)dst, 16);
-// 00007FF76B3C10CE  lea         ecx,[r14+10h]              // ecx is length in qwords
+// 00007FF76B3C10CE  lea         ecx,[r14+10h]              // ecx is length in words
 // 00007FF76B3C10D2  lea         rdx,[dst+80h (07FF76B3C50C0h)]     // &dst[len]
 // 00007FF76B3C10D9  mov         rax,qword ptr [rsi]        // rsi has ptr to src
 // 00007FF76B3C10DC  lea         rdx,[rdx-8]  
@@ -6647,7 +6647,7 @@ address generate_avx_ghash_processBlocks() {
 // 00007FF76B3C10ED  test        ecx,ecx  
 // 00007FF76B3C10EF  jg          main+7Dh (07FF76B3C10D9h)  
 
-__ lea(r11, Address(src_in, 15 * wordSize));  // End of src array
+__ lea(r11, Address(src_in, 8 * wordSize));  // End of src array
 __ lea(r12, Address(dst_in, offset));        // Destination array
 
 Register src = r11;
@@ -6685,7 +6685,7 @@ __ movl(Address(dst, 8), rax);
 // 00007FF75A601176  and         eax,0FFFFFh  
 // 00007FF75A60117B  mov         dword ptr [dst+0Ch (07FF75A60504Ch)],eax  
 __ movl(rax, Address(src, -4));
-__ andl(rax, 0xffff);
+__ andl(rax, 0xfffff);
 __ movl(Address(dst, 0xc), rax);
 
 // 00007FF75A601181  mov         ecx,dword ptr [rbx-0Ch]  
@@ -6699,7 +6699,7 @@ __ movl(rax, Address(src, -0x18));
 __ shll(rcx, 20);
 __ shrl(rax, 12);
 __ orl(rcx, rax);
-__ movl(Address(dst, 0xc), rcx);
+__ movl(Address(dst, 0x10), rcx);
 
 
 // 00007FF75A601195  mov         eax,dword ptr [rbx-0Ch]  
@@ -6743,7 +6743,7 @@ __ movw(Address(dst, 0x1c), rcx);
 __ movl(rcx, Address(src, -0x1c));
 __ movl(rax, Address(src, -0x20));
 __ shrl(rcx, 4);
-__ shll(rax, 20);
+__ shll(rax, 0x1c);
 __ orl(rcx, rax);
 __ movl(Address(dst, 0x20), rcx);
 
@@ -6753,7 +6753,7 @@ __ movl(Address(dst, 0x20), rcx);
 // 00007FF75A6011EA  mov         dword ptr [dst+24h (07FF75A605064h)],eax
 __ movl(rax, Address(src, -0x20));
 __ shrl(rax, 4);
-__ andl(rax, 0xffff);
+__ andl(rax, 0xfffff);
 __ movl(Address(dst, 0x24), rax);
 
 // 00007FF75A6011F0  mov         eax,dword ptr [rbx-28h]
@@ -6788,7 +6788,7 @@ __ movw(Address(dst, 0x2c), rcx);
 // 00007FF75A601225  mov         dword ptr [dst+30h (07FF75A605070h)],ecx
 __ movl(rcx, Address(src, -0x2c));
 __ movl(rax, Address(src, -0x30));
-__ shrl(rcx, 28);
+__ shrl(rcx, 0x1c);
 __ shll(rax, 4);
 __ orl(rcx, rax);
 __ movl(Address(dst, 0x30), rcx);
@@ -6802,7 +6802,7 @@ __ movl(Address(dst, 0x30), rcx);
 __ movzwl(rcx, Address(src, -0x24));
 __ movl(rax, Address(src, -0x30));
 __ shll(rcx, 4);
-__ shrl(rax, 28);
+__ shrl(rax, 0x1c);
 __ orl(rcx, rax);
 __ movl(Address(dst, 0x34), rcx);
 
@@ -6814,7 +6814,7 @@ __ movl(Address(dst, 0x34), rcx);
 // 00007FF75A60124E  mov         dword ptr [dst+38h (07FF75A605078h)],ecx
 __ movl(rcx, Address(src, -0x2c));
 __ movl(rax, Address(src, -0x38));
-__ shll(rcx, 24);
+__ shll(rcx, 0x18);
 __ shrl(rax, 8);
 __ orl(rcx, rax);
 __ movl(Address(dst, 0x38), rcx);
@@ -6825,7 +6825,7 @@ __ movl(Address(dst, 0x38), rcx);
 // 00007FF75A60125F  mov         dword ptr [dst+3Ch (07FF75A60507Ch)],eax
 __ movl(rax, Address(src, -0x2c));
 __ shrl(rax, 8);
-__ andl(rax, 0xffff);
+__ andl(rax, 0xfffff);
 __ movl(Address(dst, 0x3c), rax);
 
 // 00007FF75A601265  mov         ecx,dword ptr [rbx-40h]
@@ -6836,8 +6836,8 @@ __ movl(Address(dst, 0x3c), rax);
 // 00007FF75A601273  mov         dword ptr [dst+40h (07FF75A605080h)],ecx
 __ movl(rcx, Address(src, -0x40));
 __ movl(rax, Address(src, -0x34));
-__ shll(rcx, 12);
-__ shrl(rax, 20);
+__ shll(rcx, 0xc);
+__ shrl(rax, 0x14);
 __ orl(rcx, rax);
 __ movl(Address(dst, 0x40), rcx);
 
@@ -6849,8 +6849,8 @@ __ movl(Address(dst, 0x40), rcx);
 // 00007FF75A601288  mov         dword ptr [dst+44h (07FF75A605084h)],ecx
 __ movzwl(rcx, Address(src, -0x38));
 __ movl(rax, Address(src, -0x34));
-__ shrl(rax, 20);
-__ shll(rcx, 12);
+__ shrl(rax, 0x14);
+__ shll(rcx, 0xc);
 __ orl(rcx, rax);
 __ movl(Address(dst, 0x44), rcx);
 
@@ -6863,7 +6863,7 @@ __ movl(Address(dst, 0x48), rax);
 // 00007FF75A6012A8  and         eax,0FFFFFh  
 // 00007FF75A6012AD  mov         dword ptr [dst+4Ch (07FF75A60508Ch)],eax
 __ movl(rax, Address(src, -0x40));
-__ andl(rax, 0xffff);
+__ andl(rax, 0xfffff);
 __ movl(Address(dst, 0x4c), rax);
 
 

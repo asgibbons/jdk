@@ -163,6 +163,7 @@ void MacroAssembler::montgomeryMultiply52x20(Register out, Register kk0)
   // 4f:	4c 8b 29             	mov    r13,QWORD PTR [rcx]
   // 52:	4c 8b 26             	mov    r12,QWORD PTR [rsi]
   push(r8);
+  push(r9);
   push(r14);
   push(r13);
   movq(r8, kk0);    // r8 gets inv
@@ -173,12 +174,15 @@ void MacroAssembler::montgomeryMultiply52x20(Register out, Register kk0)
   vmovdqu(xmm0, xmm5);
   vmovdqu(xmm8, xmm5);
   mov64(r9, 0xfffffffffffff);
+  lea(rdi, Address(out, 0));     // Result stored here
   lea(rdx, Address(out, 2 * 40 * wordSize));    // Points to b[0]
   lea(rbx, Address(out, 0xa0 + 2 * 40 * wordSize));    // Points to b[20] - loop terminator
 #define LOOP_TERM Address(out, 4 * 40 * wordSize)
   movq(LOOP_TERM, rdx);
-  lea(r13, Address(out, 3 * 40 * wordSize));    // Points to m[0]
-  lea(r12, Address(out, 1 * 40 * wordSize));    // Points to a[0]
+  lea(rcx, Address(out, 3 * 40 * wordSize));    // Points to m[0]
+  lea(rsi, Address(out, 1 * 40 * wordSize));    // Points to a[0]
+  movq(r13, Address(rcx, 0));
+  movq(r12, Address(rsi, 0));
   xorq(rax, rax);
 
   align32();
@@ -502,6 +506,7 @@ void MacroAssembler::montgomeryMultiply52x20(Register out, Register kk0)
 
   pop(r13);
   pop(r14);
+  pop(r9);
   pop(r8);
 
 #if 0
@@ -522,7 +527,7 @@ void MacroAssembler::montgomeryMultiply52x20(Register out, Register kk0)
  34a:	48 89 f2             	mov    rdx,rsi
  34d:	e9 00 00 00 00       	jmp    352 <k1_ifma256_ams52x20+0x12>
 #endif
-  }
+}
 
 
 void MacroAssembler::montgomeryMultiply52x30(Register out, Register kk0)
