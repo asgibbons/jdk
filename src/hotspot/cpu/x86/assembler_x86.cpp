@@ -11137,14 +11137,9 @@ void Assembler::evpcmpq(KRegister kdst, KRegister mask, XMMRegister nds, XMMRegi
   assert(VM_Version::supports_evex(), "");
   assert(comparison >= Assembler::eq && comparison <= Assembler::_true, "");
   // Encoding: EVEX.NDS.XXX.66.0F3A.W1 1F /r ib
-  if (mask == knoreg){
-    InstructionAttr attributes(vector_len, /* vex_w */ true, /* legacy_mode */ false, /* no_mask_reg */ true, /* uses_vl */ true);
-    attributes.set_is_evex_instruction();
-  } else {
-    InstructionAttr attributes(vector_len, /* vex_w */ true, /* legacy_mode */ false, /* no_mask_reg */ false, /* uses_vl */ true);
-    attributes.set_is_evex_instruction();
-    attributes.set_embedded_opmask_register_specifier(mask);
-  }
+  InstructionAttr attributes(vector_len, /* vex_w */ true, /* legacy_mode */ false, /* no_mask_reg */ (mask == knoreg), /* uses_vl */ true);
+  attributes.set_is_evex_instruction();
+  if (mask != knoreg) attributes.set_embedded_opmask_register_specifier(mask);
   attributes.reset_is_clear_context();
   int encode = vex_prefix_and_encode(kdst->encoding(), nds->encoding(), src->encoding(), VEX_SIMD_66, VEX_OPCODE_0F_3A, &attributes);
   int opcode = is_signed ? 0x1F : 0x1E;
