@@ -4822,6 +4822,7 @@ void Assembler::vpmadd52huq(XMMRegister dst, XMMRegister src1, Address src2, int
   assert(VM_Version::supports_avx512ifma(), "");
   InstructionAttr attributes(vector_len, /* rex_w */ true, /* legacy_mode */ false, /* no_mask_reg */ true, /* uses_vl */ true);
   attributes.set_is_evex_instruction();
+  attributes.set_address_attributes(/* tuple_type */ EVEX_FV, /* input_size_in_bits */ EVEX_NObit);
   vex_prefix(src2, src1->encoding(), dst->encoding(), VEX_SIMD_66, VEX_OPCODE_0F_38, &attributes);
   emit_int8((unsigned char)0xB5);
   emit_operand(dst, src2);
@@ -4831,6 +4832,7 @@ void Assembler::vpmadd52luq(XMMRegister dst, XMMRegister src1, Address src2, int
   assert(VM_Version::supports_avx512ifma(), "");
   InstructionAttr attributes(vector_len, /* rex_w */ true, /* legacy_mode */ false, /* no_mask_reg */ true, /* uses_vl */ true);
   attributes.set_is_evex_instruction();
+  attributes.set_address_attributes(/* tuple_type */ EVEX_FV, /* input_size_in_bits */ EVEX_NObit);
   vex_prefix(src2, src1->encoding(), dst->encoding(), VEX_SIMD_66, VEX_OPCODE_0F_38, &attributes);
   emit_int8((unsigned char)0xB4);
   emit_operand(dst, src2);
@@ -11135,9 +11137,14 @@ void Assembler::evpcmpq(KRegister kdst, KRegister mask, XMMRegister nds, XMMRegi
   assert(VM_Version::supports_evex(), "");
   assert(comparison >= Assembler::eq && comparison <= Assembler::_true, "");
   // Encoding: EVEX.NDS.XXX.66.0F3A.W1 1F /r ib
-  InstructionAttr attributes(vector_len, /* vex_w */ true, /* legacy_mode */ false, /* no_mask_reg */ false, /* uses_vl */ true);
-  attributes.set_is_evex_instruction();
-  attributes.set_embedded_opmask_register_specifier(mask);
+  if (mask == knoreg){
+    InstructionAttr attributes(vector_len, /* vex_w */ true, /* legacy_mode */ false, /* no_mask_reg */ true, /* uses_vl */ true);
+    attributes.set_is_evex_instruction();
+  } else {
+    InstructionAttr attributes(vector_len, /* vex_w */ true, /* legacy_mode */ false, /* no_mask_reg */ false, /* uses_vl */ true);
+    attributes.set_is_evex_instruction();
+    attributes.set_embedded_opmask_register_specifier(mask);
+  }
   attributes.reset_is_clear_context();
   int encode = vex_prefix_and_encode(kdst->encoding(), nds->encoding(), src->encoding(), VEX_SIMD_66, VEX_OPCODE_0F_3A, &attributes);
   int opcode = is_signed ? 0x1F : 0x1E;

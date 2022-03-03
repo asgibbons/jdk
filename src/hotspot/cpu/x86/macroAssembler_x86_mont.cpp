@@ -336,7 +336,7 @@ void MacroAssembler::montgomeryMultiply52x20(Register out, Register kk0)
 //  1da:	62 53 b5 28 03 cb 03 	valignq ymm9,ymm9,ymm11,0x3
 //  1e1:	c5 cd db f2          	vpand  ymm6,ymm6,ymm2
 //  1e5:	c4 c1 4d d4 f2       	vpaddq ymm6,ymm6,ymm10
-//  1ea:	62 f3 ed 28 1e f6 01 	vpcmpltuq k6,ymm2,ymm6
+//  1ea:	62 f3 ed 28 1e f6 01 	vpcmpltuq k6,ymm2,ymm6   // 0x7fffe1042206
 //  1f1:	c5 fd db c2          	vpand  ymm0,ymm0,ymm2
 //  1f5:	c5 dd db ca          	vpand  ymm1,ymm4,ymm2
 //  1f9:	c5 d5 db ea          	vpand  ymm5,ymm5,ymm2
@@ -352,17 +352,17 @@ void MacroAssembler::montgomeryMultiply52x20(Register out, Register kk0)
   evalignq(xmm9, xmm9, xmm11, 3, Assembler::AVX_256bit);
   vpand(xmm6, xmm6, xmm2, Assembler::AVX_256bit);
   vpaddq(xmm6, xmm6, xmm10, Assembler::AVX_256bit);
-  evpcmpq(k6, knoreg, xmm2, xmm6, Assembler::less, false, Assembler::AVX_256bit);
+  evpcmpq(k6, knoreg, xmm2, xmm6, Assembler::noOverflow, false, Assembler::AVX_256bit);
   vpand(xmm0, xmm0, xmm2, Assembler::AVX_256bit);
   vpand(xmm1, xmm4, xmm2, Assembler::AVX_256bit);
   vpand(xmm5, xmm5, xmm2, Assembler::AVX_256bit);
   vpaddq(xmm0, xmm0, xmm8, Assembler::AVX_256bit);
   vpaddq(xmm1, xmm1, xmm12, Assembler::AVX_256bit);
   vpaddq(xmm5, xmm5, xmm3, Assembler::AVX_256bit);
-  evpcmpq(k0, knoreg, xmm2, xmm0, Assembler::less, false, Assembler::AVX_256bit);
-  evpcmpq(k1, knoreg, xmm2, xmm5, Assembler::less, false, Assembler::AVX_256bit);
-  evpcmpq(k4, knoreg, xmm2, xmm1, Assembler::equal, false, Assembler::AVX_256bit);
-  evpcmpq(k7, knoreg, xmm2, xmm1, Assembler::less, false, Assembler::AVX_256bit);
+  evpcmpq(k0, knoreg, xmm2, xmm0, Assembler::noOverflow, false, Assembler::AVX_256bit);
+  evpcmpq(k1, knoreg, xmm2, xmm5, Assembler::noOverflow, false, Assembler::AVX_256bit);
+  evpcmpq(k4, knoreg, xmm2, xmm1, Assembler::overflow, false, Assembler::AVX_256bit);
+  evpcmpq(k7, knoreg, xmm2, xmm1, Assembler::noOverflow, false, Assembler::AVX_256bit);
 
 //  227:	c5 f9 93 f6          	kmovb  esi,k6
 //  22b:	62 f3 ed 28 1e f5 00 	vpcmpequq k6,ymm2,ymm5
@@ -375,15 +375,15 @@ void MacroAssembler::montgomeryMultiply52x20(Register out, Register kk0)
 //  254:	c5 f9 93 c7          	kmovb  eax,k7
 //  258:	62 f3 ed 28 1e c7 01 	vpcmpltuq k0,ymm2,ymm7
   kmovbl(rsi, k6);
-  evpcmpq(k6, knoreg, xmm2, xmm5, Assembler::equal, false, Assembler::AVX_256bit);
+  evpcmpq(k6, knoreg, xmm2, xmm5, Assembler::overflow, false, Assembler::AVX_256bit);
   vpand(xmm7, xmm7, xmm2, Assembler::AVX_256bit);
-  evpcmpq(k2, knoreg, xmm2, xmm0, Assembler::equal, false, Assembler::AVX_256bit);
-  evpcmpq(k3, knoreg, xmm2, xmm6, Assembler::equal, false, Assembler::AVX_256bit);
+  evpcmpq(k2, knoreg, xmm2, xmm0, Assembler::overflow, false, Assembler::AVX_256bit);
+  evpcmpq(k3, knoreg, xmm2, xmm6, Assembler::overflow, false, Assembler::AVX_256bit);
   vpaddq(xmm7, xmm7, xmm9, Assembler::AVX_256bit);
-  evpcmpq(k5, knoreg, xmm2, xmm7, Assembler::equal, false, Assembler::AVX_256bit);
+  evpcmpq(k5, knoreg, xmm2, xmm7, Assembler::overflow, false, Assembler::AVX_256bit);
   kmovbl(r8, k0);
   kmovbl(rax, k7);
-  evpcmpq(k0, knoreg, xmm2, xmm7, Assembler::less, false, Assembler::AVX_256bit);
+  evpcmpq(k0, knoreg, xmm2, xmm7, Assembler::noOverflow, false, Assembler::AVX_256bit);
 
 //  25f:	c1 e0 10             	shl    eax,0x10
 //  262:	c5 79 93 c9          	kmovb  r9d,k1
@@ -432,7 +432,7 @@ void MacroAssembler::montgomeryMultiply52x20(Register out, Register kk0)
   orl(rdx, r10);
   orl(rax, rcx);
 
-//  2ab:	8d 04 42             	lea    eax,[rdx+rax*2]
+//  2ab:	8d 04 42             	lea    eax,[rdx+rax*2]  // compiles into lea eax,[edx+eax*2]
 //  2ae:	31 c2                	xor    edx,eax
 //  2b0:	0f b6 c6             	movzx  eax,dh
 //  2b3:	c5 f9 92 d0          	kmovb  k2,eax
@@ -443,11 +443,17 @@ void MacroAssembler::montgomeryMultiply52x20(Register out, Register kk0)
 //  2c2:	c5 f9 92 ca          	kmovb  k1,edx
 //  2c6:	c1 e8 04             	shr    eax,0x4
 //  2c9:	c1 ea 0c             	shr    edx,0xc
-  leal(rax, Address(rdx, rax, Address::times_2));
+  //  leal(rax, Address(rdx, rax, Address::times_2));
+  emit_int8((unsigned char) 0x8d);
+  emit_int8((unsigned char) 0x04);
+  emit_int8((unsigned char) 0x42);
   xorl(rdx, rax);
-  movzwl(rax, rdx);
-  shrl(rax, 8);
-  andl(rax, 0xff);
+  //movzwl(rax, rdx);
+  //shrl(rax, 8);
+  //andl(rax, 0xff);
+  emit_int8((unsigned char) 0x0f);
+  emit_int8((unsigned char) 0xb6);
+  emit_int8((unsigned char) 0xc6);
   kmovbl(k2, rax);
   movl(rax, rdx);
   shrl(rax, 0x10);
@@ -457,7 +463,7 @@ void MacroAssembler::montgomeryMultiply52x20(Register out, Register kk0)
   shrl(rax, 4);
   shrl(rdx, 0xc);
 
-//  2cc:	62 f1 fd 29 fb c2    	vpsubq ymm0{k1},ymm0,ymm2
+//  2cc:	62 f1 fd 29 fb c2    	vpsubq ymm0{k1},ymm0,ymm2  // ??????????
 //  2d2:	62 f1 cd 2a fb f2    	vpsubq ymm6{k2},ymm6,ymm2
 //  2d8:	62 f1 f5 2b fb ca    	vpsubq ymm1{k3},ymm1,ymm2
 //  2de:	c5 f9 92 e0          	kmovb  k4,eax
@@ -475,13 +481,13 @@ void MacroAssembler::montgomeryMultiply52x20(Register out, Register kk0)
 //  31a:	62 f1 fe 28 7f 6f 03 	vmovdqu64 YMMWORD PTR [rdi+0x60],ymm5
 //  321:	62 f1 fe 28 7f 4f 04 	vmovdqu64 YMMWORD PTR [rdi+0x80],ymm1
 //  328:	c5 f8 77             	vzeroupper 
-  evpsubq(xmm0, k1, xmm0, xmm2, false, Assembler::AVX_256bit);
-  evpsubq(xmm6, k2, xmm6, xmm2, false, Assembler::AVX_256bit);
-  evpsubq(xmm1, k3, xmm1, xmm2, false, Assembler::AVX_256bit);
+  evpsubq(xmm0, k1, xmm0, xmm2, true, Assembler::AVX_256bit);
+  evpsubq(xmm6, k2, xmm6, xmm2, true, Assembler::AVX_256bit);
+  evpsubq(xmm1, k3, xmm1, xmm2, true, Assembler::AVX_256bit);
   kmovbl(k4, rax);
   kmovbl(k5, rdx);
-  evpsubq(xmm7, k4, xmm7, xmm2, false, Assembler::AVX_256bit);
-  evpsubq(xmm5, k5, xmm5, xmm2, false, Assembler::AVX_256bit);
+  evpsubq(xmm7, k4, xmm7, xmm2, true, Assembler::AVX_256bit);
+  evpsubq(xmm5, k5, xmm5, xmm2, true, Assembler::AVX_256bit);
   vpand(xmm0, xmm0, xmm2, Assembler::AVX_256bit);
   vpand(xmm7, xmm7, xmm2, Assembler::AVX_256bit);
   vpand(xmm6, xmm6, xmm2, Assembler::AVX_256bit);
