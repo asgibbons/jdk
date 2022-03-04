@@ -6651,10 +6651,10 @@ address generate_avx_ghash_processBlocks() {
 
 Register src = r11;
 Register dst = r12;
+Label L_xform, L_bottom;
 
 __ jmp(L_bottom);
 
-Label L_xform;
 __ BIND(L_xform);
 
 // 00007FF75A60114A  mov         ecx,dword ptr [rbx-8]  
@@ -6876,24 +6876,24 @@ __ movq(r15, rax);
 
 __ lea(src, Address(a_in, 8 * wordSize));  // End of src array
 __ lea(dst, Address(dst_in, XFORM_ARRAY_SIZE));        // Destination array
-__ call(L_xform);
+__ call(L_xform, relocInfo::none);
 
 __ lea(src, Address(b_in, 8 * wordSize));  // End of src array
 __ lea(dst, Address(dst_in, 2 * XFORM_ARRAY_SIZE));        // Destination array
-__ call(L_xform);
+__ call(L_xform, relocInfo::none);
 
 __ lea(src, Address(n_in, 8 * wordSize));  // End of src array
 __ lea(dst, Address(dst_in, 3 * XFORM_ARRAY_SIZE));        // Destination array
-__ call(L_xform);
+__ call(L_xform, relocInfo::none);
 
 __ movq(rcx, r10);
 __ movq(rax, r15);
   }
 
-  void transform_r52x30(Register src, Register dst, int offset) {
+  void transform_r52x30(Register a_in, Register b_in, Register n_in, Register dst_in) {
   }
 
-  void transform_r52x40(Register src, Register dst, int offset) {
+  void transform_r52x40(Register a_in, Register b_in, Register n_in, Register dst_in) {
   }
 
 
