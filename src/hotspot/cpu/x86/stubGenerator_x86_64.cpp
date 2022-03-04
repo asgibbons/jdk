@@ -6953,7 +6953,7 @@ address generate_avx_ghash_processBlocks() {
 	  // (07FF63E0E50C8h)],ecx
 	  __ movl(rax, Address(rbx, -0x10));
 	  __ shll(rax, 0x14);
-	  __ orll(rax, Address(rbx, -4));
+	  __ orl(rax, Address(rbx, -4));
 	  __ movl(Address(dst, 0x00), rax);
 	  __ movl(rax, Address(rbx, -0x08));
 	  __ movl(Address(dst, 0x04), rax);
