@@ -7059,7 +7059,7 @@ __ movq(rax, r15);
 
       __ addptr(rsp, 40 * wordSize * 4 + 8);
 
-      __ jmp(L_revert);
+//      __ jmp(L_revert);
 
       __ BIND(L_exit);
       __ pop(r15);
