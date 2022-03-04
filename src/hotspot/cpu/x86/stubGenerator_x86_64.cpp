@@ -6938,19 +6938,18 @@ address generate_avx_ghash_processBlocks() {
 
 	  __ lea(src, Address(src_in, 10 * wordSize)); // End of src array
 
-	  // 00007FF63E0E12FC  mov         eax,dword ptr [rbx-10h]  // rbx is
-	  // src, tmp is dst 00007FF63E0E12FF  shl         eax,14h
+	  // 00007FF63E0E12FC  mov         eax,dword ptr [rbx-10h]  // rbx is src, tmp is dst
+	  // 00007FF63E0E12FF  shl         eax,14h
 	  // 00007FF63E0E1302  or          eax,dword ptr [rbx-4]
 	  // 00007FF63E0E1305  mov         dword ptr [tmp (07FF63E0E50C0h)],eax
 	  // 00007FF63E0E130B  mov         eax,dword ptr [rbx-8]
-	  // 00007FF63E0E130E  mov         dword ptr [tmp+4h
-	  // (07FF63E0E50C4h)],eax 00007FF63E0E1314  mov         ecx,dword ptr
-	  // [rbx-0Ch] 00007FF63E0E1317  mov         eax,dword ptr [rbx-18h]
+	  // 00007FF63E0E130E  mov         dword ptr [tmp+4h (07FF63E0E50C4h)],eax
+	  // 00007FF63E0E1314  mov         ecx,dword ptr [rbx-0Ch]
+	  // 00007FF63E0E1317  mov         eax,dword ptr [rbx-18h]
 	  // 00007FF63E0E131A  shr         ecx,0Ch
 	  // 00007FF63E0E131D  shl         eax,8
 	  // 00007FF63E0E1320  or          ecx,eax
-	  // 00007FF63E0E1322  mov         dword ptr [tmp+8h
-	  // (07FF63E0E50C8h)],ecx
+	  // 00007FF63E0E1322  mov         dword ptr [tmp+8h (07FF63E0E50C8h)],ecx
 	  __ movl(rax, Address(rbx, -0x10));
 	  __ shll(rax, 0x14);
 	  __ orl(rax, Address(rbx, -4));
@@ -7243,9 +7242,9 @@ address generate_avx_ghash_processBlocks() {
 
 	  // Make room on the stack for transformed data.  Need to convert from
 	  // radix-64 to radix-52. Maximum size is 40 qwords for 2K bit integer.
-	  __ subptr(rsp,
-		    XFORM_ARRAY_SIZE * 4 + 8); // Need 4 transformed arrays and
-					       // one word of index storage
+
+	  __ subptr(rsp, XFORM_ARRAY_SIZE * 4 + 8); // Need 4 transformed arrays and
+                                              // one word of index storage
 	  __ movptr(tmp_result, rsp);
 
 	  __ cmpl(len, 16);
