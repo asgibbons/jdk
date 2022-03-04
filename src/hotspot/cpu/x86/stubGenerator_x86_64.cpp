@@ -6634,7 +6634,9 @@ address generate_avx_ghash_processBlocks() {
    *   lomg long *dst - result
    */
 
-  void transform_r52x20(Register src_in, Register dst_in, int offset) {
+#define XFORM_ARRAY_SIZE (40 * wordSize)
+
+  void transform_r52x20(Register a_in, Register b_in, Register n_in, Register dst_in) {
 //   	reverse_words((julong *)src, (julong *)dst, 16);
 // 00007FF76B3C10CE  lea         ecx,[r14+10h]              // ecx is length in words
 // 00007FF76B3C10D2  lea         rdx,[dst+80h (07FF76B3C50C0h)]     // &dst[len]
@@ -6647,14 +6649,13 @@ address generate_avx_ghash_processBlocks() {
 // 00007FF76B3C10ED  test        ecx,ecx  
 // 00007FF76B3C10EF  jg          main+7Dh (07FF76B3C10D9h)  
 
-__ lea(r11, Address(src_in, 8 * wordSize));  // End of src array
-__ lea(r12, Address(dst_in, offset));        // Destination array
-
 Register src = r11;
 Register dst = r12;
 
-__ movq(r10, rcx);   // Save registers
-__ movq(r15, rax);
+__ jmp(L_bottom);
+
+Label L_xform;
+__ BIND(L_xform);
 
 // 00007FF75A60114A  mov         ecx,dword ptr [rbx-8]  
 // 00007FF75A60114D  mov         eax,dword ptr [rbx-4]  
@@ -6866,6 +6867,24 @@ __ movl(rax, Address(src, -0x40));
 __ andl(rax, 0xfffff);
 __ movl(Address(dst, 0x4c), rax);
 
+__ ret(0);
+
+__ BIND(L_bottom);
+
+__ movq(r10, rcx);   // Save registers
+__ movq(r15, rax);
+
+__ lea(src, Address(a_in, 8 * wordSize));  // End of src array
+__ lea(dst, Address(dst_in, XFORM_ARRAY_SIZE));        // Destination array
+__ call(L_xform);
+
+__ lea(src, Address(b_in, 8 * wordSize));  // End of src array
+__ lea(dst, Address(dst_in, 2 * XFORM_ARRAY_SIZE));        // Destination array
+__ call(L_xform);
+
+__ lea(src, Address(n_in, 8 * wordSize));  // End of src array
+__ lea(dst, Address(dst_in, 3 * XFORM_ARRAY_SIZE));        // Destination array
+__ call(L_xform);
 
 __ movq(rcx, r10);
 __ movq(rax, r15);
@@ -7017,15 +7036,13 @@ __ movq(rax, r15);
 
       // Make room on the stack for transformed data.  Need to convert from radix-64 to radix-52.
       // Maximum size is 40 qwords for 2K bit integer.
-      __ subptr(rsp, 40 * wordSize * 4 + 8);    // Need 4 transformed arrays and one word of index storage
+      __ subptr(rsp, XFORM_ARRAY_SIZE * 4 + 8);    // Need 4 transformed arrays and one word of index storage
       __ movptr(tmp_result, rsp);
 
       __ cmpl(len, 16);
       __ jcc(Assembler::greater, L_30);
       // Transform to radix-52
-      transform_r52x20(a, tmp_result, 1 * 40 * wordSize);
-      transform_r52x20(b, tmp_result, 2 * 40 * wordSize);
-      transform_r52x20(n, tmp_result, 3 * 40 * wordSize);
+      transform_r52x20(a, b, n, tmp_result);
 
       __ montgomeryMultiply52x20(tmp_result, inv);
 
@@ -7036,9 +7053,7 @@ __ movq(rax, r15);
       __ cmpl(len, 24);
       __ jcc(Assembler::greater, L_40);
       // Transform to radix-52
-      transform_r52x30(a, tmp_result, 1 * 40 * wordSize);
-      transform_r52x30(b, tmp_result, 2 * 40 * wordSize);
-      transform_r52x30(n, tmp_result, 3 * 40 * wordSize);
+      transform_r52x30(a, b, n, tmp_result);
 
       __ montgomeryMultiply52x30(tmp_result, inv);
 
@@ -7047,9 +7062,7 @@ __ movq(rax, r15);
 
       __ BIND(L_40);
       // Transform to radix-52
-      transform_r52x40(a, tmp_result, 1 * 40 * wordSize);
-      transform_r52x40(b, tmp_result, 2 * 40 * wordSize);
-      transform_r52x40(n, tmp_result, 3 * 40 * wordSize);
+      transform_r52x40(a, b, n, tmp_result);
 
       __ montgomeryMultiply52x40(tmp_result, inv);
 
@@ -7057,7 +7070,7 @@ __ movq(rax, r15);
 
       __ BIND(L_trans_result);
 
-      __ addptr(rsp, 40 * wordSize * 4 + 8);
+      __ addptr(rsp, XFORM_ARRAY_SIZE * 4 + 8);
 
 //      __ jmp(L_revert);
 
@@ -7088,6 +7101,7 @@ __ movq(rax, r15);
 
       return start;
 }
+#undef XFORM_ARRAY_SIZE
 
   /***
    *  Arguments:
