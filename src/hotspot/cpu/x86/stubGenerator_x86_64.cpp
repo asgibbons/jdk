@@ -6637,277 +6637,277 @@ address generate_avx_ghash_processBlocks() {
 #define XFORM_ARRAY_SIZE (40 * wordSize)
 
   void transform_r52x20(Register a_in, Register b_in, Register n_in, Register dst_in) {
-	  //   	reverse_words((julong *)src, (julong *)dst, 16);
-	  // 00007FF76B3C10CE  lea         ecx,[r14+10h]              // ecx is
-	  // length in words 00007FF76B3C10D2  lea         rdx,[dst+80h
-	  // (07FF76B3C50C0h)]     // &dst[len] 00007FF76B3C10D9  mov rax,qword
-	  // ptr [rsi]        // rsi has ptr to src 00007FF76B3C10DC  lea
-	  // rdx,[rdx-8] 00007FF76B3C10E0  rol         rax,20h 00007FF76B3C10E4
-	  // lea         rsi,[rsi+8] 00007FF76B3C10E8  dec         ecx
-	  // 00007FF76B3C10EA  mov         qword ptr [rdx],rax
-	  // 00007FF76B3C10ED  test        ecx,ecx
-	  // 00007FF76B3C10EF  jg          main+7Dh (07FF76B3C10D9h)
+    //     reverse_words((julong *)src, (julong *)dst, 16);
+    // 00007FF76B3C10CE  lea         ecx,[r14+10h]              // ecx is
+    // length in words 00007FF76B3C10D2  lea         rdx,[dst+80h
+    // (07FF76B3C50C0h)]     // &dst[len] 00007FF76B3C10D9  mov rax,qword
+    // ptr [rsi]        // rsi has ptr to src 00007FF76B3C10DC  lea
+    // rdx,[rdx-8] 00007FF76B3C10E0  rol         rax,20h 00007FF76B3C10E4
+    // lea         rsi,[rsi+8] 00007FF76B3C10E8  dec         ecx
+    // 00007FF76B3C10EA  mov         qword ptr [rdx],rax
+    // 00007FF76B3C10ED  test        ecx,ecx
+    // 00007FF76B3C10EF  jg          main+7Dh (07FF76B3C10D9h)
 
-	  Register src = r11;
-	  Register dst = r12;
-	  Label L_xform, L_bottom;
+    Register src = r11;
+    Register dst = r12;
+    Label L_xform, L_bottom;
 
-	  __ jmp(L_bottom);
+    __ jmp(L_bottom);
 
-	  __ BIND(L_xform);
+    __ BIND(L_xform);
 
-	  // 00007FF75A60114A  mov         ecx,dword ptr [rbx-8]
-	  // 00007FF75A60114D  mov         eax,dword ptr [rbx-4]
-	  // 00007FF75A601150  shl         ecx,0Ch
-	  // 00007FF75A601153  shr         eax,14h
-	  // 00007FF75A601156  or          ecx,eax
-	  // 00007FF75A601158  mov         dword ptr [dst (07FF75A605040h)],ecx
-	  __ movl(rcx, Address(src, -8));
-	  __ movl(rax, Address(src, -4));
-	  __ shll(rcx, 12);
-	  __ shrl(rax, 20);
-	  __ orl(rcx, rax);
-	  __ movl(Address(dst, 0), rcx);
+    // 00007FF75A60114A  mov         ecx,dword ptr [rbx-8]
+    // 00007FF75A60114D  mov         eax,dword ptr [rbx-4]
+    // 00007FF75A601150  shl         ecx,0Ch
+    // 00007FF75A601153  shr         eax,14h
+    // 00007FF75A601156  or          ecx,eax
+    // 00007FF75A601158  mov         dword ptr [dst (07FF75A605040h)],ecx
+    __ movl(rcx, Address(src, -8));
+    __ movl(rax, Address(src, -4));
+    __ shll(rcx, 12);
+    __ shrl(rax, 20);
+    __ orl(rcx, rax);
+    __ movl(Address(dst, 0), rcx);
 
-	  // 00007FF75A60115E  mov         eax,dword ptr [rbx-8]
-	  // 00007FF75A601161  shr         eax,14h
-	  // 00007FF75A601164  mov         dword ptr [dst+4h
-	  // (07FF75A605044h)],eax
-	  __ movl(rax, Address(src, -8));
-	  __ shrl(rax, 20);
-	  __ movl(Address(dst, 4), rax);
+    // 00007FF75A60115E  mov         eax,dword ptr [rbx-8]
+    // 00007FF75A601161  shr         eax,14h
+    // 00007FF75A601164  mov         dword ptr [dst+4h
+    // (07FF75A605044h)],eax
+    __ movl(rax, Address(src, -8));
+    __ shrl(rax, 20);
+    __ movl(Address(dst, 4), rax);
 
-	  // 00007FF75A60116A  mov         eax,dword ptr [rbx-10h]
-	  // 00007FF75A60116D  mov         dword ptr [dst+8h
-	  // (07FF75A605048h)],eax
-	  __ movl(rax, Address(src, -16));
-	  __ movl(Address(dst, 8), rax);
+    // 00007FF75A60116A  mov         eax,dword ptr [rbx-10h]
+    // 00007FF75A60116D  mov         dword ptr [dst+8h
+    // (07FF75A605048h)],eax
+    __ movl(rax, Address(src, -16));
+    __ movl(Address(dst, 8), rax);
 
-	  // 00007FF75A601173  mov         eax,dword ptr [rbx-4]
-	  // 00007FF75A601176  and         eax,0FFFFFh
-	  // 00007FF75A60117B  mov         dword ptr [dst+0Ch
-	  // (07FF75A60504Ch)],eax
-	  __ movl(rax, Address(src, -4));
-	  __ andl(rax, 0xfffff);
-	  __ movl(Address(dst, 0xc), rax);
+    // 00007FF75A601173  mov         eax,dword ptr [rbx-4]
+    // 00007FF75A601176  and         eax,0FFFFFh
+    // 00007FF75A60117B  mov         dword ptr [dst+0Ch
+    // (07FF75A60504Ch)],eax
+    __ movl(rax, Address(src, -4));
+    __ andl(rax, 0xfffff);
+    __ movl(Address(dst, 0xc), rax);
 
-	  // 00007FF75A601181  mov         ecx,dword ptr [rbx-0Ch]
-	  // 00007FF75A601184  mov         eax,dword ptr [rbx-18h]
-	  // 00007FF75A601187  shl         ecx,14h
-	  // 00007FF75A60118A  shr         eax,0Ch
-	  // 00007FF75A60118D  or          ecx,eax
-	  // 00007FF75A60118F  mov         dword ptr [dst+10h
-	  // (07FF75A605050h)],ecx
-	  __ movl(rcx, Address(src, -0xc));
-	  __ movl(rax, Address(src, -0x18));
-	  __ shll(rcx, 20);
-	  __ shrl(rax, 12);
-	  __ orl(rcx, rax);
-	  __ movl(Address(dst, 0x10), rcx);
-
-
-	  // 00007FF75A601195  mov         eax,dword ptr [rbx-0Ch]
-	  // 00007FF75A601198  shr         eax,0Ch
-	  // 00007FF75A60119B  mov         dword ptr [dst+14h
-	  // (07FF75A605054h)],eax
-	  __ movl(rax, Address(src, -0xc));
-	  __ shrl(rax, 12);
-	  __ movl(Address(dst, 0x14), rax);
+    // 00007FF75A601181  mov         ecx,dword ptr [rbx-0Ch]
+    // 00007FF75A601184  mov         eax,dword ptr [rbx-18h]
+    // 00007FF75A601187  shl         ecx,14h
+    // 00007FF75A60118A  shr         eax,0Ch
+    // 00007FF75A60118D  or          ecx,eax
+    // 00007FF75A60118F  mov         dword ptr [dst+10h
+    // (07FF75A605050h)],ecx
+    __ movl(rcx, Address(src, -0xc));
+    __ movl(rax, Address(src, -0x18));
+    __ shll(rcx, 20);
+    __ shrl(rax, 12);
+    __ orl(rcx, rax);
+    __ movl(Address(dst, 0x10), rcx);
 
 
-	  // 00007FF75A6011A1  mov         eax,dword ptr [rbx-14h]
-	  // 00007FF75A6011A4  movzx       ecx,byte ptr [rbx-1Dh]
-	  // 00007FF75A6011A8  shl         eax,8
-	  // 00007FF75A6011AB  or          ecx,eax
-	  // 00007FF75A6011AD  mov         dword ptr [dst+18h
-	  // (07FF75A605058h)],ecx
-	  __ movl(rax, Address(src, -0x14));
-	  __ movzwl(rcx, Address(src, -0x1d));
-	  __ shll(rax, 8);
-	  __ orl(rcx, rax);
-	  __ movw(Address(dst, 0x18), rcx);
+    // 00007FF75A601195  mov         eax,dword ptr [rbx-0Ch]
+    // 00007FF75A601198  shr         eax,0Ch
+    // 00007FF75A60119B  mov         dword ptr [dst+14h
+    // (07FF75A605054h)],eax
+    __ movl(rax, Address(src, -0xc));
+    __ shrl(rax, 12);
+    __ movl(Address(dst, 0x14), rax);
 
-	  // 00007FF75A6011B3  movzx       eax,byte ptr [rbx-11h]
-	  // 00007FF75A6011B7  mov         ecx,dword ptr [rbx-18h]
-	  // 00007FF75A6011BA  and         ecx,0FFFh
-	  // 00007FF75A6011C0  shl         ecx,8
-	  // 00007FF75A6011C3  or          ecx,eax
-	  // 00007FF75A6011C5  mov         dword ptr [dst+1Ch
-	  // (07FF75A60505Ch)],ecx
-	  __ movzwl(rax, Address(src, -0x11));
-	  __ movl(rcx, Address(src, -0x18));
-	  __ andl(rcx, 0xfff);
-	  __ shll(rcx, 8);
-	  __ orl(rcx, rax);
-	  __ movw(Address(dst, 0x1c), rcx);
 
-	  // 00007FF75A6011CB  mov         ecx,dword ptr [rbx-1Ch]
-	  // 00007FF75A6011CE  mov         eax,dword ptr [rbx-20h]
-	  // 00007FF75A6011D1  shr         ecx,4
-	  // 00007FF75A6011D4  shl         eax,1Ch
-	  // 00007FF75A6011D7  or          ecx,eax
-	  // 00007FF75A6011D9  mov         dword ptr [dst+20h
-	  // (07FF75A605060h)],ecx
-	  __ movl(rcx, Address(src, -0x1c));
-	  __ movl(rax, Address(src, -0x20));
-	  __ shrl(rcx, 4);
-	  __ shll(rax, 0x1c);
-	  __ orl(rcx, rax);
-	  __ movl(Address(dst, 0x20), rcx);
+    // 00007FF75A6011A1  mov         eax,dword ptr [rbx-14h]
+    // 00007FF75A6011A4  movzx       ecx,byte ptr [rbx-1Dh]
+    // 00007FF75A6011A8  shl         eax,8
+    // 00007FF75A6011AB  or          ecx,eax
+    // 00007FF75A6011AD  mov         dword ptr [dst+18h
+    // (07FF75A605058h)],ecx
+    __ movl(rax, Address(src, -0x14));
+    __ movzwl(rcx, Address(src, -0x1d));
+    __ shll(rax, 8);
+    __ orl(rcx, rax);
+    __ movw(Address(dst, 0x18), rcx);
 
-	  // 00007FF75A6011DF  mov         eax,dword ptr [rbx-20h]
-	  // 00007FF75A6011E2  shr         eax,4
-	  // 00007FF75A6011E5  and         eax,0FFFFFh
-	  // 00007FF75A6011EA  mov         dword ptr [dst+24h
-	  // (07FF75A605064h)],eax
-	  __ movl(rax, Address(src, -0x20));
-	  __ shrl(rax, 4);
-	  __ andl(rax, 0xfffff);
-	  __ movl(Address(dst, 0x24), rax);
+    // 00007FF75A6011B3  movzx       eax,byte ptr [rbx-11h]
+    // 00007FF75A6011B7  mov         ecx,dword ptr [rbx-18h]
+    // 00007FF75A6011BA  and         ecx,0FFFh
+    // 00007FF75A6011C0  shl         ecx,8
+    // 00007FF75A6011C3  or          ecx,eax
+    // 00007FF75A6011C5  mov         dword ptr [dst+1Ch
+    // (07FF75A60505Ch)],ecx
+    __ movzwl(rax, Address(src, -0x11));
+    __ movl(rcx, Address(src, -0x18));
+    __ andl(rcx, 0xfff);
+    __ shll(rcx, 8);
+    __ orl(rcx, rax);
+    __ movw(Address(dst, 0x1c), rcx);
 
-	  // 00007FF75A6011F0  mov         eax,dword ptr [rbx-28h]
-	  // 00007FF75A6011F3  movzx       ecx,word ptr [rbx-22h]
-	  // 00007FF75A6011F7  shl         eax,10h
-	  // 00007FF75A6011FA  or          ecx,eax
-	  // 00007FF75A6011FC  mov         dword ptr [dst+28h
-	  // (07FF75A605068h)],ecx
-	  __ movl(rax, Address(src, -0x28));
-	  __ movzwl(rcx, Address(src, -0x22));
-	  __ shll(rax, 16);
-	  __ orl(rcx, rax);
-	  __ movw(Address(dst, 0x28), rcx);
+    // 00007FF75A6011CB  mov         ecx,dword ptr [rbx-1Ch]
+    // 00007FF75A6011CE  mov         eax,dword ptr [rbx-20h]
+    // 00007FF75A6011D1  shr         ecx,4
+    // 00007FF75A6011D4  shl         eax,1Ch
+    // 00007FF75A6011D7  or          ecx,eax
+    // 00007FF75A6011D9  mov         dword ptr [dst+20h
+    // (07FF75A605060h)],ecx
+    __ movl(rcx, Address(src, -0x1c));
+    __ movl(rax, Address(src, -0x20));
+    __ shrl(rcx, 4);
+    __ shll(rax, 0x1c);
+    __ orl(rcx, rax);
+    __ movl(Address(dst, 0x20), rcx);
 
-	  // 00007FF75A601202  movzx       eax,word ptr [rbx-26h]
-	  // 00007FF75A601206  mov         ecx,dword ptr [rbx-1Ch]
-	  // 00007FF75A601209  and         ecx,0Fh
-	  // 00007FF75A60120C  shl         ecx,10h
-	  // 00007FF75A60120F  or          ecx,eax
-	  // 00007FF75A601211  mov         dword ptr [dst+2Ch
-	  // (07FF75A60506Ch)],ecx
-	  __ movzwl(rax, Address(src, -0x26));
-	  __ movl(rcx, Address(src, -0x1c));
-	  __ andl(rcx, 0xf);
-	  __ shll(rcx, 16);
-	  __ orl(rcx, rax);
-	  __ movw(Address(dst, 0x2c), rcx);
+    // 00007FF75A6011DF  mov         eax,dword ptr [rbx-20h]
+    // 00007FF75A6011E2  shr         eax,4
+    // 00007FF75A6011E5  and         eax,0FFFFFh
+    // 00007FF75A6011EA  mov         dword ptr [dst+24h
+    // (07FF75A605064h)],eax
+    __ movl(rax, Address(src, -0x20));
+    __ shrl(rax, 4);
+    __ andl(rax, 0xfffff);
+    __ movl(Address(dst, 0x24), rax);
 
-	  // 00007FF75A601217  mov         ecx,dword ptr [rbx-2Ch]
-	  // 00007FF75A60121A  mov         eax,dword ptr [rbx-30h]
-	  // 00007FF75A60121D  shr         ecx,1Ch
-	  // 00007FF75A601220  shl         eax,4
-	  // 00007FF75A601223  or          ecx,eax
-	  // 00007FF75A601225  mov         dword ptr [dst+30h
-	  // (07FF75A605070h)],ecx
-	  __ movl(rcx, Address(src, -0x2c));
-	  __ movl(rax, Address(src, -0x30));
-	  __ shrl(rcx, 0x1c);
-	  __ shll(rax, 4);
-	  __ orl(rcx, rax);
-	  __ movl(Address(dst, 0x30), rcx);
+    // 00007FF75A6011F0  mov         eax,dword ptr [rbx-28h]
+    // 00007FF75A6011F3  movzx       ecx,word ptr [rbx-22h]
+    // 00007FF75A6011F7  shl         eax,10h
+    // 00007FF75A6011FA  or          ecx,eax
+    // 00007FF75A6011FC  mov         dword ptr [dst+28h
+    // (07FF75A605068h)],ecx
+    __ movl(rax, Address(src, -0x28));
+    __ movzwl(rcx, Address(src, -0x22));
+    __ shll(rax, 16);
+    __ orl(rcx, rax);
+    __ movw(Address(dst, 0x28), rcx);
 
-	  // 00007FF75A60122B  movzx       ecx,word ptr [rbx-24h]
-	  // 00007FF75A60122F  mov         eax,dword ptr [rbx-30h]
-	  // 00007FF75A601232  shl         ecx,4
-	  // 00007FF75A601235  shr         eax,1Ch
-	  // 00007FF75A601238  or          ecx,eax
-	  // 00007FF75A60123A  mov         dword ptr [dst+34h
-	  // (07FF75A605074h)],ecx
-	  __ movzwl(rcx, Address(src, -0x24));
-	  __ movl(rax, Address(src, -0x30));
-	  __ shll(rcx, 4);
-	  __ shrl(rax, 0x1c);
-	  __ orl(rcx, rax);
-	  __ movl(Address(dst, 0x34), rcx);
+    // 00007FF75A601202  movzx       eax,word ptr [rbx-26h]
+    // 00007FF75A601206  mov         ecx,dword ptr [rbx-1Ch]
+    // 00007FF75A601209  and         ecx,0Fh
+    // 00007FF75A60120C  shl         ecx,10h
+    // 00007FF75A60120F  or          ecx,eax
+    // 00007FF75A601211  mov         dword ptr [dst+2Ch
+    // (07FF75A60506Ch)],ecx
+    __ movzwl(rax, Address(src, -0x26));
+    __ movl(rcx, Address(src, -0x1c));
+    __ andl(rcx, 0xf);
+    __ shll(rcx, 16);
+    __ orl(rcx, rax);
+    __ movw(Address(dst, 0x2c), rcx);
 
-	  // 00007FF75A601240  mov         ecx,dword ptr [rbx-2Ch]
-	  // 00007FF75A601243  mov         eax,dword ptr [rbx-38h]
-	  // 00007FF75A601246  shl         ecx,18h
-	  // 00007FF75A601249  shr         eax,8
-	  // 00007FF75A60124C  or          ecx,eax
-	  // 00007FF75A60124E  mov         dword ptr [dst+38h
-	  // (07FF75A605078h)],ecx
-	  __ movl(rcx, Address(src, -0x2c));
-	  __ movl(rax, Address(src, -0x38));
-	  __ shll(rcx, 0x18);
-	  __ shrl(rax, 8);
-	  __ orl(rcx, rax);
-	  __ movl(Address(dst, 0x38), rcx);
+    // 00007FF75A601217  mov         ecx,dword ptr [rbx-2Ch]
+    // 00007FF75A60121A  mov         eax,dword ptr [rbx-30h]
+    // 00007FF75A60121D  shr         ecx,1Ch
+    // 00007FF75A601220  shl         eax,4
+    // 00007FF75A601223  or          ecx,eax
+    // 00007FF75A601225  mov         dword ptr [dst+30h
+    // (07FF75A605070h)],ecx
+    __ movl(rcx, Address(src, -0x2c));
+    __ movl(rax, Address(src, -0x30));
+    __ shrl(rcx, 0x1c);
+    __ shll(rax, 4);
+    __ orl(rcx, rax);
+    __ movl(Address(dst, 0x30), rcx);
 
-	  // 00007FF75A601254  mov         eax,dword ptr [rbx-2Ch]
-	  // 00007FF75A601257  shr         eax,8
-	  // 00007FF75A60125A  and         eax,0FFFFFh
-	  // 00007FF75A60125F  mov         dword ptr [dst+3Ch
-	  // (07FF75A60507Ch)],eax
-	  __ movl(rax, Address(src, -0x2c));
-	  __ shrl(rax, 8);
-	  __ andl(rax, 0xfffff);
-	  __ movl(Address(dst, 0x3c), rax);
+    // 00007FF75A60122B  movzx       ecx,word ptr [rbx-24h]
+    // 00007FF75A60122F  mov         eax,dword ptr [rbx-30h]
+    // 00007FF75A601232  shl         ecx,4
+    // 00007FF75A601235  shr         eax,1Ch
+    // 00007FF75A601238  or          ecx,eax
+    // 00007FF75A60123A  mov         dword ptr [dst+34h
+    // (07FF75A605074h)],ecx
+    __ movzwl(rcx, Address(src, -0x24));
+    __ movl(rax, Address(src, -0x30));
+    __ shll(rcx, 4);
+    __ shrl(rax, 0x1c);
+    __ orl(rcx, rax);
+    __ movl(Address(dst, 0x34), rcx);
 
-	  // 00007FF75A601265  mov         ecx,dword ptr [rbx-40h]
-	  // 00007FF75A601268  mov         eax,dword ptr [rbx-34h]
-	  // 00007FF75A60126B  shl         eax,0Ch
-	  // 00007FF75A60126E  shr         ecx,14h
-	  // 00007FF75A601271  or          ecx,eax
-	  // 00007FF75A601273  mov         dword ptr [dst+40h
-	  // (07FF75A605080h)],ecx
-	  __ movl(rcx, Address(src, -0x40));
-	  __ movl(rax, Address(src, -0x34));
-	  __ shll(rcx, 0xc);
-	  __ shrl(rax, 0x14);
-	  __ orl(rcx, rax);
-	  __ movl(Address(dst, 0x40), rcx);
+    // 00007FF75A601240  mov         ecx,dword ptr [rbx-2Ch]
+    // 00007FF75A601243  mov         eax,dword ptr [rbx-38h]
+    // 00007FF75A601246  shl         ecx,18h
+    // 00007FF75A601249  shr         eax,8
+    // 00007FF75A60124C  or          ecx,eax
+    // 00007FF75A60124E  mov         dword ptr [dst+38h
+    // (07FF75A605078h)],ecx
+    __ movl(rcx, Address(src, -0x2c));
+    __ movl(rax, Address(src, -0x38));
+    __ shll(rcx, 0x18);
+    __ shrl(rax, 8);
+    __ orl(rcx, rax);
+    __ movl(Address(dst, 0x38), rcx);
 
-	  // 00007FF75A601279  movzx       ecx,byte ptr [rbx-38h]
-	  // 00007FF75A60127D  mov         eax,dword ptr [rbx-34h]
-	  // 00007FF75A601280  shr         eax,14h
-	  // 00007FF75A601283  shl         ecx,0Ch
-	  // 00007FF75A601286  or          ecx,eax
-	  // 00007FF75A601288  mov         dword ptr [dst+44h
-	  // (07FF75A605084h)],ecx
-	  __ movzwl(rcx, Address(src, -0x38));
-	  __ movl(rax, Address(src, -0x34));
-	  __ shrl(rax, 0x14);
-	  __ shll(rcx, 0xc);
-	  __ orl(rcx, rax);
-	  __ movl(Address(dst, 0x44), rcx);
+    // 00007FF75A601254  mov         eax,dword ptr [rbx-2Ch]
+    // 00007FF75A601257  shr         eax,8
+    // 00007FF75A60125A  and         eax,0FFFFFh
+    // 00007FF75A60125F  mov         dword ptr [dst+3Ch
+    // (07FF75A60507Ch)],eax
+    __ movl(rax, Address(src, -0x2c));
+    __ shrl(rax, 8);
+    __ andl(rax, 0xfffff);
+    __ movl(Address(dst, 0x3c), rax);
 
-	  // 00007FF75A601295  mov         eax,dword ptr [rbx-3Ch]
-	  // 00007FF75A601298  mov         dword ptr [dst+48h
-	  // (07FF75A605088h)],eax
-	  __ movl(rax, Address(src, -0x3c));
-	  __ movl(Address(dst, 0x48), rax);
+    // 00007FF75A601265  mov         ecx,dword ptr [rbx-40h]
+    // 00007FF75A601268  mov         eax,dword ptr [rbx-34h]
+    // 00007FF75A60126B  shl         eax,0Ch
+    // 00007FF75A60126E  shr         ecx,14h
+    // 00007FF75A601271  or          ecx,eax
+    // 00007FF75A601273  mov         dword ptr [dst+40h
+    // (07FF75A605080h)],ecx
+    __ movl(rcx, Address(src, -0x40));
+    __ movl(rax, Address(src, -0x34));
+    __ shll(rcx, 0xc);
+    __ shrl(rax, 0x14);
+    __ orl(rcx, rax);
+    __ movl(Address(dst, 0x40), rcx);
 
-	  // 00007FF75A60129E  mov         eax,dword ptr [rbx-40h]
-	  // 00007FF75A6012A8  and         eax,0FFFFFh
-	  // 00007FF75A6012AD  mov         dword ptr [dst+4Ch
-	  // (07FF75A60508Ch)],eax
-	  __ movl(rax, Address(src, -0x40));
-	  __ andl(rax, 0xfffff);
-	  __ movl(Address(dst, 0x4c), rax);
+    // 00007FF75A601279  movzx       ecx,byte ptr [rbx-38h]
+    // 00007FF75A60127D  mov         eax,dword ptr [rbx-34h]
+    // 00007FF75A601280  shr         eax,14h
+    // 00007FF75A601283  shl         ecx,0Ch
+    // 00007FF75A601286  or          ecx,eax
+    // 00007FF75A601288  mov         dword ptr [dst+44h
+    // (07FF75A605084h)],ecx
+    __ movzwl(rcx, Address(src, -0x38));
+    __ movl(rax, Address(src, -0x34));
+    __ shrl(rax, 0x14);
+    __ shll(rcx, 0xc);
+    __ orl(rcx, rax);
+    __ movl(Address(dst, 0x44), rcx);
 
-	  __ ret(0);
+    // 00007FF75A601295  mov         eax,dword ptr [rbx-3Ch]
+    // 00007FF75A601298  mov         dword ptr [dst+48h
+    // (07FF75A605088h)],eax
+    __ movl(rax, Address(src, -0x3c));
+    __ movl(Address(dst, 0x48), rax);
 
-	  __ BIND(L_bottom);
+    // 00007FF75A60129E  mov         eax,dword ptr [rbx-40h]
+    // 00007FF75A6012A8  and         eax,0FFFFFh
+    // 00007FF75A6012AD  mov         dword ptr [dst+4Ch
+    // (07FF75A60508Ch)],eax
+    __ movl(rax, Address(src, -0x40));
+    __ andl(rax, 0xfffff);
+    __ movl(Address(dst, 0x4c), rax);
 
-	  __ movq(r10, rcx); // Save registers
-	  __ movq(r15, rax);
+    __ ret(0);
 
-	  __ lea(src, Address(a_in, 8 * wordSize));       // End of src array
-	  __ lea(dst, Address(dst_in, XFORM_ARRAY_SIZE)); // Destination array
-	  __ call(L_xform, relocInfo::none);
+    __ BIND(L_bottom);
 
-	  __ lea(src, Address(b_in, 8 * wordSize)); // End of src array
-	  __ lea(dst,
-		 Address(dst_in, 2 * XFORM_ARRAY_SIZE)); // Destination array
-	  __ call(L_xform, relocInfo::none);
+    __ movq(r10, rcx); // Save registers
+    __ movq(r15, rax);
 
-	  __ lea(src, Address(n_in, 8 * wordSize)); // End of src array
-	  __ lea(dst,
-		 Address(dst_in, 3 * XFORM_ARRAY_SIZE)); // Destination array
-	  __ call(L_xform, relocInfo::none);
+    __ lea(src, Address(a_in, 8 * wordSize));       // End of src array
+    __ lea(dst, Address(dst_in, XFORM_ARRAY_SIZE)); // Destination array
+    __ call(L_xform, relocInfo::none);
 
-	  __ movq(rcx, r10);
-	  __ movq(rax, r15);
+    __ lea(src, Address(b_in, 8 * wordSize)); // End of src array
+    __ lea(dst,
+     Address(dst_in, 2 * XFORM_ARRAY_SIZE)); // Destination array
+    __ call(L_xform, relocInfo::none);
+
+    __ lea(src, Address(n_in, 8 * wordSize)); // End of src array
+    __ lea(dst,
+     Address(dst_in, 3 * XFORM_ARRAY_SIZE)); // Destination array
+    __ call(L_xform, relocInfo::none);
+
+    __ movq(rcx, r10);
+    __ movq(rax, r15);
   }
 
   void transform_r52x30(Register a_in, Register b_in, Register n_in, Register dst_in) {
@@ -6930,199 +6930,199 @@ address generate_avx_ghash_processBlocks() {
    */
 
   void transform_r64x20(Register src_in, Register dst) {
-	  Register src = rbx;
+    Register src = rbx;
 
-	  __ movq(r10, rcx); // Save registers
-	  __ movq(r15, rax);
-	  __ movq(r11, rbx);
+    __ movq(r10, rcx); // Save registers
+    __ movq(r15, rax);
+    __ movq(r11, rbx);
 
-	  __ lea(src, Address(src_in, 10 * wordSize)); // End of src array
+    __ lea(src, Address(src_in, 10 * wordSize)); // End of src array
 
-	  // 00007FF63E0E12FC  mov         eax,dword ptr [rbx-10h]  // rbx is src, tmp is dst
-	  // 00007FF63E0E12FF  shl         eax,14h
-	  // 00007FF63E0E1302  or          eax,dword ptr [rbx-4]
-	  // 00007FF63E0E1305  mov         dword ptr [tmp (07FF63E0E50C0h)],eax
-	  // 00007FF63E0E130B  mov         eax,dword ptr [rbx-8]
-	  // 00007FF63E0E130E  mov         dword ptr [tmp+4h (07FF63E0E50C4h)],eax
-	  // 00007FF63E0E1314  mov         ecx,dword ptr [rbx-0Ch]
-	  // 00007FF63E0E1317  mov         eax,dword ptr [rbx-18h]
-	  // 00007FF63E0E131A  shr         ecx,0Ch
-	  // 00007FF63E0E131D  shl         eax,8
-	  // 00007FF63E0E1320  or          ecx,eax
-	  // 00007FF63E0E1322  mov         dword ptr [tmp+8h (07FF63E0E50C8h)],ecx
-	  __ movl(rax, Address(rbx, -0x10));
-	  __ shll(rax, 0x14);
-	  __ orl(rax, Address(rbx, -4));
-	  __ movl(Address(dst, 0x00), rax);
-	  __ movl(rax, Address(rbx, -0x08));
-	  __ movl(Address(dst, 0x04), rax);
-	  __ movl(rcx, Address(rbx, -0x0c));
-	  __ movl(rax, Address(rbx, -0x18));
-	  __ shrl(rcx, 0x0c);
-	  __ shll(rax, 8);
-	  __ orl(rcx, rax);
-	  __ movl(Address(dst, 0x08), rcx);
+    // 00007FF63E0E12FC  mov         eax,dword ptr [rbx-10h]  // rbx is src, tmp is dst
+    // 00007FF63E0E12FF  shl         eax,14h
+    // 00007FF63E0E1302  or          eax,dword ptr [rbx-4]
+    // 00007FF63E0E1305  mov         dword ptr [tmp (07FF63E0E50C0h)],eax
+    // 00007FF63E0E130B  mov         eax,dword ptr [rbx-8]
+    // 00007FF63E0E130E  mov         dword ptr [tmp+4h (07FF63E0E50C4h)],eax
+    // 00007FF63E0E1314  mov         ecx,dword ptr [rbx-0Ch]
+    // 00007FF63E0E1317  mov         eax,dword ptr [rbx-18h]
+    // 00007FF63E0E131A  shr         ecx,0Ch
+    // 00007FF63E0E131D  shl         eax,8
+    // 00007FF63E0E1320  or          ecx,eax
+    // 00007FF63E0E1322  mov         dword ptr [tmp+8h (07FF63E0E50C8h)],ecx
+    __ movl(rax, Address(rbx, -0x10));
+    __ shll(rax, 0x14);
+    __ orl(rax, Address(rbx, -4));
+    __ movl(Address(dst, 0x00), rax);
+    __ movl(rax, Address(rbx, -0x08));
+    __ movl(Address(dst, 0x04), rax);
+    __ movl(rcx, Address(rbx, -0x0c));
+    __ movl(rax, Address(rbx, -0x18));
+    __ shrl(rcx, 0x0c);
+    __ shll(rax, 8);
+    __ orl(rcx, rax);
+    __ movl(Address(dst, 0x08), rcx);
 
-	  // 00007FF63E0E1328  mov         ecx,dword ptr [rbx-0Ch]
-	  // 00007FF63E0E132B  mov         eax,dword ptr [rbx-10h]
-	  // 00007FF63E0E132E  shl         ecx,14h
-	  // 00007FF63E0E1331  shr         eax,0Ch
-	  // 00007FF63E0E1334  or          ecx,eax
-	  // 00007FF63E0E1336  mov         dword ptr [tmp+0Ch
-	  // (07FF63E0E50CCh)],ecx 00007FF63E0E133C  mov         ecx,dword ptr
-	  // [rbx-1Ch] 00007FF63E0E133F  mov         eax,dword ptr [rbx-20h]
-	  // 00007FF63E0E1342  shl         ecx,1Ch
-	  // 00007FF63E0E1345  shr         eax,4
-	  // 00007FF63E0E1348  or          ecx,eax
-	  // 00007FF63E0E134A  mov         dword ptr [tmp+10h
-	  // (07FF63E0E50D0h)],ecx
-	  __ movl(rcx, Address(rbx, -0x0c));
-	  __ movl(rax, Address(rbx, -0x10));
-	  __ shll(rcx, 0x14);
-	  __ shrl(rax, 0x0c);
-	  __ orl(rcx, rax);
-	  __ movl(Address(dst, 0x0c), rcx);
-	  __ movl(rcx, Address(rbx, -0x1c));
-	  __ movl(rax, Address(rbx, -0x20));
-	  __ shll(rcx, 0x1c);
-	  __ shrl(rax, 0x04);
-	  __ orl(rcx, rax);
-	  __ movl(Address(dst, 0x10), rcx);
+    // 00007FF63E0E1328  mov         ecx,dword ptr [rbx-0Ch]
+    // 00007FF63E0E132B  mov         eax,dword ptr [rbx-10h]
+    // 00007FF63E0E132E  shl         ecx,14h
+    // 00007FF63E0E1331  shr         eax,0Ch
+    // 00007FF63E0E1334  or          ecx,eax
+    // 00007FF63E0E1336  mov         dword ptr [tmp+0Ch
+    // (07FF63E0E50CCh)],ecx 00007FF63E0E133C  mov         ecx,dword ptr
+    // [rbx-1Ch] 00007FF63E0E133F  mov         eax,dword ptr [rbx-20h]
+    // 00007FF63E0E1342  shl         ecx,1Ch
+    // 00007FF63E0E1345  shr         eax,4
+    // 00007FF63E0E1348  or          ecx,eax
+    // 00007FF63E0E134A  mov         dword ptr [tmp+10h
+    // (07FF63E0E50D0h)],ecx
+    __ movl(rcx, Address(rbx, -0x0c));
+    __ movl(rax, Address(rbx, -0x10));
+    __ shll(rcx, 0x14);
+    __ shrl(rax, 0x0c);
+    __ orl(rcx, rax);
+    __ movl(Address(dst, 0x0c), rcx);
+    __ movl(rcx, Address(rbx, -0x1c));
+    __ movl(rax, Address(rbx, -0x20));
+    __ shll(rcx, 0x1c);
+    __ shrl(rax, 0x04);
+    __ orl(rcx, rax);
+    __ movl(Address(dst, 0x10), rcx);
 
-	  // 00007FF63E0E1350  movzx       eax,byte ptr [rbx-15h]
-	  // 00007FF63E0E1354  mov         ecx,dword ptr [rbx-20h]
-	  // 00007FF63E0E1357  shl         ecx,14h
-	  // 00007FF63E0E135A  or          ecx,dword ptr [rbx-14h]
-	  // 00007FF63E0E135D  shl         ecx,8
-	  // 00007FF63E0E1360  or          ecx,eax
-	  // 00007FF63E0E1362  mov         dword ptr [tmp+14h
-	  // (07FF63E0E50D4h)],ecx 00007FF63E0E1368  mov         eax,dword ptr
-	  // [rbx-24h] 00007FF63E0E136B  movzx       ecx,word ptr [rbx-26h]
-	  // 00007FF63E0E136F  shl         eax,10h
-	  // 00007FF63E0E1372  or          ecx,eax
-	  // 00007FF63E0E1374  mov         dword ptr [tmp+18h
-	  // (07FF63E0E50D8h)],ecx
-	  __ movl(rax, Address(rbx, -0x15));
-	  __ movl(rcx, Address(rbx, -0x20));
-	  __ shll(rcx, 0x14);
-	  __ orl(rcx, Address(rbx, -0x14));
-	  __ shll(rcx, 0x08);
-	  __ orl(rcx, rax);
-	  __ movl(Address(dst, 0x14), rcx);
-	  __ movl(rax, Address(rbx, -0x24));
-	  __ movl(rcx, Address(rbx, -0x26));
-	  __ shll(rax, 0x10);
-	  __ orl(rcx, rax);
-	  __ movl(Address(dst, 0x18), rcx);
+    // 00007FF63E0E1350  movzx       eax,byte ptr [rbx-15h]
+    // 00007FF63E0E1354  mov         ecx,dword ptr [rbx-20h]
+    // 00007FF63E0E1357  shl         ecx,14h
+    // 00007FF63E0E135A  or          ecx,dword ptr [rbx-14h]
+    // 00007FF63E0E135D  shl         ecx,8
+    // 00007FF63E0E1360  or          ecx,eax
+    // 00007FF63E0E1362  mov         dword ptr [tmp+14h
+    // (07FF63E0E50D4h)],ecx 00007FF63E0E1368  mov         eax,dword ptr
+    // [rbx-24h] 00007FF63E0E136B  movzx       ecx,word ptr [rbx-26h]
+    // 00007FF63E0E136F  shl         eax,10h
+    // 00007FF63E0E1372  or          ecx,eax
+    // 00007FF63E0E1374  mov         dword ptr [tmp+18h
+    // (07FF63E0E50D8h)],ecx
+    __ movl(rax, Address(rbx, -0x15));
+    __ movl(rcx, Address(rbx, -0x20));
+    __ shll(rcx, 0x14);
+    __ orl(rcx, Address(rbx, -0x14));
+    __ shll(rcx, 0x08);
+    __ orl(rcx, rax);
+    __ movl(Address(dst, 0x14), rcx);
+    __ movl(rax, Address(rbx, -0x24));
+    __ movl(rcx, Address(rbx, -0x26));
+    __ shll(rax, 0x10);
+    __ orl(rcx, rax);
+    __ movl(Address(dst, 0x18), rcx);
 
-	  // 00007FF63E0E137A  mov         ecx,dword ptr [rbx-28h]
-	  // 00007FF63E0E137D  mov         eax,dword ptr [rbx-1Ch]
-	  // 00007FF63E0E1380  shl         ecx,10h
-	  // 00007FF63E0E1383  shr         eax,4
-	  // 00007FF63E0E1386  or          ecx,eax
-	  // 00007FF63E0E1388  mov         dword ptr [tmp+1Ch
-	  // (07FF63E0E50DCh)],ecx 00007FF63E0E138E  mov         ecx,dword ptr
-	  // [rbx-38h] 00007FF63E0E1391  mov         eax,dword ptr [rbx-30h]
-	  // 00007FF63E0E1394  shl         ecx,14h
-	  // 00007FF63E0E1397  or          ecx,dword ptr [rbx-2Ch]
-	  // 00007FF63E0E139A  shl         ecx,4
-	  // 00007FF63E0E139D  shr         eax,1Ch
-	  // 00007FF63E0E13A0  or          ecx,eax
-	  // 00007FF63E0E13A2  mov         dword ptr [tmp+20h
-	  // (07FF63E0E50E0h)],ecx
-	  __ movl(rcx, Address(rbx, -0x28));
-	  __ movl(rax, Address(rbx, -0x1c));
-	  __ shll(rcx, 0x10);
-	  __ shrl(rax, 0x04);
-	  __ orl(rcx, rax);
-	  __ movl(Address(dst, 0x1c), rcx);
-	  __ movl(rcx, Address(rbx, -0x38));
-	  __ movl(rax, Address(rbx, -0x30));
-	  __ shll(rcx, 0x14);
-	  __ orl(rcx, Address(rbx, -0x2c));
-	  __ shll(rcx, 0x04);
-	  __ shrl(rax, 0x1c);
-	  __ orl(rcx, rax);
-	  __ movl(Address(dst, 0x20), rcx);
+    // 00007FF63E0E137A  mov         ecx,dword ptr [rbx-28h]
+    // 00007FF63E0E137D  mov         eax,dword ptr [rbx-1Ch]
+    // 00007FF63E0E1380  shl         ecx,10h
+    // 00007FF63E0E1383  shr         eax,4
+    // 00007FF63E0E1386  or          ecx,eax
+    // 00007FF63E0E1388  mov         dword ptr [tmp+1Ch
+    // (07FF63E0E50DCh)],ecx 00007FF63E0E138E  mov         ecx,dword ptr
+    // [rbx-38h] 00007FF63E0E1391  mov         eax,dword ptr [rbx-30h]
+    // 00007FF63E0E1394  shl         ecx,14h
+    // 00007FF63E0E1397  or          ecx,dword ptr [rbx-2Ch]
+    // 00007FF63E0E139A  shl         ecx,4
+    // 00007FF63E0E139D  shr         eax,1Ch
+    // 00007FF63E0E13A0  or          ecx,eax
+    // 00007FF63E0E13A2  mov         dword ptr [tmp+20h
+    // (07FF63E0E50E0h)],ecx
+    __ movl(rcx, Address(rbx, -0x28));
+    __ movl(rax, Address(rbx, -0x1c));
+    __ shll(rcx, 0x10);
+    __ shrl(rax, 0x04);
+    __ orl(rcx, rax);
+    __ movl(Address(dst, 0x1c), rcx);
+    __ movl(rcx, Address(rbx, -0x38));
+    __ movl(rax, Address(rbx, -0x30));
+    __ shll(rcx, 0x14);
+    __ orl(rcx, Address(rbx, -0x2c));
+    __ shll(rcx, 0x04);
+    __ shrl(rax, 0x1c);
+    __ orl(rcx, rax);
+    __ movl(Address(dst, 0x20), rcx);
 
-	  // 00007FF63E0E13A8  movzx       ecx,word ptr [rbx-22h]
-	  // 00007FF63E0E13AC  mov         eax,dword ptr [rbx-30h]
-	  // 00007FF63E0E13AF  shl         eax,4
-	  // 00007FF63E0E13B2  or          ecx,eax
-	  // 00007FF63E0E13B4  mov         dword ptr [tmp+24h
-	  // (07FF63E0E50E4h)],ecx 00007FF63E0E13BA  mov         ecx,dword ptr
-	  // [rbx-40h] 00007FF63E0E13BD  mov         eax,dword ptr [rbx-34h]
-	  // 00007FF63E0E13C0  shl         ecx,0Ch
-	  // 00007FF63E0E13C3  shr         eax,8
-	  // 00007FF63E0E13C6  or          ecx,eax
-	  // 00007FF63E0E13C8  mov         dword ptr [tmp+28h
-	  // (07FF63E0E50E8h)],ecx
-	  __ movl(rcx, Address(rbx, -0x22));
-	  __ movl(rax, Address(rbx, -0x30));
-	  __ shll(rax, 0x04);
-	  __ orl(rcx, rax);
-	  __ movl(Address(dst, 0x24), rcx);
-	  __ movl(rcx, Address(rbx, -0x40));
-	  __ movl(rax, Address(rbx, -0x34));
-	  __ shll(rcx, 0x0c);
-	  __ shrl(rax, 0x08);
-	  __ orl(rcx, rax);
-	  __ movl(Address(dst, 0x28), rcx);
+    // 00007FF63E0E13A8  movzx       ecx,word ptr [rbx-22h]
+    // 00007FF63E0E13AC  mov         eax,dword ptr [rbx-30h]
+    // 00007FF63E0E13AF  shl         eax,4
+    // 00007FF63E0E13B2  or          ecx,eax
+    // 00007FF63E0E13B4  mov         dword ptr [tmp+24h
+    // (07FF63E0E50E4h)],ecx 00007FF63E0E13BA  mov         ecx,dword ptr
+    // [rbx-40h] 00007FF63E0E13BD  mov         eax,dword ptr [rbx-34h]
+    // 00007FF63E0E13C0  shl         ecx,0Ch
+    // 00007FF63E0E13C3  shr         eax,8
+    // 00007FF63E0E13C6  or          ecx,eax
+    // 00007FF63E0E13C8  mov         dword ptr [tmp+28h
+    // (07FF63E0E50E8h)],ecx
+    __ movl(rcx, Address(rbx, -0x22));
+    __ movl(rax, Address(rbx, -0x30));
+    __ shll(rax, 0x04);
+    __ orl(rcx, rax);
+    __ movl(Address(dst, 0x24), rcx);
+    __ movl(rcx, Address(rbx, -0x40));
+    __ movl(rax, Address(rbx, -0x34));
+    __ shll(rcx, 0x0c);
+    __ shrl(rax, 0x08);
+    __ orl(rcx, rax);
+    __ movl(Address(dst, 0x28), rcx);
 
-	  // 00007FF63E0E13CE  mov         ecx,dword ptr [rbx-38h]
-	  // 00007FF63E0E13D1  mov         eax,dword ptr [rbx-34h]
-	  // 00007FF63E0E13D4  shl         eax,18h
-	  // 00007FF63E0E13D7  shr         ecx,8
-	  // 00007FF63E0E13DA  or          ecx,eax
-	  // 00007FF63E0E13DC  mov         dword ptr [tmp+2Ch
-	  // (07FF63E0E50ECh)],ecx 00007FF63E0E13E2  mov         eax,dword ptr
-	  // [rbx-48h] 00007FF63E0E13E5  mov         dword ptr [tmp+30h
-	  // (07FF63E0E50F0h)],eax 00007FF63E0E13EB  mov         ecx,dword ptr
-	  // [rbx-3Ch] 00007FF63E0E13EE  mov         eax,dword ptr [rbx-40h]
-	  // 00007FF63E0E13F1  shr         eax,14h
-	  // 00007FF63E0E13F4  shl         ecx,0Ch
-	  // 00007FF63E0E13F7  or          ecx,eax
-	  // 00007FF63E0E13F9  mov         dword ptr [tmp+34h
-	  // (07FF63E0E50F4h)],ecx
-	  __ movl(rcx, Address(rbx, -0x38));
-	  __ movl(rax, Address(rbx, -0x34));
-	  __ shll(rax, 0x18);
-	  __ shrl(rcx, 0x08);
-	  __ orl(rcx, rax);
-	  __ movl(Address(dst, 0x2c), rcx);
-	  __ movl(rax, Address(rbx, -0x48));
-	  __ movl(Address(dst, 0x30), rax);
-	  __ movl(rcx, Address(rbx, -0x3c));
-	  __ movl(rax, Address(rbx, -0x40));
-	  __ shrl(rax, 0x14);
-	  __ shll(rcx, 0x0c);
-	  __ orl(rcx, rax);
-	  __ movl(Address(dst, 0x34), rcx);
+    // 00007FF63E0E13CE  mov         ecx,dword ptr [rbx-38h]
+    // 00007FF63E0E13D1  mov         eax,dword ptr [rbx-34h]
+    // 00007FF63E0E13D4  shl         eax,18h
+    // 00007FF63E0E13D7  shr         ecx,8
+    // 00007FF63E0E13DA  or          ecx,eax
+    // 00007FF63E0E13DC  mov         dword ptr [tmp+2Ch
+    // (07FF63E0E50ECh)],ecx 00007FF63E0E13E2  mov         eax,dword ptr
+    // [rbx-48h] 00007FF63E0E13E5  mov         dword ptr [tmp+30h
+    // (07FF63E0E50F0h)],eax 00007FF63E0E13EB  mov         ecx,dword ptr
+    // [rbx-3Ch] 00007FF63E0E13EE  mov         eax,dword ptr [rbx-40h]
+    // 00007FF63E0E13F1  shr         eax,14h
+    // 00007FF63E0E13F4  shl         ecx,0Ch
+    // 00007FF63E0E13F7  or          ecx,eax
+    // 00007FF63E0E13F9  mov         dword ptr [tmp+34h
+    // (07FF63E0E50F4h)],ecx
+    __ movl(rcx, Address(rbx, -0x38));
+    __ movl(rax, Address(rbx, -0x34));
+    __ shll(rax, 0x18);
+    __ shrl(rcx, 0x08);
+    __ orl(rcx, rax);
+    __ movl(Address(dst, 0x2c), rcx);
+    __ movl(rax, Address(rbx, -0x48));
+    __ movl(Address(dst, 0x30), rax);
+    __ movl(rcx, Address(rbx, -0x3c));
+    __ movl(rax, Address(rbx, -0x40));
+    __ shrl(rax, 0x14);
+    __ shll(rcx, 0x0c);
+    __ orl(rcx, rax);
+    __ movl(Address(dst, 0x34), rcx);
 
-	  // 00007FF63E0E13FF  mov         ecx,dword ptr [rbx-4Ch]
-	  // 00007FF63E0E1402  mov         eax,dword ptr [rbx-50h]
-	  // 00007FF63E0E1405  shr         eax,0Ch
-	  // 00007FF63E0E1408  shl         ecx,14h
-	  // 00007FF63E0E140B  or          ecx,eax
-	  // 00007FF63E0E140D  mov         dword ptr [tmp+38h
-	  // (07FF63E0E50F8h)],ecx 00007FF63E0E141A  mov         eax,dword ptr
-	  // [rbx-50h] 00007FF63E0E141D  shl         eax,14h 00007FF63E0E1420 or
-	  // eax,dword ptr [rbx-44h] 00007FF63E0E1423  mov         dword ptr
-	  // [tmp+3Ch (07FF63E0E50FCh)],eax
-	  __ movl(rcx, Address(rbx, -0x4c));
-	  __ movl(rax, Address(rbx, -0x50));
-	  __ shrl(rax, 0x0c);
-	  __ shll(rcx, 0x14);
-	  __ orl(rcx, rax);
-	  __ movl(Address(dst, 0x38), rcx);
-	  __ movl(rax, Address(rbx, -0x50));
-	  __ shll(rax, 0x14);
-	  __ orl(rax, Address(rbx, -0x44));
-	  __ movl(Address(dst, 0x3c), rax);
+    // 00007FF63E0E13FF  mov         ecx,dword ptr [rbx-4Ch]
+    // 00007FF63E0E1402  mov         eax,dword ptr [rbx-50h]
+    // 00007FF63E0E1405  shr         eax,0Ch
+    // 00007FF63E0E1408  shl         ecx,14h
+    // 00007FF63E0E140B  or          ecx,eax
+    // 00007FF63E0E140D  mov         dword ptr [tmp+38h
+    // (07FF63E0E50F8h)],ecx 00007FF63E0E141A  mov         eax,dword ptr
+    // [rbx-50h] 00007FF63E0E141D  shl         eax,14h 00007FF63E0E1420 or
+    // eax,dword ptr [rbx-44h] 00007FF63E0E1423  mov         dword ptr
+    // [tmp+3Ch (07FF63E0E50FCh)],eax
+    __ movl(rcx, Address(rbx, -0x4c));
+    __ movl(rax, Address(rbx, -0x50));
+    __ shrl(rax, 0x0c);
+    __ shll(rcx, 0x14);
+    __ orl(rcx, rax);
+    __ movl(Address(dst, 0x38), rcx);
+    __ movl(rax, Address(rbx, -0x50));
+    __ shll(rax, 0x14);
+    __ orl(rax, Address(rbx, -0x44));
+    __ movl(Address(dst, 0x3c), rax);
 
-	  __ movq(rcx, r10);
-	  __ movq(rax, r15);
-	  __ movq(rbx, r11);
+    __ movq(rcx, r10);
+    __ movq(rax, r15);
+    __ movq(rbx, r11);
   }
 
   void transform_r64x30(Register src, Register dst) {
@@ -7160,158 +7160,163 @@ address generate_avx_ghash_processBlocks() {
 
 
   address generate_montgomeryMultiply(bool is_square) {
-	  __ align(CodeEntryAlignment);
-	  StubCodeMark mark(this, "StubRoutines", "montgomeryMultiply");
+    __ align(CodeEntryAlignment);
+    StubCodeMark mark(this, "StubRoutines", "montgomeryMultiply");
 
-	  DEBUG_ONLY(
-		  Label L_broken_inv, L_broken_MM, L_odd_len;
-		  __ BIND(L_broken_inv);
-		  __ stop("broken inverse in Montgomery multiply (gen)");
-		  __ BIND(L_broken_MM);
-		  __ stop("broken Montgomery multiply (gen)");
-		  __ BIND(L_odd_len);
-		  __ stop("array length in montgomery_multiply must be even (gen)"););
+    DEBUG_ONLY(
+      Label L_broken_inv, L_broken_MM, L_odd_len;
+      __ BIND(L_broken_inv);
+      __ stop("broken inverse in Montgomery multiply (gen)");
+      __ BIND(L_broken_MM);
+      __ stop("broken Montgomery multiply (gen)");
+      __ BIND(L_odd_len);
+      __ stop("array length in montgomery_multiply must be even (gen)"););
 
-	  address start = __ pc();
+    address start = __ pc();
 
-	  BLOCK_COMMENT("Entry:");
-	  __ enter(); // required for proper stackwalking of RuntimeStub frame
+    BLOCK_COMMENT("Entry:");
+    __ enter(); // required for proper stackwalking of RuntimeStub frame
 
-	  Label L_exit, L_revert, L_30, L_40, L_trans_result;
+    Label L_exit, L_revert, L_30, L_40, L_trans_result;
 
-	  Register a;
-	  Register b;
-	  Register n;
-	  Register len;
-	  Register inv;
-	  Register m;
-	  const Register tmp_result = r14;
+    Register a;
+    Register b;
+    Register n;
+    Register len;
+    Register inv;
+    Register m;
+    const Register tmp_result = r14;
 
-	  // Save callee-saved registers before using them
-	  __ push(rbx);
-	  __ push(r12);
-	  __ push(r13);
-	  __ push(r14);
-	  __ push(r15);
+    // Save callee-saved registers before using them
+    __ push(rbx);
+    __ push(r12);
+    __ push(r13);
+    __ push(r14);
+    __ push(r15);
 
-	  if (!is_square) {
-		  a = c_rarg0;
-		  b = c_rarg1;
-		  n = c_rarg2;
-		  len = c_rarg3;
-		  // and updated with the incremented counter in the end
+    if (!is_square) {
+      a = c_rarg0;
+      b = c_rarg1;
+      n = c_rarg2;
+      len = c_rarg3;
+      // and updated with the incremented counter in the end
 #ifndef _WIN64
-		  inv = c_rarg4;
-		  m = c_rarg5;
+      inv = c_rarg4;
+      m = c_rarg5;
 #else
-		  const Address inv_mem(rbp, 6 * wordSize);
-		  inv = r10;
-		  const Address m_mem(rbp, 7 * wordSize);
-		  m = r13;
-		  __ movq(inv, inv_mem);
-		  __ movptr(m, m_mem);
+      const Address inv_mem(rbp, 6 * wordSize);
+      inv = r10;
+      const Address m_mem(rbp, 7 * wordSize);
+      m = r13;
+      __ movq(inv, inv_mem);
+      __ movptr(m, m_mem);
 #endif
-	  } else {
-		  a = c_rarg0;
-		  b = c_rarg0;
-		  n = c_rarg1;
-		  len = c_rarg2;
-		  inv = c_rarg3;
-		  // and updated with the incremented counter in the end
+    } else {
+      a = c_rarg0;
+      b = c_rarg0;
+      n = c_rarg1;
+      len = c_rarg2;
+      inv = c_rarg3;
+      // and updated with the incremented counter in the end
 #ifndef _WIN64
-		  m = c_rarg4;
+      m = c_rarg4;
 #else
-		  const Address m_mem(rbp, 6 * wordSize);
-		  m = r13;
-		  __ movptr(m, m_mem);
+      const Address m_mem(rbp, 6 * wordSize);
+      m = r13;
+      __ movptr(m, m_mem);
 #endif
-	  }
+    }
 
-	  assert_different_registers(a, n, len, inv, m);
+    assert_different_registers(a, n, len, inv, m);
 
-	  __ cmpl(len, 32);
-	  __ jcc(Assembler::greater, L_revert);
+    __ cmpl(len, 32);
+    __ jcc(Assembler::greater, L_revert);
 
-	  DEBUG_ONLY(__ push(rdx);
-		     __ movq(rax,
-			     Address(n, len, Address::times_4, -1 * wordSize));
-		     __ rorq(rax, 32); __ mulq(inv); __ cmpq(rax, 0xffffffff);
-		     __ jcc(Assembler::notEqual, L_broken_inv); __ pop(rdx);
+    DEBUG_ONLY(
+      __ push(rdx);
+      __ movq(rax, Address(n, len, Address::times_4, -1 * wordSize));
+      __ rorq(rax, 32);
+      __ mulq(inv);
+      __ cmpq(rax, 0xffffffff);
+      __ jcc(Assembler::notEqual, L_broken_inv);
+      __ pop(rdx);
 
-		     __ testq(len, 1); __ jcc(Assembler::notZero, L_odd_len););
+      __ testq(len, 1);
+      __ jcc(Assembler::notZero, L_odd_len);
+    );
 
-	  // Make room on the stack for transformed data.  Need to convert from
-	  // radix-64 to radix-52. Maximum size is 40 qwords for 2K bit integer.
+    // Make room on the stack for transformed data.  Need to convert from
+    // radix-64 to radix-52. Maximum size is 40 qwords for 2K bit integer.
 
-	  __ subptr(rsp, XFORM_ARRAY_SIZE * 4 + 8); // Need 4 transformed arrays and
+    __ subptr(rsp, XFORM_ARRAY_SIZE * 4 + 8); // Need 4 transformed arrays and
                                               // one word of index storage
-	  __ movptr(tmp_result, rsp);
+    __ movptr(tmp_result, rsp);
 
-	  __ cmpl(len, 16);
-	  __ jcc(Assembler::greater, L_30);
-	  // Transform to radix-52
-	  transform_r52x20(a, b, n, tmp_result);
+    __ cmpl(len, 16);
+    __ jcc(Assembler::greater, L_30);
+    // Transform to radix-52
+    transform_r52x20(a, b, n, tmp_result);
 
-	  __ montgomeryMultiply52x20(tmp_result, inv);
+    __ montgomeryMultiply52x20(tmp_result, inv);
 
-	  transform_r64x20(tmp_result, m);
-	  __ jmp(L_trans_result);
+    transform_r64x20(tmp_result, m);
+    __ jmp(L_trans_result);
 
-	  __ BIND(L_30);
-	  __ cmpl(len, 24);
-	  __ jcc(Assembler::greater, L_40);
-	  // Transform to radix-52
-	  transform_r52x30(a, b, n, tmp_result);
+    __ BIND(L_30);
+    __ cmpl(len, 24);
+    __ jcc(Assembler::greater, L_40);
+    // Transform to radix-52
+    transform_r52x30(a, b, n, tmp_result);
 
-	  __ montgomeryMultiply52x30(tmp_result, inv);
+    __ montgomeryMultiply52x30(tmp_result, inv);
 
-	  transform_r64x30(tmp_result, m);
-	  __ jmp(L_trans_result);
+    transform_r64x30(tmp_result, m);
+    __ jmp(L_trans_result);
 
-	  __ BIND(L_40);
-	  // Transform to radix-52
-	  transform_r52x40(a, b, n, tmp_result);
+    __ BIND(L_40);
+    // Transform to radix-52
+    transform_r52x40(a, b, n, tmp_result);
 
-	  __ montgomeryMultiply52x40(tmp_result, inv);
+    __ montgomeryMultiply52x40(tmp_result, inv);
 
-	  transform_r64x40(tmp_result, m);
+    transform_r64x40(tmp_result, m);
 
-	  __ BIND(L_trans_result);
+    __ BIND(L_trans_result);
 
-	  __ addptr(rsp, XFORM_ARRAY_SIZE * 4 + 8);
+    __ addptr(rsp, XFORM_ARRAY_SIZE * 4 + 8);
 
-	  //      __ jmp(L_revert);
+    //      __ jmp(L_revert);
 
-	  __ BIND(L_exit);
-	  __ pop(r15);
-	  __ pop(r14);
-	  __ pop(r13);
-	  __ pop(r12);
-	  __ pop(rbx);
-	  __ leave();
-	  __ ret(0);
+    __ BIND(L_exit);
+    __ pop(r15);
+    __ pop(r14);
+    __ pop(r13);
+    __ pop(r12);
+    __ pop(rbx);
+    __ leave();
+    __ ret(0);
 
-	  __ BIND(L_revert);
-	  // Tail jump if outside our range.  Revert to SharedRuntime.
-	  if (is_square) {
-		  __ lea(r11,
-			 RuntimeAddress(
-				 (address)SharedRuntime::montgomery_square));
-	  } else {
-		  __ lea(r11,
-			 RuntimeAddress(
-				 (address)SharedRuntime::montgomery_multiply));
-	  }
-	  __ pop(r15);
-	  __ pop(r14);
-	  __ pop(r13);
-	  __ pop(r12);
-	  __ pop(rbx);
-	  __ leave();
-	  __ jmp(r11);
+    __ BIND(L_revert);
+    // Tail jump if outside our range.  Revert to SharedRuntime.
+    if (is_square) {
+      __ lea(r11,
+       RuntimeAddress(
+         (address)SharedRuntime::montgomery_square));
+    } else {
+      __ lea(r11,
+       RuntimeAddress(
+         (address)SharedRuntime::montgomery_multiply));
+    }
+    __ pop(r15);
+    __ pop(r14);
+    __ pop(r13);
+    __ pop(r12);
+    __ pop(rbx);
+    __ leave();
+    __ jmp(r11);
 
 
-	  return start;
+    return start;
   }
 #undef XFORM_ARRAY_SIZE
 
