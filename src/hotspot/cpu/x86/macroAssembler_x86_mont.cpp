@@ -178,7 +178,7 @@ void MacroAssembler::montgomeryMultiply52x20(Register out, Register kk0)
   lea(rdx, Address(out, 2 * 40 * wordSize));    // Points to b[0]
   lea(rbx, Address(out, 0xa0 + 2 * 40 * wordSize));    // Points to b[20] - loop terminator
 #define LOOP_TERM Address(rdi, 4 * 40 * wordSize)
-  movq(LOOP_TERM, rdx);
+  movq(LOOP_TERM, rbx);
   lea(rcx, Address(out, 3 * 40 * wordSize));    // Points to m[0]
   lea(rsi, Address(out, 1 * 40 * wordSize));    // Points to a[0]
   movq(r13, Address(rcx, 0));

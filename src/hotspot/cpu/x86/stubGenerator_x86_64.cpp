@@ -6651,10 +6651,74 @@ address generate_avx_ghash_processBlocks() {
     Register src = r11;
     Register dst = r12;
     Label L_xform, L_bottom;
-
+    
     __ jmp(L_bottom);
 
     __ BIND(L_xform);
+
+
+// 	julong res = 0;
+// 00007FF752011149  xor         r9d,r9d  
+// 00007FF75201114C  lea         r12,[dst (07FF752015040h)]  
+// 00007FF752011153  mov         rsi,r12  
+// 00007FF752011156  lea         r14d,[r9+0Fh]  
+// 00007FF75201115A  nop         word ptr [rax+rax]  
+// 	for (j = 0, k = 0; j < 128; j += 13) {
+// 		int m = 0;
+// 00007FF752011160  xor         r10d,r10d  
+// 		for (l = j; (l < j + 13) && (l < 128); l++) {
+// 00007FF752011163  lea         ebx,[r9+0Dh]  
+// 00007FF752011167  xor         r11d,r11d  
+// 00007FF75201116A  cmp         r9d,ebx  
+// 00007FF75201116D  jge         main+15Ch (07FF7520111CCh)  
+// 00007FF75201116F  nop  
+// 00007FF752011170  cmp         r9d,80h  
+// 00007FF752011177  jge         main+15Ch (07FF7520111CCh)  
+// 			res |= (julong)extractNibble((unsigned int *)s_l, l, 16)
+// 00007FF752011179  lea         ecx,[r9*4]  
+// 00007FF752011181  and         ecx,8000001Fh  
+// 00007FF752011187  jge         main+120h (07FF752011190h)  
+// 00007FF752011189  dec         ecx  
+// 00007FF75201118B  or          ecx,0FFFFFFE0h  
+// 00007FF75201118E  inc         ecx  
+// 00007FF752011190  mov         eax,r9d  
+// 		for (l = j; (l < j + 13) && (l < 128); l++) {
+// 00007FF752011193  inc         r9d  
+// 			res |= (julong)extractNibble((unsigned int *)s_l, l, 16)
+// 00007FF752011196  cdq  
+// 00007FF752011197  and         edx,7  
+// 00007FF75201119A  add         eax,edx  
+// 00007FF75201119C  mov         edx,r14d  
+// 00007FF75201119F  sar         eax,3  
+// 00007FF7520111A2  sub         edx,eax  
+// 00007FF7520111A4  movsxd      rax,ecx  
+// 00007FF7520111A7  mov         r8d,dword ptr [r15+rdx*4]  
+// 00007FF7520111AB  shlx        edx,r14d,ecx  
+// 00007FF7520111B0  and         r8,rdx  
+// 00007FF7520111B3  shrx        rcx,r8,rax  
+// 00007FF7520111B8  mov         eax,r10d  
+// 			       << m;
+// 			m += 4;
+// 00007FF7520111BB  add         r10d,4  
+// 00007FF7520111BF  shlx        rcx,rcx,rax  
+// 00007FF7520111C4  or          r11,rcx  
+// 00007FF7520111C7  cmp         r9d,ebx  
+// 00007FF7520111CA  jl          main+100h (07FF752011170h)  
+// 		}
+// 		dst_l[k++] = res;
+// 00007FF7520111CC  mov         qword ptr [rsi],r11  
+// 00007FF7520111CF  mov         r9d,ebx  
+// 00007FF7520111D2  add         rsi,8  
+// 00007FF7520111D6  cmp         ebx,80h  
+// 00007FF7520111DC  jl          main+0F0h (07FF752011160h)  
+// 		res = 0;
+
+
+
+
+
+
+
 
 	// transform src_w to dst_w
 // 	dst_w[0] = src_w[15];
@@ -6806,7 +6870,7 @@ address generate_avx_ghash_processBlocks() {
     __ movl(rdx, Address(src, 0x10));
     __ movl(Address(dst, 0x28), rax);
     __ movl(rax, r8);
-    __ shrl(rax, 0x04)
+    __ shrl(rax, 0x04);
     __ andl(rax, 0xfffff);
     __ shrl(r8, 0x18);
     __ movl(Address(dst, 0x2c), rax);
@@ -6891,13 +6955,11 @@ address generate_avx_ghash_processBlocks() {
     __ call(L_xform, relocInfo::none);
 
     __ lea(src, Address(b_in, 8 * wordSize)); // End of src array
-    __ lea(dst,
-     Address(dst_in, 2 * XFORM_ARRAY_SIZE)); // Destination array
+    __ lea(dst, Address(dst_in, 2 * XFORM_ARRAY_SIZE)); // Destination array
     __ call(L_xform, relocInfo::none);
 
     __ lea(src, Address(n_in, 8 * wordSize)); // End of src array
-    __ lea(dst,
-     Address(dst_in, 3 * XFORM_ARRAY_SIZE)); // Destination array
+    __ lea(dst, Address(dst_in, 3 * XFORM_ARRAY_SIZE)); // Destination array
     __ call(L_xform, relocInfo::none);
 
     __ movq(rcx, r10);
@@ -6925,11 +6987,13 @@ address generate_avx_ghash_processBlocks() {
    *   lomg long *dst - result
    */
 
-  void transform_r64x20(Register src, Register dst) {
+  void transform_r64x20(Register src, Register dst_in) {
+    Register dst = r11;
     __ movq(r10, rcx); // Save registers
     __ movq(r15, rax);
     __ push(r8);
     __ push(rdx);
+    __ movq(dst, dst_in);
 
 // 00007FF6A74313CF  mov         edx,dword ptr [src+48h (07FF6A7435088h)]  
 // 00007FF6A74313D5  mov         ecx,edx  
@@ -6977,7 +7041,7 @@ address generate_avx_ghash_processBlocks() {
 // 00007FF6A7431442  mov         dword ptr [dst+10h (07FF6A74350D0h)],eax  
     __ movl(rcx, rdx);
     __ shll(rdx, 0x0c);
-    __ shrl(rax, 0x08);
+    __ shrl(rcx, 0x14);
     __ orl(rcx, rax);
     __ movl(Address(dst, 0x0c), rcx);
     __ movl(rcx, Address(src, 0x34));
@@ -7178,6 +7242,12 @@ address generate_avx_ghash_processBlocks() {
     const Register tmp_result = r14;
 
     // Save callee-saved registers before using them
+    __ push(r9);
+    __ push(r8);
+    __ push(rcx);
+    __ push(rdx);
+    __ push(rdi);
+    __ push(rsi);
     __ push(rbx);
     __ push(r12);
     __ push(r13);
@@ -7275,7 +7345,7 @@ address generate_avx_ghash_processBlocks() {
 
     __ addptr(rsp, XFORM_ARRAY_SIZE * 4 + 8);
 
-    //      __ jmp(L_revert);
+     __ jmp(L_revert);
 
     __ BIND(L_exit);
     __ pop(r15);
@@ -7283,6 +7353,12 @@ address generate_avx_ghash_processBlocks() {
     __ pop(r13);
     __ pop(r12);
     __ pop(rbx);
+    __ pop(rsi);
+    __ pop(rdi);
+    __ pop(rdx);
+    __ pop(rcx);
+    __ pop(r8);
+    __ pop(r9);
     __ leave();
     __ ret(0);
 
@@ -7302,6 +7378,12 @@ address generate_avx_ghash_processBlocks() {
     __ pop(r13);
     __ pop(r12);
     __ pop(rbx);
+    __ pop(rsi);
+    __ pop(rdi);
+    __ pop(rdx);
+    __ pop(rcx);
+    __ pop(r8);
+    __ pop(r9);
     __ leave();
     __ jmp(r11);
 
