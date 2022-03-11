@@ -6695,9 +6695,9 @@ address generate_avx_ghash_processBlocks() {
 // 00007FF75201118B  or          ecx,0FFFFFFE0h  
 // 00007FF75201118E  inc         ecx  
     __ cmpl(r9, 0x80);
-    __ jcc(Assembler::greaterEqual, l_bottom1);
+    __ jcc(Assembler::greaterEqual, L_bottom1);
 
-    __ leal(rcx, Address(r9, 0, Address::times_4, 1));
+    __ leal(rcx, Address(r9, noreg, Address::times_4, 1));
     __ andl(rcx, 0x8000001f);
     __ jcc(Assembler::greaterEqual, L_11190);
 
@@ -6725,8 +6725,8 @@ address generate_avx_ghash_processBlocks() {
     __ movl(rax, r9);
     __ incl(r9);
     __ cdql();
-    __ and(rdx, 0x7);
-    __ add(rax, rdx);
+    __ andl(rdx, 0x7);
+    __ addl(rax, rdx);
     __ movl(rdx, r15);
     __ sarl(rax, 0x3);
     __ subl(rdx, rax);
@@ -6760,7 +6760,7 @@ address generate_avx_ghash_processBlocks() {
 // 00007FF7520111D6  cmp         ebx,80h  
 // 00007FF7520111DC  jl          main+0F0h (07FF752011160h)  
 // 		res = 0;
-    __ movq(Address(dst), r11);
+    __ movq(Address(dst, 0), r11);
     __ movl(r9, rbx);
     __ addptr(dst, 0x8);
     __ cmpl(rbx, 0x80);
