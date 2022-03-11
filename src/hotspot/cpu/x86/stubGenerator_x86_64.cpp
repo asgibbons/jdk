@@ -6650,21 +6650,26 @@ address generate_avx_ghash_processBlocks() {
 
     Register src = r11;
     Register dst = r12;
-    Label L_xform, L_bottom;
-    
+    Label L_xform, L_bottom, L_bottom1, L_outer, L_inner, L_11190;
+
     __ jmp(L_bottom);
 
     __ BIND(L_xform);
 
+// r12 is dst
+// r15 is src
 
 // 	julong res = 0;
 // 00007FF752011149  xor         r9d,r9d  
-// 00007FF75201114C  lea         r12,[dst (07FF752015040h)]  
-// 00007FF752011153  mov         rsi,r12  
-// 00007FF752011156  lea         r14d,[r9+0Fh]  
+// 00007FF752011156  lea         r15d,[r9+0Fh]  
 // 00007FF75201115A  nop         word ptr [rax+rax]  
 // 	for (j = 0, k = 0; j < 128; j += 13) {
 // 		int m = 0;
+    __ xorl(r9, r9);
+    __ leal(r15, Address(r9, 0xf));
+
+    __ align32();
+    __ BIND(L_outer);
 // 00007FF752011160  xor         r10d,r10d  
 // 		for (l = j; (l < j + 13) && (l < 128); l++) {
 // 00007FF752011163  lea         ebx,[r9+0Dh]  
@@ -6672,6 +6677,14 @@ address generate_avx_ghash_processBlocks() {
 // 00007FF75201116A  cmp         r9d,ebx  
 // 00007FF75201116D  jge         main+15Ch (07FF7520111CCh)  
 // 00007FF75201116F  nop  
+    __ xorl(r10, r10);
+    __ leal(rbx, Address(r9, 0x0d));
+    __ xorl(r11, r11);
+    __ cmpl(r9, rbx);
+    __ jcc(Assembler::greaterEqual, L_bottom1);
+
+    __ align(32);
+    __ BIND(L_inner);
 // 00007FF752011170  cmp         r9d,80h  
 // 00007FF752011177  jge         main+15Ch (07FF7520111CCh)  
 // 			res |= (julong)extractNibble((unsigned int *)s_l, l, 16)
@@ -6681,6 +6694,18 @@ address generate_avx_ghash_processBlocks() {
 // 00007FF752011189  dec         ecx  
 // 00007FF75201118B  or          ecx,0FFFFFFE0h  
 // 00007FF75201118E  inc         ecx  
+    __ cmpl(r9, 0x80);
+    __ jcc(Assembler::greaterEqual, l_bottom1);
+
+    __ leal(rcx, Address(r9, 0, Address::times_4, 1));
+    __ andl(rcx, 0x8000001f);
+    __ jcc(Assembler::greaterEqual, L_11190);
+
+    __ decl(rcx);
+    __ orl(rcx, 0x0FFFFFFE0);
+    __ incl(rcx);
+
+    __ BIND(L_11190);
 // 00007FF752011190  mov         eax,r9d  
 // 		for (l = j; (l < j + 13) && (l < 128); l++) {
 // 00007FF752011193  inc         r9d  
@@ -6688,7 +6713,7 @@ address generate_avx_ghash_processBlocks() {
 // 00007FF752011196  cdq  
 // 00007FF752011197  and         edx,7  
 // 00007FF75201119A  add         eax,edx  
-// 00007FF75201119C  mov         edx,r14d  
+// 00007FF75201119C  mov         edx,r15d  
 // 00007FF75201119F  sar         eax,3  
 // 00007FF7520111A2  sub         edx,eax  
 // 00007FF7520111A4  movsxd      rax,ecx  
@@ -6697,6 +6722,22 @@ address generate_avx_ghash_processBlocks() {
 // 00007FF7520111B0  and         r8,rdx  
 // 00007FF7520111B3  shrx        rcx,r8,rax  
 // 00007FF7520111B8  mov         eax,r10d  
+    __ movl(rax, r9);
+    __ incl(r9);
+    __ cdql();
+    __ and(rdx, 0x7);
+    __ add(rax, rdx);
+    __ movl(rdx, r15);
+    __ sarl(rax, 0x3);
+    __ subl(rdx, rax);
+    __ movl(rax, rcx);
+    __ shlq(rax, 0x20);
+    __ sarq(rax, 0x20);
+    __ movl(r8, Address(r15, rdx, Address::times_4));
+    __ shlxl(rdx, r14, rcx);
+    __ andq(r8, rdx);
+    __ shrxq(rcx, r8, rax);
+    __ movl(rax, r10);
 // 			       << m;
 // 			m += 4;
 // 00007FF7520111BB  add         r10d,4  
@@ -6704,16 +6745,30 @@ address generate_avx_ghash_processBlocks() {
 // 00007FF7520111C4  or          r11,rcx  
 // 00007FF7520111C7  cmp         r9d,ebx  
 // 00007FF7520111CA  jl          main+100h (07FF752011170h)  
+    __ addl(r10, 0x4);
+    __ shlxq(rcx, rcx, rax);
+    __ orq(r11, rcx);
+    __ cmpl(r9, rbx);
+    __ jcc(Assembler::less, L_inner);
+
 // 		}
 // 		dst_l[k++] = res;
-// 00007FF7520111CC  mov         qword ptr [rsi],r11  
+    __ BIND(L_bottom1);
+// 00007FF7520111CC  mov         qword ptr [dst],r11  
 // 00007FF7520111CF  mov         r9d,ebx  
-// 00007FF7520111D2  add         rsi,8  
+// 00007FF7520111D2  add         dst,8  
 // 00007FF7520111D6  cmp         ebx,80h  
 // 00007FF7520111DC  jl          main+0F0h (07FF752011160h)  
 // 		res = 0;
+    __ movq(Address(dst), r11);
+    __ movl(r9, rbx);
+    __ addptr(dst, 0x8);
+    __ cmpl(rbx, 0x80);
+    __ jcc(Assembler::less, L_outer);
 
 
+
+    __ ret(0);
 
 
 
@@ -6945,27 +7000,33 @@ address generate_avx_ghash_processBlocks() {
 
     __ BIND(L_bottom);
 
-    __ movq(r10, rcx); // Save registers
-    __ movq(r15, rax);
+    __ push(rcx); // Save registers
+    __ push(rax);
     __ push(r8);
+    __ push(r9);
     __ push(rdx);
+    __ push(b_in);
+    __ push(n_in);
 
     __ lea(src, Address(a_in, 8 * wordSize));       // End of src array
     __ lea(dst, Address(dst_in, XFORM_ARRAY_SIZE)); // Destination array
     __ call(L_xform, relocInfo::none);
 
+    __ pop(b_in);
     __ lea(src, Address(b_in, 8 * wordSize)); // End of src array
     __ lea(dst, Address(dst_in, 2 * XFORM_ARRAY_SIZE)); // Destination array
     __ call(L_xform, relocInfo::none);
 
+    __ pop(n_in);
     __ lea(src, Address(n_in, 8 * wordSize)); // End of src array
     __ lea(dst, Address(dst_in, 3 * XFORM_ARRAY_SIZE)); // Destination array
     __ call(L_xform, relocInfo::none);
 
-    __ movq(rcx, r10);
-    __ movq(rax, r15);
     __ pop(rdx);
+    __ pop(r9);
     __ pop(r8);
+    __ pop(rax);
+    __ pop(rcx);
   }
 
   void transform_r52x30(Register a_in, Register b_in, Register n_in, Register dst_in) {
