@@ -6991,8 +6991,8 @@ address generate_avx_ghash_processBlocks() {
     __ orl(rax, 0xFFFFFFF0);
     __ incl(rax);
     __ BIND(L_tmp);
-    __ negl(rax, rax);
-    __ sbbl(rax);
+    __ negl(rax);
+    __ sbbl(rax, rax);
     __ andl(rax, 0xFFFFFFFD);
     __ addl(rax, 0x04);
     __ subl(r8, rax);
