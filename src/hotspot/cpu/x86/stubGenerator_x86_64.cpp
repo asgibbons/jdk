@@ -6734,7 +6734,7 @@ address generate_avx_ghash_processBlocks() {
 // 00007FF6FD2211FD  or          r14,rcx  
 // 			       << m;
     __ shlxl(rcx, r13, r8);
-    __ movl(rdx, Address(src, rax, Assembler::times_4));
+    __ movl(rdx, Address(src, rax, Address::times_4));
     __ andq(rdx, rcx);
     __ movl(rax, r10);
     __ shrxq(rcx, rdx, r8);
@@ -6991,7 +6991,7 @@ address generate_avx_ghash_processBlocks() {
     __ orl(rax, 0xFFFFFFF0);
     __ incl(rax);
     __ BIND(L_tmp);
-    __ negl(rax);
+    __ negl(rax, rax);
     __ sbbl(rax);
     __ andl(rax, 0xFFFFFFFD);
     __ addl(rax, 0x04);
