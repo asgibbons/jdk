@@ -6624,14 +6624,14 @@ address generate_avx_ghash_processBlocks() {
 
 #define MM_XFORM_ARRAY_SIZE (40 * wordSize)
 #define MM_FOUR_ARRAYS (MM_XFORM_ARRAY_SIZE * 4)
-#define MM_a Address(rbp, -1 * wordSize)
-#define MM_b Address(rbp, -2 * wordSize)
-#define MM_n Address(rbp, -3 * wordSize)
-#define MM_len Address(rbp, -4 * wordSize)
-#define MM_inv Address(rbp, -5 * wordSize)
-#define MM_m Address(rbp, -6 * wordSize)
-#define MM_res Address(rbp, -7 * wordSize)
-#define MM_STACK_ADJ (MM_FOUR_ARRAYS + 8 * wordSize)
+#define MM_a Address(rbp, -13 * wordSize)
+#define MM_b Address(rbp, -14 * wordSize)
+#define MM_n Address(rbp, -15 * wordSize)
+#define MM_len Address(rbp, -16 * wordSize)
+#define MM_inv Address(rbp, -17 * wordSize)
+#define MM_m Address(rbp, -18 * wordSize)
+#define MM_res Address(rbp, -19 * wordSize)
+#define MM_STACK_ADJ (MM_FOUR_ARRAYS + 10 * wordSize)
 
   /***
    *  Convert array to base-52.
@@ -6671,7 +6671,104 @@ address generate_avx_ghash_processBlocks() {
     __ jmp(L_bottom);
 
     __ BIND(L_xform);
+//******************************************************************//
+// 00007FF61C591195  xor         r9d,r9d  
+//     rbp is initialized to 0??
+// 00007FF61C591198  lea         r13d,[rbp+0Fh]  
+// 00007FF61C59119C  nop         dword ptr [rax]  
+    __ xorl(r9, r9);
+    __ leal(r13, Address(r9, 0x0f));
 
+    __ align(32);
+    __ BIND(L_outer);
+// 	julong res = 0;
+// 	unsigned int jj, ll;
+// 	for (jj = 0; jj < 256; jj += 13) {
+// 		int m = 0;
+// 00007FF6FD2211B0  xor         r10d,r10d  
+// 		for (l = j; (l < j + 13) && (l < 256); l++) {
+// 00007FF6FD2211B3  lea         ebx,[r9+0Dh]  
+// 00007FF6FD2211B7  xor         r14d,r14d  
+// 00007FF6FD2211BA  cmp         r9d,ebx  
+// 00007FF6FD2211BD  jge         main+199h (07FF6FD221209h)  
+// 00007FF6FD2211BF  nop  
+// 00007FF6FD2211C0  cmp         r9d,100h  
+// 00007FF6FD2211C7  jge         main+199h (07FF6FD221209h)  
+    __ xorl(r10,r10);
+    __ leal(rbx, Address(r9, 0x0d));
+    __ xorl(r14, r14);
+    __ cmpl(r9, rbx);
+    __ jcc(Assembler::greaterEqual, L_bottom1);
+
+    __ align(32);
+    __ BIND(L_inner);
+
+    __ cmpl(r9, 0x100);
+    __ jcc(Assembler::greaterEqual, L_bottom1);
+// 			res |= (julong)extractNibble((unsigned int *)s_l, l, 32)
+// 00007FF6FD2211C9  mov         ecx,r9d  
+// 00007FF6FD2211CC  mov         eax,1Fh  
+// 00007FF6FD2211D1  shr         ecx,3  
+// 00007FF6FD2211D4  mov         r8d,r9d  
+// 00007FF6FD2211D7  sub         eax,ecx  
+// 00007FF6FD2211D9  and         r8d,7  
+// 00007FF6FD2211DD  shl         r8d,2  
+// 		for (l = j; (l < j + 13) && (l < 256); l++) {
+// 00007FF6FD2211E1  inc         r9d  
+    __ movl(rcx, r9);
+    __ movl(rax, 0x1f);
+    __ shrl(rcx, 0x03);
+    __ movl(r8, r9);
+    __ subl(rax, rcx);
+    __ andl(r8, 0x07);
+    __ shll(r8, 0x02);
+    __ incl(r9);
+
+// 			res |= (julong)extractNibble((unsigned int *)s_l, l, 32)
+// 00007FF6FD2211E4  shlx        ecx,r13d,r8d  
+// 00007FF6FD2211E9  mov         edx,dword ptr [src+rax*4]  
+// 00007FF6FD2211ED  and         rdx,rcx  
+// 00007FF6FD2211F0  mov         eax,r10d  
+// 00007FF6FD2211F3  shrx        rcx,rdx,r8  
+// 00007FF6FD2211F8  shlx        rcx,rcx,rax  
+// 00007FF6FD2211FD  or          r14,rcx  
+// 			       << m;
+    __ shlxl(rcx, r13, r8);
+    __ movl(rdx, Address(src, rax, Assembler::times_4));
+    __ andq(rdx, rcx);
+    __ movl(rax, r10);
+    __ shrxq(rcx, rdx, r8);
+    __ shlxq(rcx, rcx, rax);
+    __ orq(r14, rcx);
+
+// 			m += 4;
+// 00007FF6FD221200  add         r10d,4  
+// 00007FF6FD221204  cmp         r9d,ebx  
+// 00007FF6FD221207  jl          main+150h (07FF6FD2211C0h)  L_inner
+    __ addl(r10, 0x04);
+    __ cmpl(r9, rbx);
+    __ jcc(Assembler::less, L_inner);
+
+// 		}
+// 		*dst_l++ = res;
+    __ BIND(L_bottom1);
+// 00007FF6FD221209  mov         qword ptr [dst],r14  
+// 00007FF6FD22120C  mov         r9d,ebx  
+// 00007FF6FD22120F  add         dst,8  
+// 00007FF6FD221213  cmp         ebx,100h  
+// 00007FF6FD221219  jl          main+140h (07FF6FD2211B0h)  L_outer
+    __ movq(Address(dst, 0), r14);
+    __ movl(r9, rbx);
+    __ addptr(dst, 8);
+    __ cmpl(rbx, 0x100);
+    __ jcc(Assembler::less, L_outer);
+
+// 		res = 0;
+// 	}
+    __ ret(0);
+
+#if 0
+//******************************************************************//
 // 	julong res = 0;
 // 00007FF752011149  xor         r9d,r9d  
 // 00007FF752011156  lea         ebp,[r9+0Fh]  
@@ -6707,7 +6804,7 @@ address generate_avx_ghash_processBlocks() {
 // 00007FF752011189  dec         ecx  
 // 00007FF75201118B  or          ecx,0FFFFFFE0h  
 // 00007FF75201118E  inc         ecx  
-    __ cmpl(r9, 0x80);
+    __ cmpl(r9, 0100);
     __ jcc(Assembler::greaterEqual, L_bottom1);
 
     __ leal(rcx, Address(noreg, r9, Address::times_4));
@@ -6776,25 +6873,26 @@ address generate_avx_ghash_processBlocks() {
     __ movq(Address(dst, 0), r14);
     __ movl(r9, rbx);
     __ addptr(dst, 0x8);
-    __ cmpl(rbx, 0x80);
+    __ cmpl(rbx, 0x100);
     __ jcc(Assembler::less, L_outer);
 
     __ ret(0);
+#endif
 
     __ BIND(L_bottom);
 
-    __ lea(src, MM_a);       // End of src array
-    __ lea(dst, MM_res);
+    __ movptr(src, MM_a);       // End of src array
+    __ movptr(dst, MM_res);
     __ lea(dst, Address(dst, MM_XFORM_ARRAY_SIZE)); // Destination array
     __ call(L_xform, relocInfo::none);
 
-    __ lea(src, MM_b);       // End of src array
-    __ lea(dst, MM_res);
+    __ movptr(src, MM_b);       // End of src array
+    __ movptr(dst, MM_res);
     __ lea(dst, Address(dst, 2 * MM_XFORM_ARRAY_SIZE)); // Destination array
     __ call(L_xform, relocInfo::none);
 
-    __ lea(src, MM_n);       // End of src array
-    __ lea(dst, MM_res);
+    __ movptr(src, MM_n);       // End of src array
+    __ movptr(dst, MM_res);
     __ lea(dst, Address(dst, 3 * MM_XFORM_ARRAY_SIZE)); // Destination array
     __ call(L_xform, relocInfo::none);
   }
@@ -6818,8 +6916,106 @@ address generate_avx_ghash_processBlocks() {
    *   lomg long *dst - result
    */
 
-  void transform_r64x20(Register src, Register dst_in) {
-    Register dst = r11;
+  void transform_r64x20(Register src, Register dst) {
+        Label L_inner, L_outer, L_tmp;
+// 00007FF73473113E  mov         r9,rbx  
+
+// 	unsigned int res2 = 0;
+// 	unsigned int ll;
+// 	for (j = 312; j > 0;) {
+// 00007FF734731141  lea         r14d,[rsi+0Fh]  
+// 00007FF734731145  mov         r8d,138h  
+// 		int m = 28;
+    __ mov64(r14, 0x0f);
+    __ mov64(r8, 0x138);
+
+    __ BIND(L_outer);
+// 00007FF73473114B  mov         edi,1Ch  
+// 00007FF734731150  xor         r13d,r13d  
+// 00007FF734731153  lea         r10d,[rdi-14h]  
+// 		for (ll = 0; ll < 8; ll++) {
+// 			res2 |= (julong)extractNibbleRev(s_l_l, j) << m;
+    __ mov64(rdi, 0x1c);
+    __ xorl(r13, r13);
+    __ leal(r10, Address(rdi, -0x14));
+
+    __ BIND(L_inner);
+// 00007FF734731157  mov         edx,r8d  
+// 00007FF73473115A  mov         ecx,r8d  
+// 00007FF73473115D  shr         rcx,4  
+// 00007FF734731161  lea         rsi,[s_l_l (07FF7347350C0h)]  
+// 00007FF734731168  and         edx,r14d  
+// 00007FF73473116B  shl         edx,2  
+// 00007FF73473116E  shlx        rax,r14,rdx  
+// 00007FF734731173  mov         rcx,qword ptr [rsi+rcx*8]  
+// 00007FF734731177  and         rcx,rax  
+// 00007FF73473117A  mov         eax,edi  
+// 00007FF73473117C  shrx        rcx,rcx,rdx  
+// 00007FF734731181  shlx        rcx,rcx,rax  
+// 00007FF734731186  or          r13d,ecx  
+    __ movl(rdx, r8);
+    __ movl(rcx, r8);
+    __ shrq(rcx, 4);
+    __ leaq(rsi, Address(src, 0));
+    __ andl(rdx, r14);
+    __ shll(rdx, 0x02);
+    __ shlxq(rax, r14, rdx);
+    __ movq(rcx, Address(rsi, rcx, Address::times_8));
+    __ andq(rcx, rax);
+    __ movl(rax, rdi);
+    __ shrxq(rcx, rcx, rdx);
+    __ shlxq(rcx, rcx, rax);
+    __ orl(r13, rcx);
+
+// 			m -= 4;
+// 00007FF734731189  sub         edi,4  
+// 			j -= (j % 16) ? 1 : 4;
+// 00007FF73473118C  mov         eax,r8d  
+// 00007FF73473118F  and         eax,8000000Fh  
+// 00007FF734731194  jge         main+141h (07FF73473119Dh)  
+// 00007FF734731196  dec         eax  
+// 00007FF734731198  or          eax,0FFFFFFF0h  
+// 00007FF73473119B  inc         eax  
+// 00007FF73473119D  neg         eax  
+// 00007FF73473119F  sbb         eax,eax  
+// 00007FF7347311A1  and         eax,0FFFFFFFDh  
+// 00007FF7347311A4  add         eax,4  
+// 00007FF7347311A7  sub         r8d,eax  
+// 00007FF7347311AA  sub         r10,1  
+// 00007FF7347311AE  jne         main+0FBh (07FF734731157h)  
+    __ subl(rdi, 0x04);
+    __ movl(rax, r8);
+    __ andl(rax, 0x8000000f);
+    __ jcc(Assembler::greaterEqual, L_tmp);
+    __ decl(rax);
+    __ orl(rax, 0xFFFFFFF0);
+    __ incl(rax);
+    __ BIND(L_tmp);
+    __ negl(rax);
+    __ sbbl(rax);
+    __ andl(rax, 0xFFFFFFFD);
+    __ addl(rax, 0x04);
+    __ subl(r8, rax);
+    __ subq(r10, 0x01);
+    __ jcc(Assembler::notEqual, L_inner);
+
+// 		}
+// 		*p++ = res2;
+// 00007FF7347311B0  mov         dword ptr [r9],r13d  
+// 00007FF7347311B3  add         r9,4  
+// 00007FF7347311B7  test        r8d,r8d  
+// 00007FF7347311BA  jg          main+0EFh (07FF73473114Bh)  
+// 		res2 = 0;
+// 	}
+    __ movl(Address(dst, 0), r13);
+    __ addq(dst, 4);
+    __ testl(r8, r8);
+    __ jcc(Assembler::greater, L_outer);
+
+#if 0
+
+
+
     __ movq(r10, rcx); // Save registers
     __ movq(r15, rax);
     __ push(r8);
@@ -7008,6 +7204,7 @@ address generate_avx_ghash_processBlocks() {
     __ movq(rbx, r11);
     __ pop(rdx);
     __ pop(r8);
+#endif
   }
 
   void transform_r64x30(Register src, Register dst) {
@@ -7120,8 +7317,15 @@ address generate_avx_ghash_processBlocks() {
 
     assert_different_registers(a, n, len, inv, m);
 
-    __ cmpl(len, 32);
+#if 0
+    __ cmpl(len, 64);
     __ jcc(Assembler::greater, L_revert);
+    __ cmpl(len, 32);
+    __ jcc(Assembler::less, L_revert);
+#else
+    __ cmpl(len, 32);
+    __ jcc(Assembler::notEqual, L_revert);
+#endif
 
     DEBUG_ONLY(
       __ push(rdx);
@@ -7139,8 +7343,7 @@ address generate_avx_ghash_processBlocks() {
     // Make room on the stack for transformed data.  Need to convert from
     // radix-64 to radix-52. Maximum size is 40 qwords for 2K bit integer.
 
-    __ subptr(rsp, MM_STACK_ADJ); // Need 4 transformed arrays and
-    __ movptr(tmp_result, rsp);
+    __ subptr(rsp, MM_STACK_ADJ); // Need 4 transformed arrays
 
     // Save input registers as needed
     __ movq(MM_a, a);
@@ -7151,23 +7354,24 @@ address generate_avx_ghash_processBlocks() {
     __ movq(MM_m, m);
     __ movq(MM_res, rsp);
 
-    __ cmpl(len, 16);
+    __ cmpl(len, 32);
     __ jcc(Assembler::greater, L_30);
-    // Transform to radix-52
+    // Transform all inputs to radix-52
     transform_r52x20();
 
     __ movq(tmp_result, MM_res);
     __ movq(inv, MM_inv);
     __ montgomeryMultiply52x20(tmp_result, inv);
 
-    __ movq(tmp_result, MM_res);
-    __ movq(m, MM_m);
+    __ movq(r11, MM_res);
+    __ movq(r12, MM_m);
 
-    transform_r64x20(tmp_result, m);
+    transform_r64x20(r11, r12);
+#if 0
     __ jmp(L_trans_result);
 
     __ BIND(L_30);
-    __ cmpl(len, 24);
+    __ cmpl(len, 48);
     __ jcc(Assembler::greater, L_40);
     // Transform to radix-52
     transform_r52x30(a, b, n, tmp_result);
@@ -7184,12 +7388,13 @@ address generate_avx_ghash_processBlocks() {
     __ montgomeryMultiply52x40(tmp_result, inv);
 
     transform_r64x40(tmp_result, m);
+#endif
 
     __ BIND(L_trans_result);
 
     __ addptr(rsp, MM_STACK_ADJ);
 
-     __ jmp(L_revert);
+    //__ jmp(L_revert);
 
     __ BIND(L_exit);
     __ pop(r15);
@@ -8469,7 +8674,7 @@ address generate_avx_ghash_processBlocks() {
       }
     }
     if (UseMontgomerySquareIntrinsic) {
-      if (VM_Version::supports_avx512ifma()) {
+      if (!VM_Version::supports_avx512ifma()) {   // ASGASG
         StubRoutines::_montgomerySquare = generate_montgomeryMultiply(true);
       } else {
         StubRoutines::_montgomerySquare
