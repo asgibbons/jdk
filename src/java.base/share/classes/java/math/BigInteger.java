@@ -3055,6 +3055,23 @@ public class BigInteger extends Number implements Comparable<BigInteger> {
         if (signum == 0)
             return ZERO;
 
+        // Accelerate common sizes
+        if (z.mag.length <= 32) {
+            return oddModPow_20(y, z);
+        }
+
+        if (z.mag.length <= 48) {
+            return oddModPow_30(y, z);
+        }
+
+        if (z.mag.length <= 64) {
+            return oddModPow_40(y, z);
+        }
+
+        return oddModPow_default(y, z);
+    }
+
+    private BigInteger oddModPow_default(BigInteger y, BigInteger z) {
         int[] base = mag.clone();
         int[] exp = y.mag;
         int[] mod = z.mag;

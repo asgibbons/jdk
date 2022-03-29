@@ -29,7 +29,7 @@
 #include "runtime/stubRoutines.hpp"
 #include "macroAssembler_x86.hpp"
 
-#ifdef _LP64
+#if _LP64 || 1
 void MacroAssembler::montgomeryMultiply52x20(Register out, Register kk0)
 {
   const int LIMIT = 5552;
@@ -130,12 +130,11 @@ void MacroAssembler::montgomeryMultiply52x20(Register out, Register kk0)
 #endif
 
    // On entry:
-   //  out points to where the result should be stored (20 qwords)
+   //  out points to where the result should be stored (16 qwords)
    //  out + 40 qwords is a
    //  out + 80 qwords is b
    //  out + 120 qwords is m
    //  kk0 is the inverse (-(1/p) mod b)
-   //  out + 160 is space for a qword (loop index)
    //
    // This routine uses all GP registers, and ymm0 - ymm12
    // Need to save r8, r14 and r13
