@@ -3055,26 +3055,41 @@ public class BigInteger extends Number implements Comparable<BigInteger> {
         if (signum == 0)
             return ZERO;
 
-        // Accelerate common sizes
-        if (z.mag.length <= 32) {
-            return oddModPow_20(y, z);
+        // Accelerate common sizes if possible
+        if (this.mag.length == 32) {
+            return oddModPow_20(this.mag, this.mag.length, y.mag, y.mag.length, z.mag, z.mag.length);
         }
 
-        if (z.mag.length <= 48) {
-            return oddModPow_30(y, z);
+        if (this.mag.length == 48) {
+            return oddModPow_30(this.mag, this.mag.length, y.mag, y.mag.length, z.mag, z.mag.length);
         }
 
-        if (z.mag.length <= 64) {
-            return oddModPow_40(y, z);
+        if (this.mag.length == 64) {
+            return oddModPow_40(this.mag, this.mag.length, y.mag, y.mag.length, z.mag, z.mag.length);
         }
 
-        return oddModPow_default(y, z);
+        return oddModPow_default(this.mag.clone(), y.mag, z.mag);
     }
 
-    private BigInteger oddModPow_default(BigInteger y, BigInteger z) {
-        int[] base = mag.clone();
-        int[] exp = y.mag;
-        int[] mod = z.mag;
+    @IntrinsicCandidate
+    private static BigInteger oddModPow_20(int[] x, int xlen, int[] y, int ylen, int[] z, int zlen) {
+        return oddModPow_default(x.clone(), y, z);
+    }
+
+    @IntrinsicCandidate
+    private static BigInteger oddModPow_30(int[] x, int xlen, int[] y, int ylen, int[] z, int zlen) {
+        return oddModPow_default(x.clone(), y, z);
+    }
+
+    @IntrinsicCandidate
+    private static BigInteger oddModPow_40(int[] x, int xlen, int[] y, int ylen, int[] z, int zlen) {
+        return oddModPow_default(x.clone(), y, z);
+    }
+
+    private static BigInteger oddModPow_default(int[] base, int[] exp, int[] mod) {
+        //int[] base = mag.clone();
+        //int[] exp = y.mag;
+        //int[] mod = z.mag;
         int modLen = mod.length;
 
         // Make modLen even. It is conventional to use a cryptographic
