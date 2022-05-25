@@ -365,7 +365,10 @@ protected:
     decl(HV,                "hv",                46) /* Hypervisor instructions */ \
     decl(SERIALIZE,         "serialize",         47) /* CPU SERIALIZE */ \
                                                      \
-    decl(AVX512_IFMA,       "avx512_ifma",       48) /* Integer 52-bit FMA instructions */
+    decl(RDTSCP,            "rdtscp",            48) /* RDTSCP instruction */ \
+    decl(RDPID,             "rdpid",             49) /* RDPID instruction */ \
+    decl(FSRM,              "fsrm",              50) /* Fast Short REP MOV */ \
+    decl(AVX512_IFMA,       "avx512_ifma",       51) /* Integer 52-bit FMA instructions */
 
 #define DECLARE_CPU_FEATURE_FLAG(id, name, bit) CPU_##id = (1ULL << bit),
     CPU_FEATURE_FLAGS(DECLARE_CPU_FEATURE_FLAG)

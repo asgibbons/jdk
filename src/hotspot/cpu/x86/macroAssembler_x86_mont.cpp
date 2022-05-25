@@ -454,6 +454,7 @@ void MacroAssembler::montgomeryMultiply52x20(Register out, Register kk0)
   //movzwl(rax, rdx);
   //shrl(rax, 8);
   //andl(rax, 0xff);
+  movzbl / movzbq
   emit_int8((unsigned char) 0x0f);
   emit_int8((unsigned char) 0xb6);
   emit_int8((unsigned char) 0xc6);
