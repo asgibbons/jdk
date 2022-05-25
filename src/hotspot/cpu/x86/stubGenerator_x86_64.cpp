@@ -5034,14 +5034,14 @@ address generate_cipherBlockChaining_decryptVectorAESCrypt() {
     __ evpxorq(B6, S6, RK1, Assembler::AVX_512bit);
     __ evpxorq(B7, S7, RK1, Assembler::AVX_512bit);
 
-    __ evalignq(IV, S0, IV, 0x06);
-    __ evalignq(S0, S1, S0, 0x06);
-    __ evalignq(S1, S2, S1, 0x06);
-    __ evalignq(S2, S3, S2, 0x06);
-    __ evalignq(S3, S4, S3, 0x06);
-    __ evalignq(S4, S5, S4, 0x06);
-    __ evalignq(S5, S6, S5, 0x06);
-    __ evalignq(S6, S7, S6, 0x06);
+    __ evalignq(IV, S0, IV, 0x06, Assembler::AVX_512bit);
+    __ evalignq(S0, S1, S0, 0x06, Assembler::AVX_512bit);
+    __ evalignq(S1, S2, S1, 0x06, Assembler::AVX_512bit);
+    __ evalignq(S2, S3, S2, 0x06, Assembler::AVX_512bit);
+    __ evalignq(S3, S4, S3, 0x06, Assembler::AVX_512bit);
+    __ evalignq(S4, S5, S4, 0x06, Assembler::AVX_512bit);
+    __ evalignq(S5, S6, S5, 0x06, Assembler::AVX_512bit);
+    __ evalignq(S6, S7, S6, 0x06, Assembler::AVX_512bit);
 
     roundDec(RK2);
     roundDec(RK3);
@@ -6595,6 +6595,826 @@ address generate_avx_ghash_processBlocks() {
       return start;
   }
 
+// Montgomery parameter stack storage defines
+
+#define MM_XFORM_ARRAY_SIZE (40 * wordSize)
+#define MM_FOUR_ARRAYS (MM_XFORM_ARRAY_SIZE * 4)
+#define MM_a Address(rbp, -13 * wordSize)
+#define MM_b Address(rbp, -14 * wordSize)
+#define MM_n Address(rbp, -15 * wordSize)
+#define MM_len Address(rbp, -16 * wordSize)
+#define MM_inv Address(rbp, -17 * wordSize)
+#define MM_m Address(rbp, -18 * wordSize)
+#define MM_res Address(rbp, -19 * wordSize)
+#define MM_STACK_ADJ (MM_FOUR_ARRAYS + 10 * wordSize)
+
+  /***
+   *  Convert array to base-52.
+   *
+   *  Inputs:
+   *   src    - int   *radix-64
+   *   dst    - int   *radix-52
+   *   offset - int   offset into dst
+   *   len    - int   length of src array in 32-bit words
+   *
+   * Output:
+   *   lomg long *dst - result
+   * 
+   * Registers used:
+   *   src - r11
+   *   dst - r12
+   *   scratch - rax, rbx, rcx, rdx, r8, r9, r10, r14, r15
+   * 
+   */
+
+  void transform_r52x20() {
+    //     reverse_words((julong *)src, (julong *)dst, 16);
+    // 00007FF76B3C10CE  lea         ecx,[r14+10h]              // ecx is
+    // length in words 00007FF76B3C10D2  lea         rdx,[dst+80h
+    // (07FF76B3C50C0h)]     // &dst[len] 00007FF76B3C10D9  mov rax,qword
+    // ptr [rsi]        // rsi has ptr to src 00007FF76B3C10DC  lea
+    // rdx,[rdx-8] 00007FF76B3C10E0  rol         rax,20h 00007FF76B3C10E4
+    // lea         rsi,[rsi+8] 00007FF76B3C10E8  dec         ecx
+    // 00007FF76B3C10EA  mov         qword ptr [rdx],rax
+    // 00007FF76B3C10ED  test        ecx,ecx
+    // 00007FF76B3C10EF  jg          main+7Dh (07FF76B3C10D9h)
+
+    Register src = r11;
+    Register dst = r12;
+    Label L_xform, L_bottom, L_bottom1, L_outer, L_inner, L_11190;
+
+    __ jmp(L_bottom);
+
+    __ BIND(L_xform);
+//******************************************************************//
+// 00007FF61C591195  xor         r9d,r9d  
+//     rbp is initialized to 0??
+// 00007FF61C591198  lea         r13d,[rbp+0Fh]  
+// 00007FF61C59119C  nop         dword ptr [rax]  
+    __ xorl(r9, r9);
+    __ leal(r13, Address(r9, 0x0f));
+
+    __ align(32);
+    __ BIND(L_outer);
+// 	julong res = 0;
+// 	unsigned int jj, ll;
+// 	for (jj = 0; jj < 256; jj += 13) {
+// 		int m = 0;
+// 00007FF6FD2211B0  xor         r10d,r10d  
+// 		for (l = j; (l < j + 13) && (l < 256); l++) {
+// 00007FF6FD2211B3  lea         ebx,[r9+0Dh]  
+// 00007FF6FD2211B7  xor         r14d,r14d  
+// 00007FF6FD2211BA  cmp         r9d,ebx  
+// 00007FF6FD2211BD  jge         main+199h (07FF6FD221209h)  
+// 00007FF6FD2211BF  nop  
+// 00007FF6FD2211C0  cmp         r9d,100h  
+// 00007FF6FD2211C7  jge         main+199h (07FF6FD221209h)  
+    __ xorl(r10,r10);
+    __ leal(rbx, Address(r9, 0x0d));
+    __ xorl(r14, r14);
+    __ cmpl(r9, rbx);
+    __ jcc(Assembler::greaterEqual, L_bottom1);
+
+    __ align(32);
+    __ BIND(L_inner);
+
+    __ cmpl(r9, 0x100);
+    __ jcc(Assembler::greaterEqual, L_bottom1);
+// 			res |= (julong)extractNibble((unsigned int *)s_l, l, 32)
+// 00007FF6FD2211C9  mov         ecx,r9d  
+// 00007FF6FD2211CC  mov         eax,1Fh  
+// 00007FF6FD2211D1  shr         ecx,3  
+// 00007FF6FD2211D4  mov         r8d,r9d  
+// 00007FF6FD2211D7  sub         eax,ecx  
+// 00007FF6FD2211D9  and         r8d,7  
+// 00007FF6FD2211DD  shl         r8d,2  
+// 		for (l = j; (l < j + 13) && (l < 256); l++) {
+// 00007FF6FD2211E1  inc         r9d  
+    __ movl(rcx, r9);
+    __ movl(rax, 0x1f);
+    __ shrl(rcx, 0x03);
+    __ movl(r8, r9);
+    __ subl(rax, rcx);
+    __ andl(r8, 0x07);
+    __ shll(r8, 0x02);
+    __ incl(r9);
+
+// 			res |= (julong)extractNibble((unsigned int *)s_l, l, 32)
+// 00007FF6FD2211E4  shlx        ecx,r13d,r8d  
+// 00007FF6FD2211E9  mov         edx,dword ptr [src+rax*4]  
+// 00007FF6FD2211ED  and         rdx,rcx  
+// 00007FF6FD2211F0  mov         eax,r10d  
+// 00007FF6FD2211F3  shrx        rcx,rdx,r8  
+// 00007FF6FD2211F8  shlx        rcx,rcx,rax  
+// 00007FF6FD2211FD  or          r14,rcx  
+// 			       << m;
+    __ shlxl(rcx, r13, r8);
+    __ movl(rdx, Address(src, rax, Address::times_4));
+    __ andq(rdx, rcx);
+    __ movl(rax, r10);
+    __ shrxq(rcx, rdx, r8);
+    __ shlxq(rcx, rcx, rax);
+    __ orq(r14, rcx);
+
+// 			m += 4;
+// 00007FF6FD221200  add         r10d,4  
+// 00007FF6FD221204  cmp         r9d,ebx  
+// 00007FF6FD221207  jl          main+150h (07FF6FD2211C0h)  L_inner
+    __ addl(r10, 0x04);
+    __ cmpl(r9, rbx);
+    __ jcc(Assembler::less, L_inner);
+
+// 		}
+// 		*dst_l++ = res;
+    __ BIND(L_bottom1);
+// 00007FF6FD221209  mov         qword ptr [dst],r14  
+// 00007FF6FD22120C  mov         r9d,ebx  
+// 00007FF6FD22120F  add         dst,8  
+// 00007FF6FD221213  cmp         ebx,100h  
+// 00007FF6FD221219  jl          main+140h (07FF6FD2211B0h)  L_outer
+    __ movq(Address(dst, 0), r14);
+    __ movl(r9, rbx);
+    __ addptr(dst, 8);
+    __ cmpl(rbx, 0x100);
+    __ jcc(Assembler::less, L_outer);
+
+// 		res = 0;
+// 	}
+    __ ret(0);
+
+#if 0
+//******************************************************************//
+// 	julong res = 0;
+// 00007FF752011149  xor         r9d,r9d  
+// 00007FF752011156  lea         ebp,[r9+0Fh]  
+// 00007FF75201115A  nop         word ptr [rax+rax]  
+// 	for (j = 0, k = 0; j < 128; j += 13) {
+// 		int m = 0;
+    __ xorl(r9, r9);
+    __ leal(r15, Address(r9, 0xf));
+
+    __ align32();
+    __ BIND(L_outer);
+// 00007FF752011160  xor         r10d,r10d  
+// 		for (l = j; (l < j + 13) && (l < 128); l++) {
+// 00007FF752011163  lea         ebx,[r9+0Dh]  
+// 00007FF752011167  xor         r14d,r14d  
+// 00007FF75201116A  cmp         r9d,ebx  
+// 00007FF75201116D  jge         main+15Ch (07FF7520111CCh)  
+// 00007FF75201116F  nop  
+    __ xorl(r10, r10);
+    __ leal(rbx, Address(r9, 0x0d));
+    __ xorl(r14, r14);
+    __ cmpl(r9, rbx);
+    __ jcc(Assembler::greaterEqual, L_bottom1);
+
+    __ align(32);
+    __ BIND(L_inner);
+// 00007FF752011170  cmp         r9d,80h  
+// 00007FF752011177  jge         main+15Ch (07FF7520111CCh)  
+// 			res |= (julong)extractNibble((unsigned int *)s_l, l, 16)
+// 00007FF752011179  lea         ecx,[r9*4]  
+// 00007FF752011181  and         ecx,8000001Fh  
+// 00007FF752011187  jge         main+120h (07FF752011190h)  
+// 00007FF752011189  dec         ecx  
+// 00007FF75201118B  or          ecx,0FFFFFFE0h  
+// 00007FF75201118E  inc         ecx  
+    __ cmpl(r9, 0100);
+    __ jcc(Assembler::greaterEqual, L_bottom1);
+
+    __ leal(rcx, Address(noreg, r9, Address::times_4));
+    __ andl(rcx, 0x8000001f);
+    __ jcc(Assembler::greaterEqual, L_11190);
+
+    __ decl(rcx);
+    __ orl(rcx, 0x0FFFFFFE0);
+    __ incl(rcx);
+
+    __ BIND(L_11190);
+// 00007FF752011190  mov         eax,r9d  
+// 		for (l = j; (l < j + 13) && (l < 128); l++) {
+// 00007FF752011193  inc         r9d  
+// 			res |= (julong)extractNibble((unsigned int *)s_l, l, 16)
+// 00007FF752011196  cdq  
+// 00007FF752011197  and         edx,7  
+// 00007FF75201119A  add         eax,edx  
+// 00007FF75201119C  mov         edx,ebp  
+// 00007FF75201119F  sar         eax,3  
+// 00007FF7520111A2  sub         edx,eax  
+// 00007FF7520111A4  movsxd      rax,ecx  
+// 00007FF7520111A7  mov         r8d,dword ptr [src+rdx*4]  
+// 00007FF7520111AB  shlx        edx,ebp,ecx  
+// 00007FF7520111B0  and         r8,rdx  
+// 00007FF7520111B3  shrx        rcx,r8,rax  
+// 00007FF7520111B8  mov         eax,r10d  
+    __ movl(rax, r9);
+    __ incl(r9);
+    __ cdql();
+    __ andl(rdx, 0x7);
+    __ addl(rax, rdx);
+    __ movl(rdx, r15);
+    __ sarl(rax, 0x3);
+    __ subl(rdx, rax);
+    __ movl(rax, rcx);
+    __ shlq(rax, 0x20);
+    __ sarq(rax, 0x20);
+    __ movl(r8, Address(src, rdx, Address::times_4));
+    __ shlxl(rdx, r15, rcx);
+    __ andq(r8, rdx);
+    __ shrxq(rcx, r8, rax);
+    __ movl(rax, r10);
+// 			       << m;
+// 			m += 4;
+// 00007FF7520111BB  add         r10d,4  
+// 00007FF7520111BF  shlx        rcx,rcx,rax  
+// 00007FF7520111C4  or          r14,rcx  
+// 00007FF7520111C7  cmp         r9d,ebx  
+// 00007FF7520111CA  jl          main+100h (07FF752011170h)  
+    __ addl(r10, 0x4);
+    __ shlxq(rcx, rcx, rax);
+    __ orq(r14, rcx);
+    __ cmpl(r9, rbx);
+    __ jcc(Assembler::less, L_inner);
+
+// 		}
+// 		dst_l[k++] = res;
+    __ BIND(L_bottom1);
+// 00007FF7520111CC  mov         qword ptr [dst],r14  
+// 00007FF7520111CF  mov         r9d,ebx  
+// 00007FF7520111D2  add         dst,8  
+// 00007FF7520111D6  cmp         ebx,80h  
+// 00007FF7520111DC  jl          main+0F0h (07FF752011160h)  
+// 		res = 0;
+    __ movq(Address(dst, 0), r14);
+    __ movl(r9, rbx);
+    __ addptr(dst, 0x8);
+    __ cmpl(rbx, 0x100);
+    __ jcc(Assembler::less, L_outer);
+
+    __ ret(0);
+#endif
+
+    __ BIND(L_bottom);
+
+    __ movptr(src, MM_a);       // End of src array
+    __ movptr(dst, MM_res);
+    __ lea(dst, Address(dst, MM_XFORM_ARRAY_SIZE)); // Destination array
+    __ call(L_xform, relocInfo::none);
+
+    __ movptr(src, MM_b);       // End of src array
+    __ movptr(dst, MM_res);
+    __ lea(dst, Address(dst, 2 * MM_XFORM_ARRAY_SIZE)); // Destination array
+    __ call(L_xform, relocInfo::none);
+
+    __ movptr(src, MM_n);       // End of src array
+    __ movptr(dst, MM_res);
+    __ lea(dst, Address(dst, 3 * MM_XFORM_ARRAY_SIZE)); // Destination array
+    __ call(L_xform, relocInfo::none);
+  }
+
+  void transform_r52x30(Register a_in, Register b_in, Register n_in, Register dst_in) {
+  }
+
+  void transform_r52x40(Register a_in, Register b_in, Register n_in, Register dst_in) {
+  }
+
+
+  /***
+   *  Convert base-52 back into big-endian base-64.
+   *
+   *  Inputs:
+   *   src    - int   *radix-64
+   *   dst    - int   *radix-52
+   *   len    - int   length of src array in 32-bit words
+   *
+   * Output:
+   *   lomg long *dst - result
+   */
+
+  void transform_r64x20(Register src, Register dst) {
+        Label L_inner, L_outer, L_tmp;
+// 00007FF73473113E  mov         r9,rbx  
+
+// 	unsigned int res2 = 0;
+// 	unsigned int ll;
+// 	for (j = 312; j > 0;) {
+// 00007FF734731141  lea         r14d,[rsi+0Fh]  
+// 00007FF734731145  mov         r8d,138h  
+// 		int m = 28;
+    __ mov64(r14, 0x0f);
+    __ mov64(r8, 0x138);
+
+    __ BIND(L_outer);
+// 00007FF73473114B  mov         edi,1Ch  
+// 00007FF734731150  xor         r13d,r13d  
+// 00007FF734731153  lea         r10d,[rdi-14h]  
+// 		for (ll = 0; ll < 8; ll++) {
+// 			res2 |= (julong)extractNibbleRev(s_l_l, j) << m;
+    __ mov64(rdi, 0x1c);
+    __ xorl(r13, r13);
+    __ leal(r10, Address(rdi, -0x14));
+
+    __ BIND(L_inner);
+// 00007FF734731157  mov         edx,r8d  
+// 00007FF73473115A  mov         ecx,r8d  
+// 00007FF73473115D  shr         rcx,4  
+// 00007FF734731161  lea         rsi,[s_l_l (07FF7347350C0h)]  
+// 00007FF734731168  and         edx,r14d  
+// 00007FF73473116B  shl         edx,2  
+// 00007FF73473116E  shlx        rax,r14,rdx  
+// 00007FF734731173  mov         rcx,qword ptr [rsi+rcx*8]  
+// 00007FF734731177  and         rcx,rax  
+// 00007FF73473117A  mov         eax,edi  
+// 00007FF73473117C  shrx        rcx,rcx,rdx  
+// 00007FF734731181  shlx        rcx,rcx,rax  
+// 00007FF734731186  or          r13d,ecx  
+    __ movl(rdx, r8);
+    __ movl(rcx, r8);
+    __ shrq(rcx, 4);
+    __ leaq(rsi, Address(src, 0));
+    __ andl(rdx, r14);
+    __ shll(rdx, 0x02);
+    __ shlxq(rax, r14, rdx);
+    __ movq(rcx, Address(rsi, rcx, Address::times_8));
+    __ andq(rcx, rax);
+    __ movl(rax, rdi);
+    __ shrxq(rcx, rcx, rdx);
+    __ shlxq(rcx, rcx, rax);
+    __ orl(r13, rcx);
+
+// 			m -= 4;
+// 00007FF734731189  sub         edi,4  
+// 			j -= (j % 16) ? 1 : 4;
+// 00007FF73473118C  mov         eax,r8d  
+// 00007FF73473118F  and         eax,8000000Fh  
+// 00007FF734731194  jge         main+141h (07FF73473119Dh)  
+// 00007FF734731196  dec         eax  
+// 00007FF734731198  or          eax,0FFFFFFF0h  
+// 00007FF73473119B  inc         eax  
+// 00007FF73473119D  neg         eax  
+// 00007FF73473119F  sbb         eax,eax  
+// 00007FF7347311A1  and         eax,0FFFFFFFDh  
+// 00007FF7347311A4  add         eax,4  
+// 00007FF7347311A7  sub         r8d,eax  
+// 00007FF7347311AA  sub         r10,1  
+// 00007FF7347311AE  jne         main+0FBh (07FF734731157h)  
+    __ subl(rdi, 0x04);
+    __ movl(rax, r8);
+    __ andl(rax, 0x8000000f);
+    __ jcc(Assembler::greaterEqual, L_tmp);
+    __ decl(rax);
+    __ orl(rax, 0xFFFFFFF0);
+    __ incl(rax);
+    __ BIND(L_tmp);
+    __ negl(rax);
+    __ sbbl(rax, rax);
+    __ andl(rax, 0xFFFFFFFD);
+    __ addl(rax, 0x04);
+    __ subl(r8, rax);
+    __ subq(r10, 0x01);
+    __ jcc(Assembler::notEqual, L_inner);
+
+// 		}
+// 		*p++ = res2;
+// 00007FF7347311B0  mov         dword ptr [r9],r13d  
+// 00007FF7347311B3  add         r9,4  
+// 00007FF7347311B7  test        r8d,r8d  
+// 00007FF7347311BA  jg          main+0EFh (07FF73473114Bh)  
+// 		res2 = 0;
+// 	}
+    __ movl(Address(dst, 0), r13);
+    __ addq(dst, 4);
+    __ testl(r8, r8);
+    __ jcc(Assembler::greater, L_outer);
+
+#if 0
+
+
+
+    __ movq(r10, rcx); // Save registers
+    __ movq(r15, rax);
+    __ push(r8);
+    __ push(rdx);
+    __ movq(dst, dst_in);
+
+// 00007FF6A74313CF  mov         edx,dword ptr [src+48h (07FF6A7435088h)]  
+// 00007FF6A74313D5  mov         ecx,edx  
+// 00007FF6A74313D7  mov         r8d,dword ptr [src+30h (07FF6A7435070h)]  
+// 00007FF6A74313DE  mov         eax,dword ptr [src+4Ch (07FF6A743508Ch)]  
+// 00007FF6A74313E4  shl         eax,14h  
+// 00007FF6A74313E7  shl         edx,14h  
+// 00007FF6A74313EA  or          edx,dword ptr [src+44h (07FF6A7435084h)]  
+// 00007FF6A74313F0  shr         ecx,0Ch  
+// 00007FF6A74313F3  or          ecx,eax  
+// 00007FF6A74313F5  mov         dword ptr [dst+4h (07FF6A74350C4h)],edx  
+// 00007FF6A74313FB  mov         eax,dword ptr [src+40h (07FF6A7435080h)]  
+// 00007FF6A7431401  mov         edx,dword ptr [src+38h (07FF6A7435078h)]  
+// 00007FF6A7431407  mov         dword ptr [dst+8h (07FF6A74350C8h)],eax  
+// 00007FF6A743140D  mov         eax,dword ptr [src+3Ch (07FF6A743507Ch)]  
+// 00007FF6A7431413  shl         eax,0Ch  
+// 00007FF6A7431416  mov         dword ptr [dst (07FF6A74350C0h)],ecx  
+    __ movl(rdx, Address(src, 0x48));
+    __ movl(rcx, rdx);
+    __ movl(r8, Address(src, 0x30));
+    __ movl(rax, Address(src, 0x4c));
+    __ shll(rax, 0x14);
+    __ shll(rdx, 0x14);
+    __ orl(rdx, Address(src, 0x44));
+    __ shrl(rcx, 0x0c);
+    __ orl(rcx, rax);
+    __ movl(Address(dst, 0x04), rdx);
+    __ movl(rax, Address(src, 0x40));
+    __ movl(rdx, Address(src, 0x38));
+    __ movl(Address(dst, 0x08), rax);
+    __ movl(rax, Address(src, 0x3c));
+    __ shll(rax, 0x0c);
+    __ movl(Address(dst, 0x00), rcx);
+// 00007FF6A743141C  mov         ecx,edx  
+// 00007FF6A743141E  shl         edx,0Ch  
+// 00007FF6A7431421  shr         ecx,14h  
+// 00007FF6A7431424  or          ecx,eax  
+// 00007FF6A7431426  mov         dword ptr [dst+0Ch (07FF6A74350CCh)],ecx  
+// 00007FF6A743142C  mov         ecx,dword ptr [src+34h (07FF6A7435074h)]  
+// 00007FF6A7431432  mov         eax,ecx  
+// 00007FF6A7431434  shr         eax,8  
+// 00007FF6A7431437  or          eax,edx  
+// 00007FF6A7431439  shl         ecx,18h  
+// 00007FF6A743143C  mov         edx,dword ptr [src+28h (07FF6A7435068h)]  
+// 00007FF6A7431442  mov         dword ptr [dst+10h (07FF6A74350D0h)],eax  
+    __ movl(rcx, rdx);
+    __ shll(rdx, 0x0c);
+    __ shrl(rcx, 0x14);
+    __ orl(rcx, rax);
+    __ movl(Address(dst, 0x0c), rcx);
+    __ movl(rcx, Address(src, 0x34));
+    __ movl(rax, rcx);
+    __ shrl(rax, 0x08);
+    __ orl(rax, rdx);
+    __ shll(rcx, 0x18);
+    __ movl(rdx, Address(src, 0x28));
+    __ movl(Address(dst, 0x10), rax);
+// 00007FF6A7431448  mov         eax,r8d  
+// 00007FF6A743144B  shr         eax,8  
+// 00007FF6A743144E  or          eax,ecx  
+// 00007FF6A7431450  shl         r8d,14h  
+// 00007FF6A7431454  or          r8d,dword ptr [src+2Ch (07FF6A743506Ch)]  
+// 00007FF6A743145B  mov         ecx,dword ptr [src+24h (07FF6A7435064h)]  
+// 00007FF6A7431461  mov         dword ptr [dst+14h (07FF6A74350D4h)],eax  
+    __ movl(rax, r8);
+    __ shrl(rax, 0x08);
+    __ orl(rax, rcx);
+    __ shll(r8, 0x14);
+    __ orl(r8, Address(src, 0x2c));
+    __ movl(rcx, Address(src, 0x24));
+    __ movl(Address(dst, 0x14), rax);
+// 00007FF6A7431467  mov         eax,edx  
+// 00007FF6A7431469  shr         eax,1Ch  
+// 00007FF6A743146C  shl         edx,4  
+// 00007FF6A743146F  shl         r8d,4  
+// 00007FF6A7431473  or          r8d,eax  
+// 00007FF6A7431476  mov         eax,ecx  
+// 00007FF6A7431478  shr         eax,10h  
+// 00007FF6A743147B  or          eax,edx  
+// 00007FF6A743147D  shl         ecx,10h  
+// 00007FF6A7431480  mov         edx,dword ptr [src+20h (07FF6A7435060h)]  
+// 00007FF6A7431486  mov         dword ptr [dst+1Ch (07FF6A74350DCh)],eax  
+    __ movl(rax, rdx);
+    __ shrl(rax, 0x1c);
+    __ shll(rdx, 0x04);
+    __ shll(r8, 0x04);
+    __ orl(r8, rax);
+    __ movl(rax, rcx);
+    __ shrl(rax, 0x10);
+    __ orl(rax, rdx);
+    __ shll(rcx, 0x10);
+    __ movl(rdx, Address(src, 0x20));
+    __ movl(Address(dst, 0x1c), rax);
+// 00007FF6A743148C  mov         eax,edx  
+// 00007FF6A743148E  shr         eax,10h  
+// 00007FF6A7431491  or          eax,ecx  
+// 00007FF6A7431493  shl         edx,10h  
+// 00007FF6A7431496  mov         ecx,dword ptr [src+1Ch (07FF6A743505Ch)]  
+// 00007FF6A743149C  mov         dword ptr [dst+20h (07FF6A74350E0h)],eax  
+// 00007FF6A74314A2  mov         eax,ecx  
+// 00007FF6A74314A4  shr         eax,4  
+// 00007FF6A74314A7  or          eax,edx  
+// 00007FF6A74314A9  shl         ecx,1Ch  
+// 00007FF6A74314AC  mov         edx,dword ptr [src+18h (07FF6A7435058h)]  
+// 00007FF6A74314B2  mov         dword ptr [dst+24h (07FF6A74350E4h)],eax  
+    __ movl(rax, rdx);
+    __ shrl(rax, 0x10);
+    __ orl(rax, rcx);
+    __ shll(rdx, 0x10);
+    __ movl(rcx, Address(src, 0x1c));
+    __ movl(Address(dst, 0x20), rax);
+    __ movl(rax, rcx);
+    __ shrl(rax, 0x04);
+    __ orl(rax, rdx);
+    __ shll(rcx, 0x1c);
+    __ movl(rdx, Address(src, 0x18));
+    __ movl(Address(dst, 0x24), rax);
+// 00007FF6A74314B8  mov         eax,edx  
+// 00007FF6A74314BA  shr         eax,4  
+// 00007FF6A74314BD  or          eax,ecx  
+// 00007FF6A74314BF  shl         edx,14h  
+// 00007FF6A74314C2  or          edx,dword ptr [src+14h (07FF6A7435054h)]  
+// 00007FF6A74314C8  mov         ecx,dword ptr [src+10h (07FF6A7435050h)]  
+// 00007FF6A74314CE  mov         dword ptr [dst+28h (07FF6A74350E8h)],eax  
+// 00007FF6A74314D4  mov         eax,ecx  
+// 00007FF6A74314D6  shl         edx,8  
+// 00007FF6A74314D9  shr         eax,18h  
+// 00007FF6A74314DC  mov         dword ptr [dst+18h (07FF6A74350D8h)],r8d  
+// 00007FF6A74314E3  or          edx,eax  
+// 00007FF6A74314E5  shl         ecx,8  
+// 00007FF6A74314E8  mov         dword ptr [dst+2Ch (07FF6A74350ECh)],edx  
+// 00007FF6A74314EE  mov         edx,dword ptr [src+0Ch (07FF6A743504Ch)]  
+    __ movl(rax, rdx);
+    __ shrl(rax, 0x04);
+    __ orl(rax, rcx);
+    __ shll(rdx, 0x14);
+    __ orl(rdx, Address(src, 0x14));
+    __ movl(rcx, Address(src, 0x10));
+    __ movl(Address(dst, 0x28), rax);
+    __ movl(rax, rcx);
+    __ shll(rdx, 0x08);
+    __ shrl(rax, 0x18);
+    __ movl(Address(dst, 0x18), r8);
+    __ orl(rdx, rax);
+    __ shll(rcx, 0x08);
+    __ movl(Address(dst, 0x2c), rdx);
+    __ movl(rdx, Address(src, 0x0c));
+// 00007FF6A74314F4  mov         eax,edx  
+// 00007FF6A74314F6  shr         eax,0Ch  
+// 00007FF6A74314F9  or          eax,ecx  
+// 00007FF6A74314FB  shl         edx,14h  
+// 00007FF6A74314FE  mov         ecx,dword ptr [src+8h (07FF6A7435048h)]  
+// 00007FF6A7431504  mov         dword ptr [dst+30h (07FF6A74350F0h)],eax  
+// 00007FF6A743150A  mov         eax,ecx  
+// 00007FF6A743150C  shr         eax,0Ch  
+// 00007FF6A743150F  shl         ecx,14h  
+// 00007FF6A7431512  or          eax,edx  
+// 00007FF6A7431514  or          ecx,dword ptr [src+4h (07FF6A7435044h)]  
+// 00007FF6A743151A  mov         dword ptr [dst+34h (07FF6A74350F4h)],eax  
+// 00007FF6A7431520  mov         eax,dword ptr [src (07FF6A7435040h)]  
+// 00007FF6A7431526  mov         dword ptr [dst+38h (07FF6A74350F8h)],ecx  
+// 00007FF6A7431533  mov         dword ptr [dst+3Ch (07FF6A74350FCh)],eax  
+    __ movl(rax, rdx);
+    __ shrl(rax, 0x0c);
+    __ orl(rax, rcx);
+    __ shll(rdx, 0x14);
+    __ movl(rcx, Address(src, 0x08));
+    __ movl(Address(dst, 0x30), rax);
+    __ movl(rax, rcx);
+    __ shrl(rax, 0x0c);
+    __ shll(rcx, 0x14);
+    __ orl(rax, rdx);
+    __ orl(rcx, Address(src, 0x04));
+    __ movl(Address(dst, 0x34), rax);
+    __ movl(rax, Address(src, 0x00));
+    __ movl(Address(dst, 0x38), rcx);
+    __ movl(Address(dst, 0x3c), rax);
+
+    __ movq(rcx, r10);
+    __ movq(rax, r15);
+    __ movq(rbx, r11);
+    __ pop(rdx);
+    __ pop(r8);
+#endif
+  }
+
+  void transform_r64x30(Register src, Register dst) {
+  }
+
+  void transform_r64x40(Register src, Register dst) {
+  }
+
+
+  /***
+   *  Arguments:
+   *  void SharedRuntime::montgomery_multiply(jint *a_ints, jint *b_ints, jint *n_ints,
+   *                                          jint len, jlong inv,
+   *                                          jint *m_ints) {
+   *
+   *  Inputs:
+   *   c_rarg0   - int   *a
+   *   c_rarg1   - int   *b   - not if squaring
+   *   c_rarg2   - int   *n
+   *   c_rarg3   - int   len
+   *   c_rarg4   - int   inv
+   *   c_rarg5   - int   *m
+   *
+   * Output:
+   *   int *m result
+   */
+
+  // Windows regs    |  Linux regs
+  // c_rarg0 (rcx)   |  c_rarg0 (rdi)
+  // c_rarg1 (rdx)   |  c_rarg1 (rsi)
+  // c_rarg2 (r8)    |  c_rarg2 (rdx)
+  // c_rarg3 (r9)    |  c_rarg3 (rcx)
+  // r10             |  c_rarg4 (r8)
+  // r13             |  c_rarg5 (r9)
+
+
+  address generate_montgomeryMultiply(bool is_square) {
+    __ align(CodeEntryAlignment);
+    StubCodeMark mark(this, "StubRoutines", "montgomeryMultiply");
+
+    DEBUG_ONLY(
+      Label L_broken_inv, L_broken_MM, L_odd_len;
+      __ BIND(L_broken_inv);
+      __ stop("broken inverse in Montgomery multiply (gen)");
+      __ BIND(L_broken_MM);
+      __ stop("broken Montgomery multiply (gen)");
+      __ BIND(L_odd_len);
+      __ stop("array length in montgomery_multiply must be even (gen)"););
+
+    address start = __ pc();
+
+    BLOCK_COMMENT("Entry:");
+    __ enter(); // required for proper stackwalking of RuntimeStub frame
+
+    Label L_exit, L_revert, L_30, L_40, L_trans_result;
+
+    Register a;
+    Register b;
+    Register n;
+    Register len;
+    Register inv;
+    Register m;
+    Register tmp_result = r14;
+
+    // Save callee-saved registers before using them
+    __ push(r9);
+    __ push(r8);
+    __ push(rcx);
+    __ push(rdx);
+    __ push(rdi);
+    __ push(rsi);
+    __ push(rbx);
+    __ push(r12);
+    __ push(r13);
+    __ push(r14);
+    __ push(r15);
+
+    if (!is_square) {
+      a = c_rarg0;
+      b = c_rarg1;
+      n = c_rarg2;
+      len = c_rarg3;
+      // and updated with the incremented counter in the end
+#ifndef _WIN64
+      inv = c_rarg4;
+      m = c_rarg5;
+#else
+      const Address inv_mem(rbp, 6 * wordSize);
+      inv = r10;
+      const Address m_mem(rbp, 7 * wordSize);
+      m = r13;
+      __ movq(inv, inv_mem);
+      __ movptr(m, m_mem);
+#endif
+    } else {
+      a = c_rarg0;
+      b = c_rarg0;
+      n = c_rarg1;
+      len = c_rarg2;
+      inv = c_rarg3;
+      // and updated with the incremented counter in the end
+#ifndef _WIN64
+      m = c_rarg4;
+#else
+      const Address m_mem(rbp, 6 * wordSize);
+      m = r13;
+      __ movptr(m, m_mem);
+#endif
+    }
+
+    assert_different_registers(a, n, len, inv, m);
+
+#if 0
+    __ cmpl(len, 64);
+    __ jcc(Assembler::greater, L_revert);
+    __ cmpl(len, 32);
+    __ jcc(Assembler::less, L_revert);
+#else
+    __ cmpl(len, 32);
+    __ jcc(Assembler::notEqual, L_revert);
+#endif
+
+    DEBUG_ONLY(
+      __ push(rdx);
+      __ movq(rax, Address(n, len, Address::times_4, -1 * wordSize));
+      __ rorq(rax, 32);
+      __ mulq(inv);
+      __ cmpq(rax, 0xffffffff);
+      __ jcc(Assembler::notEqual, L_broken_inv);
+      __ pop(rdx);
+
+      __ testq(len, 1);
+      __ jcc(Assembler::notZero, L_odd_len);
+    );
+
+    // Make room on the stack for transformed data.  Need to convert from
+    // radix-64 to radix-52. Maximum size is 40 qwords for 2K bit integer.
+
+    __ subptr(rsp, MM_STACK_ADJ); // Need 4 transformed arrays
+
+    // Save input registers as needed
+    __ movq(MM_a, a);
+    __ movq(MM_b, b);
+    __ movq(MM_n, n);
+    __ movq(MM_len, len);
+    __ movq(MM_inv, inv);
+    __ movq(MM_m, m);
+    __ movq(MM_res, rsp);
+
+    __ cmpl(len, 32);
+    __ jcc(Assembler::greater, L_30);
+    // Transform all inputs to radix-52
+    transform_r52x20();
+
+    __ movq(tmp_result, MM_res);
+    __ movq(inv, MM_inv);
+    __ montgomeryMultiply52x20(tmp_result, inv);
+
+    __ movq(r11, MM_res);
+    __ movq(r12, MM_m);
+
+    transform_r64x20(r11, r12);
+#if 0
+    __ jmp(L_trans_result);
+
+    __ BIND(L_30);
+    __ cmpl(len, 48);
+    __ jcc(Assembler::greater, L_40);
+    // Transform to radix-52
+    transform_r52x30(a, b, n, tmp_result);
+
+    __ montgomeryMultiply52x30(tmp_result, inv);
+
+    transform_r64x30(tmp_result, m);
+    __ jmp(L_trans_result);
+
+    __ BIND(L_40);
+    // Transform to radix-52
+    transform_r52x40(a, b, n, tmp_result);
+
+    __ montgomeryMultiply52x40(tmp_result, inv);
+
+    transform_r64x40(tmp_result, m);
+#endif
+
+    __ BIND(L_trans_result);
+
+    __ addptr(rsp, MM_STACK_ADJ);
+
+    //__ jmp(L_revert);
+
+    __ BIND(L_exit);
+    __ pop(r15);
+    __ pop(r14);
+    __ pop(r13);
+    __ pop(r12);
+    __ pop(rbx);
+    __ pop(rsi);
+    __ pop(rdi);
+    __ pop(rdx);
+    __ pop(rcx);
+    __ pop(r8);
+    __ pop(r9);
+    __ leave();
+    __ ret(0);
+
+    __ BIND(L_revert);
+    // Tail jump if outside our range.  Revert to SharedRuntime.
+    if (is_square) {
+      __ lea(r11,
+       RuntimeAddress(
+         (address)SharedRuntime::montgomery_square));
+    } else {
+      __ lea(r11,
+       RuntimeAddress(
+         (address)SharedRuntime::montgomery_multiply));
+    }
+    __ pop(r15);
+    __ pop(r14);
+    __ pop(r13);
+    __ pop(r12);
+    __ pop(rbx);
+    __ pop(rsi);
+    __ pop(rdi);
+    __ pop(rdx);
+    __ pop(rcx);
+    __ pop(r8);
+    __ pop(r9);
+    __ leave();
+    __ jmp(r11);
+
+
+    return start;
+  }
+#undef MM_XFORM_ARRAY_SIZE
 
   /***
    *  Arguments:
@@ -7818,12 +8638,20 @@ address generate_avx_ghash_processBlocks() {
       StubRoutines::_bigIntegerLeftShiftWorker = generate_bigIntegerLeftShift();
     }
     if (UseMontgomeryMultiplyIntrinsic) {
-      StubRoutines::_montgomeryMultiply
-        = CAST_FROM_FN_PTR(address, SharedRuntime::montgomery_multiply);
+      if (VM_Version::supports_avx512ifma()) {
+        StubRoutines::_montgomeryMultiply = generate_montgomeryMultiply(false);
+      } else {
+        StubRoutines::_montgomeryMultiply
+          = CAST_FROM_FN_PTR(address, SharedRuntime::montgomery_multiply);
+      }
     }
     if (UseMontgomerySquareIntrinsic) {
-      StubRoutines::_montgomerySquare
-        = CAST_FROM_FN_PTR(address, SharedRuntime::montgomery_square);
+      if (!VM_Version::supports_avx512ifma()) {   // ASGASG
+        StubRoutines::_montgomerySquare = generate_montgomeryMultiply(true);
+      } else {
+        StubRoutines::_montgomerySquare
+          = CAST_FROM_FN_PTR(address, SharedRuntime::montgomery_square);
+      }
     }
 
     // Get svml stub routine addresses

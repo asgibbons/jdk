@@ -1854,6 +1854,8 @@ private:
   void pmaddwd(XMMRegister dst, XMMRegister src);
   void vpmaddwd(XMMRegister dst, XMMRegister nds, XMMRegister src, int vector_len);
   void vpmaddubsw(XMMRegister dst, XMMRegister src1, XMMRegister src2, int vector_len);
+  void vpmadd52huq(XMMRegister dst, XMMRegister src1, Address src2, int vector_len);
+  void vpmadd52luq(XMMRegister dst, XMMRegister src1, Address src2, int vector_len);
 
   // Multiply add accumulate
   void evpdpwssd(XMMRegister dst, XMMRegister nds, XMMRegister src, int vector_len);
@@ -2025,7 +2027,7 @@ private:
 
   void palignr(XMMRegister dst, XMMRegister src, int imm8);
   void vpalignr(XMMRegister dst, XMMRegister src1, XMMRegister src2, int imm8, int vector_len);
-  void evalignq(XMMRegister dst, XMMRegister nds, XMMRegister src, uint8_t imm8);
+  void evalignq(XMMRegister dst, XMMRegister nds, XMMRegister src, uint8_t imm8, int vector_len);
 
   void pblendw(XMMRegister dst, XMMRegister src, int imm8);
   void vblendps(XMMRegister dst, XMMRegister src1, XMMRegister src2, int imm8, int vector_len);
