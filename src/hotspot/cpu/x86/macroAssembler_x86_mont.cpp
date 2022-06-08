@@ -227,23 +227,23 @@ void MacroAssembler::montgomeryMultiply52x20(Register out, Register kk0)
   addq(rax, r10);
   setb(Assembler::below, r15);
 
-  // a8:  62 f2 e5 28 b4 06      vpmadd52luq ymm0,ymm3,YMMWORD PTR [rsi]
-  // ae:  62 f2 e5 28 b4 7e 01   vpmadd52luq ymm7,ymm3,YMMWORD PTR [rsi+0x20]
-  // b5:  62 f2 ed 28 b4 01      vpmadd52luq ymm0,ymm2,YMMWORD PTR [rcx]
-  // bb:  62 f2 ed 28 b4 79 01   vpmadd52luq ymm7,ymm2,YMMWORD PTR [rcx+0x20]
+  // a8:  62 f2 e5 28 b4 06      evpmadd52luq ymm0,ymm3,YMMWORD PTR [rsi]
+  // ae:  62 f2 e5 28 b4 7e 01   evpmadd52luq ymm7,ymm3,YMMWORD PTR [rsi+0x20]
+  // b5:  62 f2 ed 28 b4 01      evpmadd52luq ymm0,ymm2,YMMWORD PTR [rcx]
+  // bb:  62 f2 ed 28 b4 79 01   evpmadd52luq ymm7,ymm2,YMMWORD PTR [rcx+0x20]
   // c2:  62 f3 c5 28 03 c0 01   valignq ymm0,ymm7,ymm0,0x1
   // c9:  48 83 44 24 f8 08      add    QWORD PTR [rsp-0x8],0x8
-  // cf:  62 f2 e5 28 b4 4e 04   vpmadd52luq ymm1,ymm3,YMMWORD PTR [rsi+0x80]
-  // d6:  62 f2 ed 28 b4 49 04   vpmadd52luq ymm1,ymm2,YMMWORD PTR [rcx+0x80]
+  // cf:  62 f2 e5 28 b4 4e 04   evpmadd52luq ymm1,ymm3,YMMWORD PTR [rsi+0x80]
+  // d6:  62 f2 ed 28 b4 49 04   evpmadd52luq ymm1,ymm2,YMMWORD PTR [rcx+0x80]
   // dd:  62 f3 bd 28 03 e1 01   valignq ymm4,ymm8,ymm1,0x1
-  vpmadd52luq(xmm0, xmm3, Address(rsi, 0), Assembler::AVX_256bit);
-  vpmadd52luq(xmm7, xmm3, Address(rsi, 0x20), Assembler::AVX_256bit);
-  vpmadd52luq(xmm0, xmm2, Address(rcx, 0), Assembler::AVX_256bit);
-  vpmadd52luq(xmm7, xmm2, Address(rcx, 0x20), Assembler::AVX_256bit);
+  evpmadd52luq(xmm0, xmm3, Address(rsi, 0), Assembler::AVX_256bit);
+  evpmadd52luq(xmm7, xmm3, Address(rsi, 0x20), Assembler::AVX_256bit);
+  evpmadd52luq(xmm0, xmm2, Address(rcx, 0), Assembler::AVX_256bit);
+  evpmadd52luq(xmm7, xmm2, Address(rcx, 0x20), Assembler::AVX_256bit);
   evalignq(xmm0, xmm7, xmm0, 1, Assembler::AVX_256bit);
   addq(LOOP_TERM, 8);
-  vpmadd52luq(xmm1, xmm3, Address(rsi, 0x80), Assembler::AVX_256bit);
-  vpmadd52luq(xmm1, xmm2, Address(rcx, 0x80), Assembler::AVX_256bit);
+  evpmadd52luq(xmm1, xmm3, Address(rsi, 0x80), Assembler::AVX_256bit);
+  evpmadd52luq(xmm1, xmm2, Address(rcx, 0x80), Assembler::AVX_256bit);
   evalignq(xmm4, xmm8, xmm1, 1, Assembler::AVX_256bit);
 
   // e4:  4d 89 da               mov    r10,r11
@@ -263,47 +263,47 @@ void MacroAssembler::montgomeryMultiply52x20(Register out, Register kk0)
   orq(r10, rax);
   movq(rax, xmm0);
 
-//  102:  62 f2 e5 28 b4 76 02   vpmadd52luq ymm6,ymm3,YMMWORD PTR [rsi+0x40]
-//  109:  62 f2 e5 28 b4 6e 03   vpmadd52luq ymm5,ymm3,YMMWORD PTR [rsi+0x60]
-//  110:  62 f2 ed 28 b4 71 02   vpmadd52luq ymm6,ymm2,YMMWORD PTR [rcx+0x40]
-//  117:  62 f2 ed 28 b4 69 03   vpmadd52luq ymm5,ymm2,YMMWORD PTR [rcx+0x60]
+//  102:  62 f2 e5 28 b4 76 02   evpmadd52luq ymm6,ymm3,YMMWORD PTR [rsi+0x40]
+//  109:  62 f2 e5 28 b4 6e 03   evpmadd52luq ymm5,ymm3,YMMWORD PTR [rsi+0x60]
+//  110:  62 f2 ed 28 b4 71 02   evpmadd52luq ymm6,ymm2,YMMWORD PTR [rcx+0x40]
+//  117:  62 f2 ed 28 b4 69 03   evpmadd52luq ymm5,ymm2,YMMWORD PTR [rcx+0x60]
 //  11e:  62 f3 cd 28 03 ff 01   valignq ymm7,ymm6,ymm7,0x1
-  vpmadd52luq(xmm6, xmm3, Address(rsi, 0x40), Assembler::AVX_256bit);
-  vpmadd52luq(xmm5, xmm3, Address(rsi, 0x60), Assembler::AVX_256bit);
-  vpmadd52luq(xmm6, xmm2, Address(rcx, 0x40), Assembler::AVX_256bit);
-  vpmadd52luq(xmm5, xmm2, Address(rcx, 0x60), Assembler::AVX_256bit);
+  evpmadd52luq(xmm6, xmm3, Address(rsi, 0x40), Assembler::AVX_256bit);
+  evpmadd52luq(xmm5, xmm3, Address(rsi, 0x60), Assembler::AVX_256bit);
+  evpmadd52luq(xmm6, xmm2, Address(rcx, 0x40), Assembler::AVX_256bit);
+  evpmadd52luq(xmm5, xmm2, Address(rcx, 0x60), Assembler::AVX_256bit);
   evalignq(xmm7, xmm6, xmm7, 1, Assembler::AVX_256bit);
 
-//  125:  62 f2 e5 28 b5 06      vpmadd52huq ymm0,ymm3,YMMWORD PTR [rsi]
+//  125:  62 f2 e5 28 b5 06      evpmadd52huq ymm0,ymm3,YMMWORD PTR [rsi]
 //  12b:  62 f3 d5 28 03 f6 01   valignq ymm6,ymm5,ymm6,0x1
-//  132:  62 f2 e5 28 b5 7e 01   vpmadd52huq ymm7,ymm3,YMMWORD PTR [rsi+0x20]
+//  132:  62 f2 e5 28 b5 7e 01   evpmadd52huq ymm7,ymm3,YMMWORD PTR [rsi+0x20]
 //  139:  62 f3 f5 28 03 ed 01   valignq ymm5,ymm1,ymm5,0x1
-//  140:  62 f2 e5 28 b5 76 02   vpmadd52huq ymm6,ymm3,YMMWORD PTR [rsi+0x40]
+//  140:  62 f2 e5 28 b5 76 02   evpmadd52huq ymm6,ymm3,YMMWORD PTR [rsi+0x40]
 //  147:  62 f1 fd 28 6f cc      vmovdqa64 ymm1,ymm4
-//  14d:  62 f2 e5 28 b5 6e 03   vpmadd52huq ymm5,ymm3,YMMWORD PTR [rsi+0x60]
-//  154:  62 f2 e5 28 b5 4e 04   vpmadd52huq ymm1,ymm3,YMMWORD PTR [rsi+0x80]
+//  14d:  62 f2 e5 28 b5 6e 03   evpmadd52huq ymm5,ymm3,YMMWORD PTR [rsi+0x60]
+//  154:  62 f2 e5 28 b5 4e 04   evpmadd52huq ymm1,ymm3,YMMWORD PTR [rsi+0x80]
 //  15b:  4c 01 d0               add    rax,r10
-//  15e:  62 f2 ed 28 b5 49 04   vpmadd52huq ymm1,ymm2,YMMWORD PTR [rcx+0x80]
-//  165:  62 f2 ed 28 b5 01      vpmadd52huq ymm0,ymm2,YMMWORD PTR [rcx]
+//  15e:  62 f2 ed 28 b5 49 04   evpmadd52huq ymm1,ymm2,YMMWORD PTR [rcx+0x80]
+//  165:  62 f2 ed 28 b5 01      evpmadd52huq ymm0,ymm2,YMMWORD PTR [rcx]
 //  16b:  62 f1 fd 28 6f e1      vmovdqa64 ymm4,ymm1
-//  171:  62 f2 ed 28 b5 79 01   vpmadd52huq ymm7,ymm2,YMMWORD PTR [rcx+0x20]
-//  178:  62 f2 ed 28 b5 71 02   vpmadd52huq ymm6,ymm2,YMMWORD PTR [rcx+0x40]
-//  17f:  62 f2 ed 28 b5 69 03   vpmadd52huq ymm5,ymm2,YMMWORD PTR [rcx+0x60]
-  vpmadd52huq(xmm0, xmm3, Address(rsi, 0x00), Assembler::AVX_256bit);
+//  171:  62 f2 ed 28 b5 79 01   evpmadd52huq ymm7,ymm2,YMMWORD PTR [rcx+0x20]
+//  178:  62 f2 ed 28 b5 71 02   evpmadd52huq ymm6,ymm2,YMMWORD PTR [rcx+0x40]
+//  17f:  62 f2 ed 28 b5 69 03   evpmadd52huq ymm5,ymm2,YMMWORD PTR [rcx+0x60]
+  evpmadd52huq(xmm0, xmm3, Address(rsi, 0x00), Assembler::AVX_256bit);
   evalignq(xmm6, xmm5, xmm6, 1, Assembler::AVX_256bit);
-  vpmadd52huq(xmm7, xmm3, Address(rsi, 0x20), Assembler::AVX_256bit);
+  evpmadd52huq(xmm7, xmm3, Address(rsi, 0x20), Assembler::AVX_256bit);
   evalignq(xmm5, xmm1, xmm5, 1, Assembler::AVX_256bit);
-  vpmadd52huq(xmm6, xmm3, Address(rsi, 0x40), Assembler::AVX_256bit);
+  evpmadd52huq(xmm6, xmm3, Address(rsi, 0x40), Assembler::AVX_256bit);
   vmovdqu(xmm1, xmm4);
-  vpmadd52huq(xmm5, xmm3, Address(rsi, 0x60), Assembler::AVX_256bit);
-  vpmadd52huq(xmm1, xmm3, Address(rsi, 0x80), Assembler::AVX_256bit);
+  evpmadd52huq(xmm5, xmm3, Address(rsi, 0x60), Assembler::AVX_256bit);
+  evpmadd52huq(xmm1, xmm3, Address(rsi, 0x80), Assembler::AVX_256bit);
   addq(rax, r10);
-  vpmadd52huq(xmm1, xmm2, Address(rcx, 0x80), Assembler::AVX_256bit);
-  vpmadd52huq(xmm0, xmm2, Address(rcx, 0x00), Assembler::AVX_256bit);
+  evpmadd52huq(xmm1, xmm2, Address(rcx, 0x80), Assembler::AVX_256bit);
+  evpmadd52huq(xmm0, xmm2, Address(rcx, 0x00), Assembler::AVX_256bit);
   vmovdqu(xmm4, xmm1);
-  vpmadd52huq(xmm7, xmm2, Address(rcx, 0x20), Assembler::AVX_256bit);
-  vpmadd52huq(xmm6, xmm2, Address(rcx, 0x40), Assembler::AVX_256bit);
-  vpmadd52huq(xmm5, xmm2, Address(rcx, 0x60), Assembler::AVX_256bit);
+  evpmadd52huq(xmm7, xmm2, Address(rcx, 0x20), Assembler::AVX_256bit);
+  evpmadd52huq(xmm6, xmm2, Address(rcx, 0x40), Assembler::AVX_256bit);
+  evpmadd52huq(xmm5, xmm2, Address(rcx, 0x60), Assembler::AVX_256bit);
 
 //  186:  48 39 d3               cmp    rbx,rdx
 //  189:  0f 85 d1 fe ff ff      jne    60 <k1_ifma256_amm52x20+0x60>
@@ -688,14 +688,14 @@ void MacroAssembler::montgomeryMultiply52x30(Register out, Register kk0)
   c3:  45 31 d2               xor    r10d,r10d
   c6:  48 03 44 24 f0         add    rax,QWORD PTR [rsp-0x10]
   cb:  41 0f 92 c2            setb   r10b
-  cf:  62 f2 a5 28 b4 06      vpmadd52luq ymm0,ymm11,YMMWORD PTR [rsi]
-  d5:  62 72 a5 28 b4 46 01   vpmadd52luq ymm8,ymm11,YMMWORD PTR [rsi+0x20]
-  dc:  62 f2 ad 28 b4 01      vpmadd52luq ymm0,ymm10,YMMWORD PTR [rcx]
-  e2:  62 72 ad 28 b4 41 01   vpmadd52luq ymm8,ymm10,YMMWORD PTR [rcx+0x20]
+  cf:  62 f2 a5 28 b4 06      evpmadd52luq ymm0,ymm11,YMMWORD PTR [rsi]
+  d5:  62 72 a5 28 b4 46 01   evpmadd52luq ymm8,ymm11,YMMWORD PTR [rsi+0x20]
+  dc:  62 f2 ad 28 b4 01      evpmadd52luq ymm0,ymm10,YMMWORD PTR [rcx]
+  e2:  62 72 ad 28 b4 41 01   evpmadd52luq ymm8,ymm10,YMMWORD PTR [rcx+0x20]
   e9:  62 f3 bd 28 03 c0 01   valignq ymm0,ymm8,ymm0,0x1
-  f0:  62 f2 a5 28 b4 4e 07   vpmadd52luq ymm1,ymm11,YMMWORD PTR [rsi+0xe0]
+  f0:  62 f2 a5 28 b4 4e 07   evpmadd52luq ymm1,ymm11,YMMWORD PTR [rsi+0xe0]
   f7:  4c 8b 5c 24 f8         mov    r11,QWORD PTR [rsp-0x8]
-  fc:  62 f2 ad 28 b4 49 07   vpmadd52luq ymm1,ymm10,YMMWORD PTR [rcx+0xe0]
+  fc:  62 f2 ad 28 b4 49 07   evpmadd52luq ymm1,ymm10,YMMWORD PTR [rcx+0xe0]
  103:  62 f3 b5 28 03 d1 01   valignq ymm2,ymm9,ymm1,0x1
  10a:  4d 01 de               add    r14,r11
  10d:  4d 01 d6               add    r14,r10
@@ -703,42 +703,42 @@ void MacroAssembler::montgomeryMultiply52x30(Register out, Register kk0)
  114:  49 c1 e6 0c            shl    r14,0xc
  118:  49 09 c6               or     r14,rax
  11b:  c4 e1 f9 7e c0         vmovq  rax,xmm0
- 120:  62 f2 a5 28 b4 7e 02   vpmadd52luq ymm7,ymm11,YMMWORD PTR [rsi+0x40]
- 127:  62 f2 a5 28 b4 76 03   vpmadd52luq ymm6,ymm11,YMMWORD PTR [rsi+0x60]
- 12e:  62 f2 ad 28 b4 79 02   vpmadd52luq ymm7,ymm10,YMMWORD PTR [rcx+0x40]
- 135:  62 f2 ad 28 b4 71 03   vpmadd52luq ymm6,ymm10,YMMWORD PTR [rcx+0x60]
+ 120:  62 f2 a5 28 b4 7e 02   evpmadd52luq ymm7,ymm11,YMMWORD PTR [rsi+0x40]
+ 127:  62 f2 a5 28 b4 76 03   evpmadd52luq ymm6,ymm11,YMMWORD PTR [rsi+0x60]
+ 12e:  62 f2 ad 28 b4 79 02   evpmadd52luq ymm7,ymm10,YMMWORD PTR [rcx+0x40]
+ 135:  62 f2 ad 28 b4 71 03   evpmadd52luq ymm6,ymm10,YMMWORD PTR [rcx+0x60]
  13c:  62 53 c5 28 03 c0 01   valignq ymm8,ymm7,ymm8,0x1
- 143:  62 f2 a5 28 b4 6e 04   vpmadd52luq ymm5,ymm11,YMMWORD PTR [rsi+0x80]
+ 143:  62 f2 a5 28 b4 6e 04   evpmadd52luq ymm5,ymm11,YMMWORD PTR [rsi+0x80]
  14a:  62 f3 cd 28 03 ff 01   valignq ymm7,ymm6,ymm7,0x1
- 151:  62 f2 ad 28 b4 69 04   vpmadd52luq ymm5,ymm10,YMMWORD PTR [rcx+0x80]
- 158:  62 f2 a5 28 b4 66 05   vpmadd52luq ymm4,ymm11,YMMWORD PTR [rsi+0xa0]
+ 151:  62 f2 ad 28 b4 69 04   evpmadd52luq ymm5,ymm10,YMMWORD PTR [rcx+0x80]
+ 158:  62 f2 a5 28 b4 66 05   evpmadd52luq ymm4,ymm11,YMMWORD PTR [rsi+0xa0]
  15f:  62 f3 d5 28 03 f6 01   valignq ymm6,ymm5,ymm6,0x1
- 166:  62 f2 ad 28 b4 61 05   vpmadd52luq ymm4,ymm10,YMMWORD PTR [rcx+0xa0]
- 16d:  62 f2 a5 28 b4 5e 06   vpmadd52luq ymm3,ymm11,YMMWORD PTR [rsi+0xc0]
+ 166:  62 f2 ad 28 b4 61 05   evpmadd52luq ymm4,ymm10,YMMWORD PTR [rcx+0xa0]
+ 16d:  62 f2 a5 28 b4 5e 06   evpmadd52luq ymm3,ymm11,YMMWORD PTR [rsi+0xc0]
  174:  62 f3 dd 28 03 ed 01   valignq ymm5,ymm4,ymm5,0x1
- 17b:  62 f2 ad 28 b4 59 06   vpmadd52luq ymm3,ymm10,YMMWORD PTR [rcx+0xc0]
- 182:  62 f2 a5 28 b5 06      vpmadd52huq ymm0,ymm11,YMMWORD PTR [rsi]
+ 17b:  62 f2 ad 28 b4 59 06   evpmadd52luq ymm3,ymm10,YMMWORD PTR [rcx+0xc0]
+ 182:  62 f2 a5 28 b5 06      evpmadd52huq ymm0,ymm11,YMMWORD PTR [rsi]
  188:  62 f3 e5 28 03 e4 01   valignq ymm4,ymm3,ymm4,0x1
- 18f:  62 72 a5 28 b5 46 01   vpmadd52huq ymm8,ymm11,YMMWORD PTR [rsi+0x20]
+ 18f:  62 72 a5 28 b5 46 01   evpmadd52huq ymm8,ymm11,YMMWORD PTR [rsi+0x20]
  196:  62 f3 f5 28 03 db 01   valignq ymm3,ymm1,ymm3,0x1
- 19d:  62 f2 a5 28 b5 76 03   vpmadd52huq ymm6,ymm11,YMMWORD PTR [rsi+0x60]
+ 19d:  62 f2 a5 28 b5 76 03   evpmadd52huq ymm6,ymm11,YMMWORD PTR [rsi+0x60]
  1a4:  62 f1 fd 28 6f ca      vmovdqa64 ymm1,ymm2
- 1aa:  62 f2 a5 28 b5 6e 04   vpmadd52huq ymm5,ymm11,YMMWORD PTR [rsi+0x80]
- 1b1:  62 f2 a5 28 b5 66 05   vpmadd52huq ymm4,ymm11,YMMWORD PTR [rsi+0xa0]
- 1b8:  62 f2 a5 28 b5 5e 06   vpmadd52huq ymm3,ymm11,YMMWORD PTR [rsi+0xc0]
- 1bf:  62 f2 a5 28 b5 4e 07   vpmadd52huq ymm1,ymm11,YMMWORD PTR [rsi+0xe0]
+ 1aa:  62 f2 a5 28 b5 6e 04   evpmadd52huq ymm5,ymm11,YMMWORD PTR [rsi+0x80]
+ 1b1:  62 f2 a5 28 b5 66 05   evpmadd52huq ymm4,ymm11,YMMWORD PTR [rsi+0xa0]
+ 1b8:  62 f2 a5 28 b5 5e 06   evpmadd52huq ymm3,ymm11,YMMWORD PTR [rsi+0xc0]
+ 1bf:  62 f2 a5 28 b5 4e 07   evpmadd52huq ymm1,ymm11,YMMWORD PTR [rsi+0xe0]
  1c6:  4c 01 f0               add    rax,r14
- 1c9:  62 f2 a5 28 b5 7e 02   vpmadd52huq ymm7,ymm11,YMMWORD PTR [rsi+0x40]
- 1d0:  62 f2 ad 28 b5 01      vpmadd52huq ymm0,ymm10,YMMWORD PTR [rcx]
- 1d6:  62 72 ad 28 b5 41 01   vpmadd52huq ymm8,ymm10,YMMWORD PTR [rcx+0x20]
- 1dd:  62 f2 ad 28 b5 79 02   vpmadd52huq ymm7,ymm10,YMMWORD PTR [rcx+0x40]
+ 1c9:  62 f2 a5 28 b5 7e 02   evpmadd52huq ymm7,ymm11,YMMWORD PTR [rsi+0x40]
+ 1d0:  62 f2 ad 28 b5 01      evpmadd52huq ymm0,ymm10,YMMWORD PTR [rcx]
+ 1d6:  62 72 ad 28 b5 41 01   evpmadd52huq ymm8,ymm10,YMMWORD PTR [rcx+0x20]
+ 1dd:  62 f2 ad 28 b5 79 02   evpmadd52huq ymm7,ymm10,YMMWORD PTR [rcx+0x40]
  1e4:  49 83 c7 08            add    r15,0x8
- 1e8:  62 f2 ad 28 b5 49 07   vpmadd52huq ymm1,ymm10,YMMWORD PTR [rcx+0xe0]
- 1ef:  62 f2 ad 28 b5 71 03   vpmadd52huq ymm6,ymm10,YMMWORD PTR [rcx+0x60]
+ 1e8:  62 f2 ad 28 b5 49 07   evpmadd52huq ymm1,ymm10,YMMWORD PTR [rcx+0xe0]
+ 1ef:  62 f2 ad 28 b5 71 03   evpmadd52huq ymm6,ymm10,YMMWORD PTR [rcx+0x60]
  1f6:  62 f1 fd 28 6f d1      vmovdqa64 ymm2,ymm1
- 1fc:  62 f2 ad 28 b5 69 04   vpmadd52huq ymm5,ymm10,YMMWORD PTR [rcx+0x80]
- 203:  62 f2 ad 28 b5 61 05   vpmadd52huq ymm4,ymm10,YMMWORD PTR [rcx+0xa0]
- 20a:  62 f2 ad 28 b5 59 06   vpmadd52huq ymm3,ymm10,YMMWORD PTR [rcx+0xc0]
+ 1fc:  62 f2 ad 28 b5 69 04   evpmadd52huq ymm5,ymm10,YMMWORD PTR [rcx+0x80]
+ 203:  62 f2 ad 28 b5 61 05   evpmadd52huq ymm4,ymm10,YMMWORD PTR [rcx+0xa0]
+ 20a:  62 f2 ad 28 b5 59 06   evpmadd52huq ymm3,ymm10,YMMWORD PTR [rcx+0xc0]
  211:  4c 39 fb               cmp    rbx,r15
  214:  0f 85 66 fe ff ff      jne    80 <k1_ifma256_amm52x30+0x80>
  21a:  62 f2 fd 28 7c c8      vpbroadcastq ymm1,rax
@@ -1084,14 +1084,14 @@ void MacroAssembler::montgomeryMultiply52x40(Register out, Register kk0)
   c3:  45 31 d2               xor    r10d,r10d
   c6:  48 03 44 24 f0         add    rax,QWORD PTR [rsp-0x10]
   cb:  41 0f 92 c2            setb   r10b
-  cf:  62 f2 95 28 b4 06      vpmadd52luq ymm0,ymm13,YMMWORD PTR [rsi]
-  d5:  62 72 95 28 b4 56 01   vpmadd52luq ymm10,ymm13,YMMWORD PTR [rsi+0x20]
-  dc:  62 f2 9d 28 b4 01      vpmadd52luq ymm0,ymm12,YMMWORD PTR [rcx]
-  e2:  62 72 9d 28 b4 51 01   vpmadd52luq ymm10,ymm12,YMMWORD PTR [rcx+0x20]
+  cf:  62 f2 95 28 b4 06      evpmadd52luq ymm0,ymm13,YMMWORD PTR [rsi]
+  d5:  62 72 95 28 b4 56 01   evpmadd52luq ymm10,ymm13,YMMWORD PTR [rsi+0x20]
+  dc:  62 f2 9d 28 b4 01      evpmadd52luq ymm0,ymm12,YMMWORD PTR [rcx]
+  e2:  62 72 9d 28 b4 51 01   evpmadd52luq ymm10,ymm12,YMMWORD PTR [rcx+0x20]
   e9:  62 f3 ad 28 03 c0 01   valignq ymm0,ymm10,ymm0,0x1
   f0:  4c 8b 5c 24 f8         mov    r11,QWORD PTR [rsp-0x8]
-  f5:  62 f2 95 28 b4 4e 09   vpmadd52luq ymm1,ymm13,YMMWORD PTR [rsi+0x120]
-  fc:  62 f2 9d 28 b4 49 09   vpmadd52luq ymm1,ymm12,YMMWORD PTR [rcx+0x120]
+  f5:  62 f2 95 28 b4 4e 09   evpmadd52luq ymm1,ymm13,YMMWORD PTR [rsi+0x120]
+  fc:  62 f2 9d 28 b4 49 09   evpmadd52luq ymm1,ymm12,YMMWORD PTR [rcx+0x120]
  103:  62 f3 a5 28 03 d1 01   valignq ymm2,ymm11,ymm1,0x1
  10a:  4d 01 de               add    r14,r11
  10d:  4d 01 d6               add    r14,r10
@@ -1099,52 +1099,52 @@ void MacroAssembler::montgomeryMultiply52x40(Register out, Register kk0)
  114:  49 c1 e6 0c            shl    r14,0xc
  118:  49 09 c6               or     r14,rax
  11b:  c4 e1 f9 7e c0         vmovq  rax,xmm0
- 120:  62 72 95 28 b4 4e 02   vpmadd52luq ymm9,ymm13,YMMWORD PTR [rsi+0x40]
- 127:  62 72 95 28 b4 46 03   vpmadd52luq ymm8,ymm13,YMMWORD PTR [rsi+0x60]
- 12e:  62 72 9d 28 b4 49 02   vpmadd52luq ymm9,ymm12,YMMWORD PTR [rcx+0x40]
- 135:  62 72 9d 28 b4 41 03   vpmadd52luq ymm8,ymm12,YMMWORD PTR [rcx+0x60]
+ 120:  62 72 95 28 b4 4e 02   evpmadd52luq ymm9,ymm13,YMMWORD PTR [rsi+0x40]
+ 127:  62 72 95 28 b4 46 03   evpmadd52luq ymm8,ymm13,YMMWORD PTR [rsi+0x60]
+ 12e:  62 72 9d 28 b4 49 02   evpmadd52luq ymm9,ymm12,YMMWORD PTR [rcx+0x40]
+ 135:  62 72 9d 28 b4 41 03   evpmadd52luq ymm8,ymm12,YMMWORD PTR [rcx+0x60]
  13c:  62 53 b5 28 03 d2 01   valignq ymm10,ymm9,ymm10,0x1
- 143:  62 f2 95 28 b4 7e 04   vpmadd52luq ymm7,ymm13,YMMWORD PTR [rsi+0x80]
+ 143:  62 f2 95 28 b4 7e 04   evpmadd52luq ymm7,ymm13,YMMWORD PTR [rsi+0x80]
  14a:  62 53 bd 28 03 c9 01   valignq ymm9,ymm8,ymm9,0x1
- 151:  62 f2 9d 28 b4 79 04   vpmadd52luq ymm7,ymm12,YMMWORD PTR [rcx+0x80]
- 158:  62 f2 95 28 b4 76 05   vpmadd52luq ymm6,ymm13,YMMWORD PTR [rsi+0xa0]
+ 151:  62 f2 9d 28 b4 79 04   evpmadd52luq ymm7,ymm12,YMMWORD PTR [rcx+0x80]
+ 158:  62 f2 95 28 b4 76 05   evpmadd52luq ymm6,ymm13,YMMWORD PTR [rsi+0xa0]
  15f:  62 53 c5 28 03 c0 01   valignq ymm8,ymm7,ymm8,0x1
- 166:  62 f2 9d 28 b4 71 05   vpmadd52luq ymm6,ymm12,YMMWORD PTR [rcx+0xa0]
- 16d:  62 f2 95 28 b4 6e 06   vpmadd52luq ymm5,ymm13,YMMWORD PTR [rsi+0xc0]
+ 166:  62 f2 9d 28 b4 71 05   evpmadd52luq ymm6,ymm12,YMMWORD PTR [rcx+0xa0]
+ 16d:  62 f2 95 28 b4 6e 06   evpmadd52luq ymm5,ymm13,YMMWORD PTR [rsi+0xc0]
  174:  62 f3 cd 28 03 ff 01   valignq ymm7,ymm6,ymm7,0x1
- 17b:  62 f2 9d 28 b4 69 06   vpmadd52luq ymm5,ymm12,YMMWORD PTR [rcx+0xc0]
- 182:  62 f2 95 28 b4 66 07   vpmadd52luq ymm4,ymm13,YMMWORD PTR [rsi+0xe0]
+ 17b:  62 f2 9d 28 b4 69 06   evpmadd52luq ymm5,ymm12,YMMWORD PTR [rcx+0xc0]
+ 182:  62 f2 95 28 b4 66 07   evpmadd52luq ymm4,ymm13,YMMWORD PTR [rsi+0xe0]
  189:  62 f3 d5 28 03 f6 01   valignq ymm6,ymm5,ymm6,0x1
- 190:  62 f2 9d 28 b4 61 07   vpmadd52luq ymm4,ymm12,YMMWORD PTR [rcx+0xe0]
- 197:  62 f2 95 28 b4 5e 08   vpmadd52luq ymm3,ymm13,YMMWORD PTR [rsi+0x100]
+ 190:  62 f2 9d 28 b4 61 07   evpmadd52luq ymm4,ymm12,YMMWORD PTR [rcx+0xe0]
+ 197:  62 f2 95 28 b4 5e 08   evpmadd52luq ymm3,ymm13,YMMWORD PTR [rsi+0x100]
  19e:  62 f3 dd 28 03 ed 01   valignq ymm5,ymm4,ymm5,0x1
- 1a5:  62 f2 9d 28 b4 59 08   vpmadd52luq ymm3,ymm12,YMMWORD PTR [rcx+0x100]
- 1ac:  62 f2 95 28 b5 06      vpmadd52huq ymm0,ymm13,YMMWORD PTR [rsi]
- 1b2:  62 72 95 28 b5 56 01   vpmadd52huq ymm10,ymm13,YMMWORD PTR [rsi+0x20]
- 1b9:  62 72 95 28 b5 4e 02   vpmadd52huq ymm9,ymm13,YMMWORD PTR [rsi+0x40]
- 1c0:  62 72 95 28 b5 46 03   vpmadd52huq ymm8,ymm13,YMMWORD PTR [rsi+0x60]
- 1c7:  62 f2 95 28 b5 7e 04   vpmadd52huq ymm7,ymm13,YMMWORD PTR [rsi+0x80]
- 1ce:  62 f2 95 28 b5 76 05   vpmadd52huq ymm6,ymm13,YMMWORD PTR [rsi+0xa0]
+ 1a5:  62 f2 9d 28 b4 59 08   evpmadd52luq ymm3,ymm12,YMMWORD PTR [rcx+0x100]
+ 1ac:  62 f2 95 28 b5 06      evpmadd52huq ymm0,ymm13,YMMWORD PTR [rsi]
+ 1b2:  62 72 95 28 b5 56 01   evpmadd52huq ymm10,ymm13,YMMWORD PTR [rsi+0x20]
+ 1b9:  62 72 95 28 b5 4e 02   evpmadd52huq ymm9,ymm13,YMMWORD PTR [rsi+0x40]
+ 1c0:  62 72 95 28 b5 46 03   evpmadd52huq ymm8,ymm13,YMMWORD PTR [rsi+0x60]
+ 1c7:  62 f2 95 28 b5 7e 04   evpmadd52huq ymm7,ymm13,YMMWORD PTR [rsi+0x80]
+ 1ce:  62 f2 95 28 b5 76 05   evpmadd52huq ymm6,ymm13,YMMWORD PTR [rsi+0xa0]
  1d5:  4c 01 f0               add    rax,r14
- 1d8:  62 f2 95 28 b5 6e 06   vpmadd52huq ymm5,ymm13,YMMWORD PTR [rsi+0xc0]
+ 1d8:  62 f2 95 28 b5 6e 06   evpmadd52huq ymm5,ymm13,YMMWORD PTR [rsi+0xc0]
  1df:  49 83 c7 08            add    r15,0x8
  1e3:  62 f3 e5 28 03 e4 01   valignq ymm4,ymm3,ymm4,0x1
- 1ea:  62 f2 9d 28 b5 01      vpmadd52huq ymm0,ymm12,YMMWORD PTR [rcx]
+ 1ea:  62 f2 9d 28 b5 01      evpmadd52huq ymm0,ymm12,YMMWORD PTR [rcx]
  1f0:  62 f3 f5 28 03 db 01   valignq ymm3,ymm1,ymm3,0x1
- 1f7:  62 f2 95 28 b5 66 07   vpmadd52huq ymm4,ymm13,YMMWORD PTR [rsi+0xe0]
+ 1f7:  62 f2 95 28 b5 66 07   evpmadd52huq ymm4,ymm13,YMMWORD PTR [rsi+0xe0]
  1fe:  62 f1 fd 28 6f ca      vmovdqa64 ymm1,ymm2
- 204:  62 f2 95 28 b5 5e 08   vpmadd52huq ymm3,ymm13,YMMWORD PTR [rsi+0x100]
- 20b:  62 f2 95 28 b5 4e 09   vpmadd52huq ymm1,ymm13,YMMWORD PTR [rsi+0x120]
- 212:  62 72 9d 28 b5 51 01   vpmadd52huq ymm10,ymm12,YMMWORD PTR [rcx+0x20]
- 219:  62 f2 9d 28 b5 49 09   vpmadd52huq ymm1,ymm12,YMMWORD PTR [rcx+0x120]
- 220:  62 72 9d 28 b5 49 02   vpmadd52huq ymm9,ymm12,YMMWORD PTR [rcx+0x40]
+ 204:  62 f2 95 28 b5 5e 08   evpmadd52huq ymm3,ymm13,YMMWORD PTR [rsi+0x100]
+ 20b:  62 f2 95 28 b5 4e 09   evpmadd52huq ymm1,ymm13,YMMWORD PTR [rsi+0x120]
+ 212:  62 72 9d 28 b5 51 01   evpmadd52huq ymm10,ymm12,YMMWORD PTR [rcx+0x20]
+ 219:  62 f2 9d 28 b5 49 09   evpmadd52huq ymm1,ymm12,YMMWORD PTR [rcx+0x120]
+ 220:  62 72 9d 28 b5 49 02   evpmadd52huq ymm9,ymm12,YMMWORD PTR [rcx+0x40]
  227:  62 f1 fd 28 6f d1      vmovdqa64 ymm2,ymm1
- 22d:  62 72 9d 28 b5 41 03   vpmadd52huq ymm8,ymm12,YMMWORD PTR [rcx+0x60]
- 234:  62 f2 9d 28 b5 79 04   vpmadd52huq ymm7,ymm12,YMMWORD PTR [rcx+0x80]
- 23b:  62 f2 9d 28 b5 71 05   vpmadd52huq ymm6,ymm12,YMMWORD PTR [rcx+0xa0]
- 242:  62 f2 9d 28 b5 69 06   vpmadd52huq ymm5,ymm12,YMMWORD PTR [rcx+0xc0]
- 249:  62 f2 9d 28 b5 61 07   vpmadd52huq ymm4,ymm12,YMMWORD PTR [rcx+0xe0]
- 250:  62 f2 9d 28 b5 59 08   vpmadd52huq ymm3,ymm12,YMMWORD PTR [rcx+0x100]
+ 22d:  62 72 9d 28 b5 41 03   evpmadd52huq ymm8,ymm12,YMMWORD PTR [rcx+0x60]
+ 234:  62 f2 9d 28 b5 79 04   evpmadd52huq ymm7,ymm12,YMMWORD PTR [rcx+0x80]
+ 23b:  62 f2 9d 28 b5 71 05   evpmadd52huq ymm6,ymm12,YMMWORD PTR [rcx+0xa0]
+ 242:  62 f2 9d 28 b5 69 06   evpmadd52huq ymm5,ymm12,YMMWORD PTR [rcx+0xc0]
+ 249:  62 f2 9d 28 b5 61 07   evpmadd52huq ymm4,ymm12,YMMWORD PTR [rcx+0xe0]
+ 250:  62 f2 9d 28 b5 59 08   evpmadd52huq ymm3,ymm12,YMMWORD PTR [rcx+0x100]
  257:  4c 39 fb               cmp    rbx,r15
  25a:  0f 85 20 fe ff ff      jne    80 <k1_ifma256_amm52x40+0x80>
  260:  62 f2 fd 28 7c c8      vpbroadcastq ymm1,rax

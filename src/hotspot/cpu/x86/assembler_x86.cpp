@@ -4816,7 +4816,7 @@ void Assembler::evpdpwssd(XMMRegister dst, XMMRegister nds, XMMRegister src, int
   emit_int16(0x52, (0xC0 | encode));
 }
 
-void Assembler::vpmadd52huq(XMMRegister dst, XMMRegister src1, Address src2, int vector_len) {
+void Assembler::evpmadd52huq(XMMRegister dst, XMMRegister src1, Address src2, int vector_len) {
   assert(VM_Version::supports_avx512ifma(), "");
   InstructionAttr attributes(vector_len, /* rex_w */ true, /* legacy_mode */ false, /* no_mask_reg */ true, /* uses_vl */ true);
   attributes.set_is_evex_instruction();
@@ -4826,7 +4826,7 @@ void Assembler::vpmadd52huq(XMMRegister dst, XMMRegister src1, Address src2, int
   emit_operand(dst, src2);
 }
 
-void Assembler::vpmadd52luq(XMMRegister dst, XMMRegister src1, Address src2, int vector_len) {
+void Assembler::evpmadd52luq(XMMRegister dst, XMMRegister src1, Address src2, int vector_len) {
   assert(VM_Version::supports_avx512ifma(), "");
   InstructionAttr attributes(vector_len, /* rex_w */ true, /* legacy_mode */ false, /* no_mask_reg */ true, /* uses_vl */ true);
   attributes.set_is_evex_instruction();
