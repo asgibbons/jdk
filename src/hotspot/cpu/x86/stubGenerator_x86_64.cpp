@@ -7350,6 +7350,8 @@ address generate_avx_ghash_processBlocks() {
     __ movq(MM_b, b);
     __ movq(MM_n, n);
     __ movq(MM_len, len);
+    __ shlq(inv, 12);
+    __ shrq(inv, 12);
     __ movq(MM_inv, inv);
     __ movq(MM_m, m);
     __ movq(MM_res, rsp);
@@ -7361,7 +7363,153 @@ address generate_avx_ghash_processBlocks() {
 
     __ movq(tmp_result, MM_res);
     __ movq(inv, MM_inv);
+
+#if 0
+    __ mov64(inv, 0x3f529565d1fe2729);
+
+    __ mov64(rdx, 0x00081325874db68e);
+    __ movq(Address(tmp_result, 0x00 + 1 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x000e734f913bc3a0);
+    __ movq(Address(tmp_result, 0x08 + 1 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x000158116e2cc95e);
+    __ movq(Address(tmp_result, 0x10 + 1 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x000856a7f26aa497);
+    __ movq(Address(tmp_result, 0x18 + 1 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x0005b3dc5323fee3);
+    __ movq(Address(tmp_result, 0x20 + 1 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x0005ce38ffba66cd);
+    __ movq(Address(tmp_result, 0x28 + 1 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x000ef474c290566d);
+    __ movq(Address(tmp_result, 0x30 + 1 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x000407768302faf0);
+    __ movq(Address(tmp_result, 0x38 + 1 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x0006e1e7d4cf7f14);
+    __ movq(Address(tmp_result, 0x40 + 1 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x0007f5c3a860cb4e);
+    __ movq(Address(tmp_result, 0x48 + 1 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x000d5d999b945b96);
+    __ movq(Address(tmp_result, 0x50 + 1 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x0001e58cf63ba2e5);
+    __ movq(Address(tmp_result, 0x58 + 1 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x000cbc8a724d185b);
+    __ movq(Address(tmp_result, 0x60 + 1 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x00085a3a5eea3e70);
+    __ movq(Address(tmp_result, 0x68 + 1 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x0000fc79dc9f1288);
+    __ movq(Address(tmp_result, 0x70 + 1 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x00099f2b9ad4d356);
+    __ movq(Address(tmp_result, 0x78 + 1 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x000a7908bd284181);
+    __ movq(Address(tmp_result, 0x80 + 1 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x000c6d3bdced6c7b);
+    __ movq(Address(tmp_result, 0x88 + 1 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x000181621f6a6b68);
+    __ movq(Address(tmp_result, 0x90 + 1 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x000000007ca8db6b);
+    __ movq(Address(tmp_result, 0x98 + 1 * MM_XFORM_ARRAY_SIZE), rdx);
+
+    __ mov64(rdx, 0x000f7c8d37a23eac);
+    __ movq(Address(tmp_result, 0x00 + 2 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x000cca72b68594cf);
+    __ movq(Address(tmp_result, 0x08 + 2 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x00039452444e63e4);
+    __ movq(Address(tmp_result, 0x10 + 2 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x000bb5d623b12011);
+    __ movq(Address(tmp_result, 0x18 + 2 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x00035e156e83c657);
+    __ movq(Address(tmp_result, 0x20 + 2 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x00073a6abb494fb4);
+    __ movq(Address(tmp_result, 0x28 + 2 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x0008472996012ea2);
+    __ movq(Address(tmp_result, 0x30 + 2 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x00061dd3a4fc6fa7);
+    __ movq(Address(tmp_result, 0x38 + 2 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x0007effaa737522f);
+    __ movq(Address(tmp_result, 0x40 + 2 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x000e4108a5b578af);
+    __ movq(Address(tmp_result, 0x48 + 2 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x0005a4aefafb578d);
+    __ movq(Address(tmp_result, 0x50 + 2 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x00093363a6673b6d);
+    __ movq(Address(tmp_result, 0x58 + 2 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x0007a66b4538b510);
+    __ movq(Address(tmp_result, 0x60 + 2 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x0005a1c5f288bc7b);
+    __ movq(Address(tmp_result, 0x68 + 2 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x0001a8053138aa53);
+    __ movq(Address(tmp_result, 0x70 + 2 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x0004c7f9122c4104);
+    __ movq(Address(tmp_result, 0x78 + 2 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x000ff40847fd9909);
+    __ movq(Address(tmp_result, 0x80 + 2 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x0002c227d044e267);
+    __ movq(Address(tmp_result, 0x88 + 2 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x00017b06c12eeb08);
+    __ movq(Address(tmp_result, 0x90 + 2 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x00000009cbae2dc6);
+    __ movq(Address(tmp_result, 0x98 + 2 * MM_XFORM_ARRAY_SIZE), rdx);
+
+    __ mov64(rdx, 0x000e027aaebc9ae7);
+    __ movq(Address(tmp_result, 0x00 + 3 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x0003ef87252f6b1f);
+    __ movq(Address(tmp_result, 0x08 + 3 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x000afa10a6770995);
+    __ movq(Address(tmp_result, 0x10 + 3 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x000c9efa5bfb4344);
+    __ movq(Address(tmp_result, 0x18 + 3 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x0006fa41cda99bd2);
+    __ movq(Address(tmp_result, 0x20 + 3 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x0001fad82ff306c5);
+    __ movq(Address(tmp_result, 0x28 + 3 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x0004cfe126acbb6e);
+    __ movq(Address(tmp_result, 0x30 + 3 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x000908031d8c2121);
+    __ movq(Address(tmp_result, 0x38 + 3 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x0008280fc3a06b93);
+    __ movq(Address(tmp_result, 0x40 + 3 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x00085a5920d8ae8c);
+    __ movq(Address(tmp_result, 0x48 + 3 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x0007ba1d22ed7a40);
+    __ movq(Address(tmp_result, 0x50 + 3 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x00088f0b6079a704);
+    __ movq(Address(tmp_result, 0x58 + 3 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x000d9c791a1e6ef7);
+    __ movq(Address(tmp_result, 0x60 + 3 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x000c88437c38e5d1);
+    __ movq(Address(tmp_result, 0x68 + 3 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x000f0e43ebf1c90c);
+    __ movq(Address(tmp_result, 0x70 + 3 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x000b0e2d78ddefe1);
+    __ movq(Address(tmp_result, 0x78 + 3 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x00020506dfe2dfb6);
+    __ movq(Address(tmp_result, 0x80 + 3 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x00069e7302034bfc);
+    __ movq(Address(tmp_result, 0x88 + 3 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x00088c3656039b6b);
+    __ movq(Address(tmp_result, 0x90 + 3 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x0000000c2c13c1e2);
+    __ movq(Address(tmp_result, 0x98 + 3 * MM_XFORM_ARRAY_SIZE), rdx);
+#endif
+
     __ montgomeryMultiply52x20(tmp_result, inv);
+
+#if 0
+    __ movq(tmp_result, MM_res);
+    __ movq(inv, MM_inv);
+    __ movptr(rsi, tmp_result);
+    __ lea(rdi, Address(tmp_result, 1 * MM_XFORM_ARRAY_SIZE));
+    __ mov64(rcx, 20);
+    __ rep_mov();
+    __ xorq(rax, rax);
+    __ mov64(rcx, 20);
+    __ lea(rdi, Address(tmp_result, 2 * MM_XFORM_ARRAY_SIZE));
+    __ rep_stos();
+    __ incq(Address(tmp_result, 2 * MM_XFORM_ARRAY_SIZE));
+
+    __ movq(tmp_result, MM_res);
+    __ movq(inv, MM_inv);
+    __ montgomeryMultiply52x20(tmp_result, inv);
+#endif
 
     __ movq(r11, MM_res);
     __ movq(r12, MM_m);
@@ -8674,7 +8822,7 @@ address generate_avx_ghash_processBlocks() {
       }
     }
     if (UseMontgomerySquareIntrinsic) {
-      if (!VM_Version::supports_avx512ifma()) {   // ASGASG
+      if (VM_Version::supports_avx512ifma()) {   // ASGASG
         StubRoutines::_montgomerySquare = generate_montgomeryMultiply(true);
       } else {
         StubRoutines::_montgomerySquare

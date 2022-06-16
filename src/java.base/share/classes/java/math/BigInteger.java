@@ -3097,6 +3097,9 @@ public class BigInteger extends Number implements Comparable<BigInteger> {
         // Convert base to Montgomery form
         int[] a = leftShift(base, base.length, modLen << 5);
 
+	System.out.println("a length = " + a.length + ", base length = " + base.length + ", this length = " + mag.length + ", y length = " + y.mag.length);
+	System.out.println("modLen = " + modLen + ", exp length = " + exp.length + ", mod length = " + z.mag.length);
+
         MutableBigInteger q = new MutableBigInteger(),
                           a2 = new MutableBigInteger(a),
                           b2 = new MutableBigInteger(mod);
@@ -3114,11 +3117,14 @@ public class BigInteger extends Number implements Comparable<BigInteger> {
            table[0] = t2;
         }
 
+	System.out.println("modLen = " + modLen + ", table[0] length = " + table[0].length + ", mod length = " + mod.length);
         // Set b to the square of the base
         int[] b = montgomerySquare(table[0], mod, modLen, inv, null);
+	System.out.println("b length = " + b.length);
 
         // Set t to high half of b
         int[] t = Arrays.copyOf(b, modLen);
+	System.out.println("t length = " + t.length);
 
         // Fill in the table with odd powers of the base
         for (int i=1; i < tblmask; i++) {

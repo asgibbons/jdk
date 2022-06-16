@@ -3554,13 +3554,34 @@ void SharedRuntime::montgomery_multiply(jint *a_ints, jint *b_ints, jint *n_ints
     *n = scratch + 2 * longwords,
     *m = scratch + 3 * longwords;
 
+  if(len == 339543){
+  printf("\nm_ints before:\n");
+  for(int i = 0; i < 32; i++) printf("0x%08x ", m_ints[i]);
+  printf("\n\n");
+  }
   reverse_words((julong *)a_ints, a, longwords);
   reverse_words((julong *)b_ints, b, longwords);
   reverse_words((julong *)n_ints, n, longwords);
 
   ::montgomery_multiply(a, b, n, m, (julong)inv, longwords);
 
+  if(len == 339543){
+  printf("\nm_ints after before reverse:\n");
+  for(int i = 0; i < 32; i++) printf("0x%08x ", m_ints[i]);
+  printf("\n\n");
+  }
+
   reverse_words(m, (julong *)m_ints, longwords);
+
+  if(len == 339543){
+  printf("\nm after reverse:\n");
+  unsigned int *mm = (unsigned int *)m;
+  for(int i = 0; i < 32; i++) printf("0x%08x ", mm[i]);
+  printf("\n\n");
+  printf("\nm_ints after reverse:\n");
+  for(int i = 0; i < 32; i++) printf("0x%08x ", m_ints[i]);
+  printf("\n\n");
+  }
 }
 
 void SharedRuntime::montgomery_square(jint *a_ints, jint *n_ints,
@@ -3583,8 +3604,32 @@ void SharedRuntime::montgomery_square(jint *a_ints, jint *n_ints,
     *n = scratch + 1 * longwords,
     *m = scratch + 2 * longwords;
 
+  if(len == 339543){
+  printf("inv = 0x%016lx\n", inv);
+  printf("\na_ints before:\n");
+  for(int i = 0; i < 32; i++) printf("0x%08x ", a_ints[i]);
+  printf("\n\n");
+  printf("\nn_ints before:\n");
+  for(int i = 0; i < 32; i++) printf("0x%08x ", n_ints[i]);
+  printf("\n\n");
+  }
+
+  if(len == 339543){
+  printf("\nm_ints before:\n");
+  for(int i = 0; i < 32; i++) printf("0x%08x ", m_ints[i]);
+  printf("\n\n");
+  }
   reverse_words((julong *)a_ints, a, longwords);
   reverse_words((julong *)n_ints, n, longwords);
+
+  if(len == 339543){
+  printf("\na after reverse:\n");
+  for(int i = 0; i < 32; i++) printf("0x%08x ", ((unsigned int *)a)[i]);
+  printf("\n\n");
+  printf("\nn after reverse:\n");
+  for(int i = 0; i < 32; i++) printf("0x%08x ", ((unsigned int *)n)[i]);
+  printf("\n\n");
+  }
 
   if (len >= MONTGOMERY_SQUARING_THRESHOLD) {
     ::montgomery_square(a, n, m, (julong)inv, longwords);
@@ -3592,7 +3637,23 @@ void SharedRuntime::montgomery_square(jint *a_ints, jint *n_ints,
     ::montgomery_multiply(a, a, n, m, (julong)inv, longwords);
   }
 
+  if(len == 339543){
+  printf("\nm_ints after multiply before reverse:\n");
+  for(int i = 0; i < 32; i++) printf("0x%08x ", m_ints[i]);
+  printf("\n\n");
+  }
+
   reverse_words(m, (julong *)m_ints, longwords);
+
+  if(len == 339543){
+  printf("\nm after reverse:\n");
+  unsigned int *mm = (unsigned int *)m;
+  for(int i = 0; i < 32; i++) printf("0x%08x ", mm[i]);
+  printf("\n\n");
+  printf("\nm_ints after reverse:\n");
+  for(int i = 0; i < 32; i++) printf("0x%08x ", m_ints[i]);
+  printf("\n\n");
+  }
 }
 
 #ifdef COMPILER2
