@@ -57,8 +57,9 @@ import jdk.jfr.internal.tool.PrettyWriter;
  *
  * @since 9
  */
-public class RecordedObject {
-
+public sealed class RecordedObject
+   permits RecordedEvent, RecordedClassLoader, RecordedClass, RecordedMethod,
+           RecordedStackTrace, RecordedFrame, RecordedThread, RecordedThreadGroup {
     static{
         JdkJfrConsumer access = new JdkJfrConsumer() {
             @Override
@@ -247,7 +248,7 @@ public class RecordedObject {
     }
 
     private Object getValue(String name, boolean allowUnsigned) {
-        Objects.requireNonNull(name);
+        Objects.requireNonNull(name, "name");
         int index = 0;
         for (ValueDescriptor v : objectContext.fields) {
             if (name.equals(v.getName())) {
@@ -329,14 +330,14 @@ public class RecordedObject {
                 return v;
             }
         }
-        throw new IllegalArgumentException("\"Attempt to get unknown field \"" + name + "\"");
+        throw new IllegalArgumentException("Attempt to get unknown field \"" + name + "\"");
     }
 
     // Gets a value, but checks that type and name is correct first
     // This is to prevent a call to getString on a thread field, that is
     // null to succeed.
     private <T> T getTypedValue(String name, String typeName) {
-        Objects.requireNonNull(name);
+        Objects.requireNonNull(name, "name");
         // Validate name and type first
         getValueDescriptor(objectContext.fields, name, typeName);
         return getValue(name);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1996, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 1996, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -720,7 +720,7 @@ public class BigInteger extends Number implements Comparable<BigInteger> {
         if (numBytes > 0) {
             rnd.nextBytes(randomBits);
             int excessBits = 8*numBytes - numBits;
-            randomBits[0] &= (1 << (8-excessBits)) - 1;
+            randomBits[0] &= (byte)((1 << (8-excessBits)) - 1);
         }
         return randomBits;
     }
@@ -1605,6 +1605,7 @@ public class BigInteger extends Number implements Comparable<BigInteger> {
      * @param  val value to be multiplied by this BigInteger.
      * @return {@code this * val}
      * @see #multiply
+     * @since 19
      */
     public BigInteger parallelMultiply(BigInteger val) {
         return multiply(val, false, true, 0);
@@ -3055,9 +3056,41 @@ public class BigInteger extends Number implements Comparable<BigInteger> {
         if (signum == 0)
             return ZERO;
 
-        int[] base = mag.clone();
-        int[] exp = y.mag;
-        int[] mod = z.mag;
+        // Accelerate common sizes if possible
+        if (this.mag.length == 32) {
+            return oddModPow_20(this.mag, this.mag.length, y.mag, y.mag.length, z.mag, z.mag.length);
+        }
+
+        if (this.mag.length == 48) {
+            return oddModPow_30(this.mag, this.mag.length, y.mag, y.mag.length, z.mag, z.mag.length);
+        }
+
+        if (this.mag.length == 64) {
+            return oddModPow_40(this.mag, this.mag.length, y.mag, y.mag.length, z.mag, z.mag.length);
+        }
+
+        return oddModPow_default(this.mag.clone(), y.mag, z.mag);
+    }
+
+    @IntrinsicCandidate
+    private static BigInteger oddModPow_20(int[] x, int xlen, int[] y, int ylen, int[] z, int zlen) {
+        return oddModPow_default(x.clone(), y, z);
+    }
+
+    @IntrinsicCandidate
+    private static BigInteger oddModPow_30(int[] x, int xlen, int[] y, int ylen, int[] z, int zlen) {
+        return oddModPow_default(x.clone(), y, z);
+    }
+
+    @IntrinsicCandidate
+    private static BigInteger oddModPow_40(int[] x, int xlen, int[] y, int ylen, int[] z, int zlen) {
+        return oddModPow_default(x.clone(), y, z);
+    }
+
+    private static BigInteger oddModPow_default(int[] base, int[] exp, int[] mod) {
+        //int[] base = mag.clone();
+        //int[] exp = y.mag;
+        //int[] mod = z.mag;
         int modLen = mod.length;
 
         // Make modLen even. It is conventional to use a cryptographic
@@ -3394,7 +3427,7 @@ public class BigInteger extends Number implements Comparable<BigInteger> {
 
         // Mask out any excess bits
         int excessBits = (numInts << 5) - p;
-        mag[0] &= (1L << (32-excessBits)) - 1;
+        mag[0] &= (int)((1L << (32-excessBits)) - 1);
 
         return (mag[0] == 0 ? new BigInteger(1, mag) : new BigInteger(mag, 1));
     }
@@ -3929,7 +3962,7 @@ public class BigInteger extends Number implements Comparable<BigInteger> {
      *
      * @param val BigInteger whose magnitude array to be compared.
      * @return -1, 0 or 1 as this magnitude array is less than, equal to or
-     *         greater than the magnitude aray for the specified BigInteger's.
+     *         greater than the magnitude array for the specified BigInteger's.
      */
     final int compareMagnitude(BigInteger val) {
         int[] m1 = mag;
