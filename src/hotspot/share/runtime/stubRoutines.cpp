@@ -153,6 +153,7 @@ address StubRoutines::_multiplyToLen = NULL;
 address StubRoutines::_squareToLen = NULL;
 address StubRoutines::_mulAdd = NULL;
 address StubRoutines::_montgomeryMultiply = NULL;
+address StubRoutines::_montgomeryMultiply50x20 = NULL;
 address StubRoutines::_montgomerySquare = NULL;
 address StubRoutines::_bigIntegerRightShiftWorker = NULL;
 address StubRoutines::_bigIntegerLeftShiftWorker = NULL;

@@ -7275,6 +7275,45 @@ address generate_avx_ghash_processBlocks() {
   void transform_r64x40(Register src, Register dst) {
   }
 
+  /***
+   *  Arguments:
+   *  void montgomeryMultiply50x20(jint *out_ints, jint *a_ints, jint *b_ints, jint *n_ints, jlong inv) {
+   *
+   *  Inputs:
+   *   c_rarg0   - int   *out
+   *   c_rarg1   - int   *a
+   *   c_rarg2   - int   *b
+   *   c_rarg3   - int   *n
+   *   c_rarg4   - int   inv
+   *
+   * Output:
+   *   int *out result
+   */
+
+  // Windows regs    |  Linux regs
+  // c_rarg0 (rcx)   |  c_rarg0 (rdi)
+  // c_rarg1 (rdx)   |  c_rarg1 (rsi)
+  // c_rarg2 (r8)    |  c_rarg2 (rdx)
+  // c_rarg3 (r9)    |  c_rarg3 (rcx)
+  // r10             |  c_rarg4 (r8)
+  address generate_montgomeryMultiply50x20() {
+    __ align(CodeEntryAlignment);
+    StubCodeMark mark(this, "StubRoutines", "montgomeryMultiply50x20");
+    address start = __ pc();
+    const Register inv = c_rarg4;
+
+    BLOCK_COMMENT("Entry:");
+    __ enter(); // required for proper stackwalking of RuntimeStub frame
+#ifdef _WIN64
+      const Address inv_mem(rbp, 6 * wordSize);
+      inv = r10;
+      __ movq(inv, inv_mem);
+#endif
+    __ montgomeryMultiply52x20(c_rarg0, c_rarg1, c_rarg2, c_rarg3, inv);
+    __ leave();
+    __ ret(0);
+    return start;
+  }
 
   /***
    *  Arguments:
@@ -7423,8 +7462,9 @@ address generate_avx_ghash_processBlocks() {
     // Transform all inputs to radix-52
     transform_r52x20();
 
+    // load arguments into registers
     __ movq(tmp_result, MM_res);
-    __ movq(inv, MM_inv);
+//    __ movq(inv, MM_inv);
 
 #if 0
     __ mov64(inv, 0x3f529565d1fe2729);
@@ -7553,7 +7593,7 @@ address generate_avx_ghash_processBlocks() {
     __ movq(Address(tmp_result, 0x98 + 3 * MM_XFORM_ARRAY_SIZE), rdx);
 #endif
 
-    __ montgomeryMultiply52x20(tmp_result, inv);
+//    __ montgomeryMultiply52x20(tmp_result, inv);
 
 #if 0
     __ movq(tmp_result, MM_res);
@@ -7572,6 +7612,18 @@ address generate_avx_ghash_processBlocks() {
     __ movq(inv, MM_inv);
     __ montgomeryMultiply52x20(tmp_result, inv);
 #endif
+
+    __ lea(c_rarg0, Address(tmp_result, 0));     // Result stored here
+    __ lea(c_rarg1, Address(tmp_result, 1 * 40 * wordSize));    // Points to a[0]
+    __ lea(c_rarg2, Address(tmp_result, 2 * 40 * wordSize));    // Points to b[0]
+    __ lea(c_rarg3, Address(tmp_result, 3 * 40 * wordSize));    // Points to m[0]
+#ifdef _WIN64
+    __ push(MM_inv);
+#else
+    __ movq(c_rarg4, MM_inv);
+#endif
+    // montgomeryMultiply52x20(c_rarg0, c_rarg1, c_rarg2, c_rarg3, inv);
+    __ call_VM_leaf(CAST_FROM_FN_PTR(address, StubRoutines::montgomeryMultiply50x20()), 5);
 
     __ movq(r11, MM_res);
     __ movq(r12, MM_m);
@@ -9146,6 +9198,7 @@ address generate_avx_ghash_processBlocks() {
     }
     if (UseMontgomeryMultiplyIntrinsic) {
       if (VM_Version::supports_avx512ifma()) {
+        StubRoutines::_montgomeryMultiply50x20 = generate_montgomeryMultiply50x20();
         StubRoutines::_montgomeryMultiply = generate_montgomeryMultiply(false);
       } else {
         StubRoutines::_montgomeryMultiply

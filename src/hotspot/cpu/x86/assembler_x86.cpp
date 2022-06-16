@@ -5556,7 +5556,7 @@ void Assembler::evalignq(XMMRegister dst, XMMRegister nds, XMMRegister src, uint
   assert(VM_Version::supports_evex(), "");
   assert(vector_len == AVX_128bit? VM_Version::supports_avx512vl() :
          vector_len == AVX_256bit? VM_Version::supports_avx512vl() :
-         0, "");
+         vector_len == AVX_512bit, "");
   InstructionAttr attributes(vector_len, /* vex_w */ true, /* legacy_mode */ false, /* no_mask_reg */ true, /* uses_vl */ true);
   attributes.set_is_evex_instruction();
   int encode = vex_prefix_and_encode(dst->encoding(), nds->encoding(), src->encoding(), VEX_SIMD_66, VEX_OPCODE_0F_3A, &attributes);

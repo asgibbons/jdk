@@ -269,6 +269,7 @@ private:
 
   static const TypeFunc* multiplyToLen_Type();
   static const TypeFunc* montgomeryMultiply_Type();
+  static const TypeFunc* montgomeryMultiply50xn_Type();
   static const TypeFunc* montgomerySquare_Type();
 
   static const TypeFunc* squareToLen_Type();

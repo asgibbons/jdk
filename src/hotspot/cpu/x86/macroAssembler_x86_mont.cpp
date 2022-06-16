@@ -30,8 +30,30 @@
 #include "macroAssembler_x86.hpp"
 
 #if _LP64 || 1
-void MacroAssembler::montgomeryMultiply52x20(Register out, Register kk0)
+void MacroAssembler::montgomeryMultiply52x20(Register out, Register a, Register b, Register m, Register inv)
 {
+  // Windows regs    |  Linux regs
+  // c_rarg0 (rcx)   |  c_rarg0 (rdi)  out
+  // c_rarg1 (rdx)   |  c_rarg1 (rsi)  a
+  // c_rarg2 (r8)    |  c_rarg2 (rdx)  b
+  // c_rarg3 (r9)    |  c_rarg3 (rcx)  m
+  // r10             |  c_rarg4 (r8)   inv
+
+  const Register rtmp0 = rax;
+#ifdef _WIN64
+  const Register rtmp1 = rdi;
+  const Register rtmp2 = rsi;
+#else
+  const Register rtmp1 = r9;
+  const Register rtmp2 = r10;
+#endif
+  const Register rtmp3 = r11;
+  const Register rtmp4 = r12;
+  const Register rtmp5 = r13;
+  const Register rtmp6 = r14;
+  const Register rtmp7 = r15;
+  const Register rtmp8 = rbx;
+
   const int LIMIT = 5552;
   const int BASE = 65521;
   const int CHUNKSIZE = 16;
@@ -161,28 +183,26 @@ void MacroAssembler::montgomeryMultiply52x20(Register out, Register kk0)
   // 4a:  48 89 54 24 f8         mov    QWORD PTR [rsp-0x8],rdx
   // 4f:  4c 8b 29               mov    r13,QWORD PTR [rcx]
   // 52:  4c 8b 26               mov    r12,QWORD PTR [rsi]
-  push(r8);
-  push(r9);
-  push(r14);
+  push(rbx);
+  push(r12);
   push(r13);
-  movq(r8, kk0);    // r8 gets inv
+  push(r14);
+  push(r15);
+#ifdef _WIN64
+  push(rsi);
+  push(rdi);
+#endif
   vpxor(xmm5, xmm5, xmm5, Assembler::AVX_256bit);
   vmovdqu(xmm7, xmm5);
   vmovdqu(xmm4, xmm5);
   vmovdqu(xmm6, xmm5);
   vmovdqu(xmm0, xmm5);
   vmovdqu(xmm8, xmm5);
-  mov64(r9, 0xfffffffffffff);
-  lea(rdi, Address(out, 0));     // Result stored here
-  lea(rdx, Address(out, 2 * 40 * wordSize));    // Points to b[0]
-  lea(rbx, Address(out, 0xa0 + 2 * 40 * wordSize));    // Points to b[20] - loop terminator
-#define LOOP_TERM Address(rbp, -20 * wordSize)
-  movq(LOOP_TERM, rdx);
-  lea(rcx, Address(out, 3 * 40 * wordSize));    // Points to m[0]
-  lea(rsi, Address(out, 1 * 40 * wordSize));    // Points to a[0]
-  movq(r13, Address(rcx, 0));
-  movq(r12, Address(rsi, 0));
-  xorq(rax, rax);
+  mov64(rtmp1, 0xfffffffffffff);
+  lea(rtmp8, Address(out, 0xa0 + 2 * 40 * wordSize));    // Points to b[20] - loop terminator
+  movq(rtmp5, Address(c_rarg3, 0));
+  movq(rtmp4, Address(c_rarg1, 0));
+  xorq(rtmp0, rtmp0);
 
   align32();
   Label L_loop, L_mask;
@@ -208,24 +228,30 @@ void MacroAssembler::montgomeryMultiply52x20(Register out, Register kk0)
   // 9c:  c4 42 ab f6 dd         mulx   r11,r10,r13
   // a1:  4c 01 d0               add    rax,r10
   // a4:  41 0f 92 c7            setb   r15b
-  movq(rdx, LOOP_TERM);
   vmovdqu(xmm1, xmm4);
-  movq(r10, Address(rdx, 0));
-  movq(rdx, r10);
-  evpbroadcastq(xmm3, r10, Assembler::AVX_256bit);
-  mulxq(r11, r10, r12);
-  addq(rax, r10);
-  movq(r14, r11);
-  movq(r10, rax);
-  adcq(r14, 0);
-  imulq(r10, r8);
-  xorl(r15, r15);
-  andq(r10, r9);
-  movq(rdx, r10);
-  evpbroadcastq(xmm2, r10, Assembler::AVX_256bit);
-  mulxq(r11, r10, r13);
-  addq(rax, r10);
-  setb(Assembler::below, r15);
+  movq(rtmp2, Address(c_rarg2, 0));
+  // mulxq needs one input in rdx
+  // save restore rdx using push/pop
+  // rdx holds c_rarg1 on windows and c_rarg2 on linux
+  // make sure that neither of c_rarg1 or c_rarg2 is used in between push/pop pair
+  push(rdx);
+  movq(rdx, rtmp2);
+  evpbroadcastq(xmm3, rtmp2, Assembler::AVX_256bit);
+  mulxq(rtmp3, rtmp2, rtmp4);
+  addq(rtmp0, rtmp2);
+  movq(rtmp6, rtmp3);
+  movq(rtmp2, rtmp0);
+  adcq(rtmp6, 0);
+  imulq(rtmp2, c_rarg4);
+  xorl(rtmp7, rtmp7);
+  andq(rtmp2, rtmp1);
+  movq(rdx, rtmp2);
+  evpbroadcastq(xmm2, rtmp2, Assembler::AVX_256bit);
+  mulxq(rtmp3, rtmp2, rtmp5);
+  addq(rtmp0, rtmp2);
+  setb(Assembler::below, rtmp7);
+  pop(rdx);
+
 
   // a8:  62 f2 e5 28 b4 06      evpmadd52luq ymm0,ymm3,YMMWORD PTR [rsi]
   // ae:  62 f2 e5 28 b4 7e 01   evpmadd52luq ymm7,ymm3,YMMWORD PTR [rsi+0x20]
@@ -236,14 +262,13 @@ void MacroAssembler::montgomeryMultiply52x20(Register out, Register kk0)
   // cf:  62 f2 e5 28 b4 4e 04   evpmadd52luq ymm1,ymm3,YMMWORD PTR [rsi+0x80]
   // d6:  62 f2 ed 28 b4 49 04   evpmadd52luq ymm1,ymm2,YMMWORD PTR [rcx+0x80]
   // dd:  62 f3 bd 28 03 e1 01   valignq ymm4,ymm8,ymm1,0x1
-  evpmadd52luq(xmm0, xmm3, Address(rsi, 0), Assembler::AVX_256bit);
-  evpmadd52luq(xmm7, xmm3, Address(rsi, 0x20), Assembler::AVX_256bit);
-  evpmadd52luq(xmm0, xmm2, Address(rcx, 0), Assembler::AVX_256bit);
-  evpmadd52luq(xmm7, xmm2, Address(rcx, 0x20), Assembler::AVX_256bit);
+  evpmadd52luq(xmm0, xmm3, Address(c_rarg1, 0), Assembler::AVX_256bit);
+  evpmadd52luq(xmm7, xmm3, Address(c_rarg1, 0x20), Assembler::AVX_256bit);
+  evpmadd52luq(xmm0, xmm2, Address(c_rarg3, 0), Assembler::AVX_256bit);
+  evpmadd52luq(xmm7, xmm2, Address(c_rarg3, 0x20), Assembler::AVX_256bit);
   evalignq(xmm0, xmm7, xmm0, 1, Assembler::AVX_256bit);
-  addq(LOOP_TERM, 8);
-  evpmadd52luq(xmm1, xmm3, Address(rsi, 0x80), Assembler::AVX_256bit);
-  evpmadd52luq(xmm1, xmm2, Address(rcx, 0x80), Assembler::AVX_256bit);
+  evpmadd52luq(xmm1, xmm3, Address(c_rarg1, 0x80), Assembler::AVX_256bit);
+  evpmadd52luq(xmm1, xmm2, Address(c_rarg3, 0x80), Assembler::AVX_256bit);
   evalignq(xmm4, xmm8, xmm1, 1, Assembler::AVX_256bit);
 
   // e4:  4d 89 da               mov    r10,r11
@@ -254,24 +279,24 @@ void MacroAssembler::montgomeryMultiply52x20(Register out, Register kk0)
   // f5:  48 8b 54 24 f8         mov    rdx,QWORD PTR [rsp-0x8]
   // fa:  49 09 c2               or     r10,rax
   // fd:  c4 e1 f9 7e c0         vmovq  rax,xmm0
-  movq(r10, r11);
-  addq(r10, r14);
-  addq(r10, r15);
-  shrq(rax, 0x34);
-  shlq(r10, 0xc);
-  movq(rdx, LOOP_TERM);
-  orq(r10, rax);
-  movq(rax, xmm0);
+  movq(rtmp2, rtmp3);
+  addq(rtmp2, rtmp6);
+  addq(rtmp2, rtmp7);
+  shrq(rtmp0, 0x34);
+  shlq(rtmp2, 0xc);
+  addq(c_rarg2, 8);
+  orq(rtmp2, rtmp0);
+  movq(rtmp0, xmm0);
 
 //  102:  62 f2 e5 28 b4 76 02   evpmadd52luq ymm6,ymm3,YMMWORD PTR [rsi+0x40]
 //  109:  62 f2 e5 28 b4 6e 03   evpmadd52luq ymm5,ymm3,YMMWORD PTR [rsi+0x60]
 //  110:  62 f2 ed 28 b4 71 02   evpmadd52luq ymm6,ymm2,YMMWORD PTR [rcx+0x40]
 //  117:  62 f2 ed 28 b4 69 03   evpmadd52luq ymm5,ymm2,YMMWORD PTR [rcx+0x60]
 //  11e:  62 f3 cd 28 03 ff 01   valignq ymm7,ymm6,ymm7,0x1
-  evpmadd52luq(xmm6, xmm3, Address(rsi, 0x40), Assembler::AVX_256bit);
-  evpmadd52luq(xmm5, xmm3, Address(rsi, 0x60), Assembler::AVX_256bit);
-  evpmadd52luq(xmm6, xmm2, Address(rcx, 0x40), Assembler::AVX_256bit);
-  evpmadd52luq(xmm5, xmm2, Address(rcx, 0x60), Assembler::AVX_256bit);
+  evpmadd52luq(xmm6, xmm3, Address(c_rarg1, 0x40), Assembler::AVX_256bit);
+  evpmadd52luq(xmm5, xmm3, Address(c_rarg1, 0x60), Assembler::AVX_256bit);
+  evpmadd52luq(xmm6, xmm2, Address(c_rarg3, 0x40), Assembler::AVX_256bit);
+  evpmadd52luq(xmm5, xmm2, Address(c_rarg3, 0x60), Assembler::AVX_256bit);
   evalignq(xmm7, xmm6, xmm7, 1, Assembler::AVX_256bit);
 
 //  125:  62 f2 e5 28 b5 06      evpmadd52huq ymm0,ymm3,YMMWORD PTR [rsi]
@@ -289,25 +314,25 @@ void MacroAssembler::montgomeryMultiply52x20(Register out, Register kk0)
 //  171:  62 f2 ed 28 b5 79 01   evpmadd52huq ymm7,ymm2,YMMWORD PTR [rcx+0x20]
 //  178:  62 f2 ed 28 b5 71 02   evpmadd52huq ymm6,ymm2,YMMWORD PTR [rcx+0x40]
 //  17f:  62 f2 ed 28 b5 69 03   evpmadd52huq ymm5,ymm2,YMMWORD PTR [rcx+0x60]
-  evpmadd52huq(xmm0, xmm3, Address(rsi, 0x00), Assembler::AVX_256bit);
+  evpmadd52huq(xmm0, xmm3, Address(c_rarg1, 0x00), Assembler::AVX_256bit);
   evalignq(xmm6, xmm5, xmm6, 1, Assembler::AVX_256bit);
-  evpmadd52huq(xmm7, xmm3, Address(rsi, 0x20), Assembler::AVX_256bit);
+  evpmadd52huq(xmm7, xmm3, Address(c_rarg1, 0x20), Assembler::AVX_256bit);
   evalignq(xmm5, xmm1, xmm5, 1, Assembler::AVX_256bit);
-  evpmadd52huq(xmm6, xmm3, Address(rsi, 0x40), Assembler::AVX_256bit);
+  evpmadd52huq(xmm6, xmm3, Address(c_rarg1, 0x40), Assembler::AVX_256bit);
   vmovdqu(xmm1, xmm4);
-  evpmadd52huq(xmm5, xmm3, Address(rsi, 0x60), Assembler::AVX_256bit);
-  evpmadd52huq(xmm1, xmm3, Address(rsi, 0x80), Assembler::AVX_256bit);
+  evpmadd52huq(xmm5, xmm3, Address(c_rarg1, 0x60), Assembler::AVX_256bit);
+  evpmadd52huq(xmm1, xmm3, Address(c_rarg1, 0x80), Assembler::AVX_256bit);
   addq(rax, r10);
-  evpmadd52huq(xmm1, xmm2, Address(rcx, 0x80), Assembler::AVX_256bit);
-  evpmadd52huq(xmm0, xmm2, Address(rcx, 0x00), Assembler::AVX_256bit);
+  evpmadd52huq(xmm1, xmm2, Address(c_rarg3, 0x80), Assembler::AVX_256bit);
+  evpmadd52huq(xmm0, xmm2, Address(c_rarg3, 0x00), Assembler::AVX_256bit);
   vmovdqu(xmm4, xmm1);
-  evpmadd52huq(xmm7, xmm2, Address(rcx, 0x20), Assembler::AVX_256bit);
-  evpmadd52huq(xmm6, xmm2, Address(rcx, 0x40), Assembler::AVX_256bit);
-  evpmadd52huq(xmm5, xmm2, Address(rcx, 0x60), Assembler::AVX_256bit);
+  evpmadd52huq(xmm7, xmm2, Address(c_rarg3, 0x20), Assembler::AVX_256bit);
+  evpmadd52huq(xmm6, xmm2, Address(c_rarg3, 0x40), Assembler::AVX_256bit);
+  evpmadd52huq(xmm5, xmm2, Address(c_rarg3, 0x60), Assembler::AVX_256bit);
 
 //  186:  48 39 d3               cmp    rbx,rdx
 //  189:  0f 85 d1 fe ff ff      jne    60 <k1_ifma256_amm52x20+0x60>
-  cmpq(rbx, rdx);
+  cmpq(rtmp8, c_rarg2);
   jcc(Assembler::notEqual, L_loop);
 
 // NORMALIZATION
@@ -326,7 +351,7 @@ void MacroAssembler::montgomeryMultiply52x20(Register out, Register kk0)
   vpsrlq(xmm9, xmm7, 0x34, Assembler::AVX_256bit);
   vpsrlq(xmm10, xmm6, 0x34, Assembler::AVX_256bit);
   evalignq(xmm3, xmm2, xmm10, 3, Assembler::AVX_256bit);
-  evpbroadcastq(xmm1, rax, Assembler::AVX_256bit);
+  evpbroadcastq(xmm1, rtmp0, Assembler::AVX_256bit);
   evalignq(xmm10, xmm10, xmm9, 3, Assembler::AVX_256bit);
   vpblendd(xmm0, xmm0, xmm1, 0x3, Assembler::AVX_256bit),
   vpsrlq(xmm11, xmm0, 0x34, Assembler::AVX_256bit);
@@ -351,7 +376,7 @@ void MacroAssembler::montgomeryMultiply52x20(Register out, Register kk0)
 //  219:  62 f3 ed 28 1e e1 00   vpcmpequq k4,ymm2,ymm1
 //  220:  62 f3 ed 28 1e f9 01   vpcmpltuq k7,ymm2,ymm1
   // vmovdqu(xmm2, ExternalAddress((address) L_mask));
-  evpbroadcastq(xmm2, r9, Assembler::AVX_256bit);
+  evpbroadcastq(xmm2, rtmp1, Assembler::AVX_256bit);
   evalignq(xmm9, xmm9, xmm11, 3, Assembler::AVX_256bit);
   vpand(xmm6, xmm6, xmm2, Assembler::AVX_256bit);
   vpaddq(xmm6, xmm6, xmm10, Assembler::AVX_256bit);
@@ -377,15 +402,15 @@ void MacroAssembler::montgomeryMultiply52x20(Register out, Register kk0)
 //  250:  c5 79 93 c0            kmovb  r8d,k0
 //  254:  c5 f9 93 c7            kmovb  eax,k7
 //  258:  62 f3 ed 28 1e c7 01   vpcmpltuq k0,ymm2,ymm7
-  kmovbl(rsi, k6);
+  kmovbl(c_rarg1, k6);
   evpcmpq(k6, knoreg, xmm2, xmm5, Assembler::overflow, false, Assembler::AVX_256bit);
   vpand(xmm7, xmm7, xmm2, Assembler::AVX_256bit);
   evpcmpq(k2, knoreg, xmm2, xmm0, Assembler::overflow, false, Assembler::AVX_256bit);
   evpcmpq(k3, knoreg, xmm2, xmm6, Assembler::overflow, false, Assembler::AVX_256bit);
   vpaddq(xmm7, xmm7, xmm9, Assembler::AVX_256bit);
   evpcmpq(k5, knoreg, xmm2, xmm7, Assembler::overflow, false, Assembler::AVX_256bit);
-  kmovbl(r8, k0);
-  kmovbl(rax, k7);
+  kmovbl(c_rarg4, k0);
+  kmovbl(rtmp0, k7);
   evpcmpq(k0, knoreg, xmm2, xmm7, Assembler::noOverflow, false, Assembler::AVX_256bit);
 
 //  25f:  c1 e0 10               shl    eax,0x10
@@ -411,29 +436,29 @@ void MacroAssembler::montgomeryMultiply52x20(Register out, Register kk0)
 //  2a2:  41 c1 e2 04            shl    r10d,0x4
 //  2a6:  44 09 d2               or     edx,r10d
 //  2a9:  09 c8                  or     eax,ecx
-  shll(rax, 0x10);
-  kmovbl(r9, k1);
-  kmovbl(rdx, k4);
-  shll(r9, 0xc);
-  shll(rdx, 0x10);
-  kmovbl(rbx, k6);
-  shll(rbx, 0xc);
-  orl(rdx, rbx);
-  orl(rax, r9);
-  kmovbl(r12, k2);
-  orl(rax, r8);
-  orl(rdx, r12);
-  shll(rsi, 8);
-  kmovbl(r11, k3);
-  shll(r11, 8);
-  orl(rdx, r11);
-  orl(rax, rsi);
-  kmovbl(rcx, k0);
-  kmovbl(r10, k5);
-  shll(rcx, 4);
-  shll(r10, 4);
-  orl(rdx, r10);
-  orl(rax, rcx);
+  shll(rtmp0, 0x10);
+  kmovbl(rtmp1, k1);
+  kmovbl(c_rarg2, k4);
+  shll(rtmp1, 0xc);
+  shll(c_rarg2, 0x10);
+  kmovbl(rtmp8, k6);
+  shll(rtmp8, 0xc);
+  orl(c_rarg2, rtmp8);
+  orl(rtmp0, rtmp1);
+  kmovbl(rtmp4, k2);
+  orl(rtmp0, c_rarg4);
+  orl(c_rarg2, rtmp4);
+  shll(c_rarg1, 8);
+  kmovbl(rtmp3, k3);
+  shll(rtmp3, 8);
+  orl(c_rarg2, rtmp3);
+  orl(rtmp0, c_rarg1);
+  kmovbl(c_rarg3, k0);
+  kmovbl(rtmp2, k5);
+  shll(c_rarg3, 4);
+  shll(rtmp2, 4);
+  orl(c_rarg2, rtmp2);
+  orl(rtmp0, c_rarg3);
 
 //  2ab:  8d 04 42               lea    eax,[rdx+rax*2]  // compiles into lea eax,[edx+eax*2]
 //  2ae:  31 c2                  xor    edx,eax
@@ -450,21 +475,21 @@ void MacroAssembler::montgomeryMultiply52x20(Register out, Register kk0)
   emit_int8((unsigned char) 0x8d);
   emit_int8((unsigned char) 0x04);
   emit_int8((unsigned char) 0x42);
-  xorl(rdx, rax);
+  xorl(c_rarg2, rtmp0);
   //movzwl(rax, rdx);
   //shrl(rax, 8);
   //andl(rax, 0xff);
   emit_int8((unsigned char) 0x0f);
   emit_int8((unsigned char) 0xb6);
   emit_int8((unsigned char) 0xc6);
-  kmovbl(k2, rax);
-  movl(rax, rdx);
-  shrl(rax, 0x10);
-  kmovbl(k3, rax);
-  movl(rax, rdx);
-  kmovbl(k1, rdx);
-  shrl(rax, 4);
-  shrl(rdx, 0xc);
+  kmovbl(k2, rtmp0);
+  movl(rtmp0, c_rarg2);
+  shrl(rtmp0, 0x10);
+  kmovbl(k3, rtmp0);
+  movl(rtmp0, c_rarg2);
+  kmovbl(k1, c_rarg2);
+  shrl(rtmp0, 4);
+  shrl(c_rarg2, 0xc);
 
 //  2cc:  62 f1 fd 29 fb c2      vpsubq ymm0{k1},ymm0,ymm2  // ??????????
 //  2d2:  62 f1 cd 2a fb f2      vpsubq ymm6{k2},ymm6,ymm2
@@ -487,8 +512,8 @@ void MacroAssembler::montgomeryMultiply52x20(Register out, Register kk0)
   evpsubq(xmm0, k1, xmm0, xmm2, true, Assembler::AVX_256bit);
   evpsubq(xmm6, k2, xmm6, xmm2, true, Assembler::AVX_256bit);
   evpsubq(xmm1, k3, xmm1, xmm2, true, Assembler::AVX_256bit);
-  kmovbl(k4, rax);
-  kmovbl(k5, rdx);
+  kmovbl(k4, rtmp0);
+  kmovbl(k5, c_rarg2);
   evpsubq(xmm7, k4, xmm7, xmm2, true, Assembler::AVX_256bit);
   evpsubq(xmm5, k5, xmm5, xmm2, true, Assembler::AVX_256bit);
   vpand(xmm0, xmm0, xmm2, Assembler::AVX_256bit);
@@ -496,17 +521,22 @@ void MacroAssembler::montgomeryMultiply52x20(Register out, Register kk0)
   vpand(xmm6, xmm6, xmm2, Assembler::AVX_256bit);
   vpand(xmm5, xmm5, xmm2, Assembler::AVX_256bit);
   vpand(xmm1, xmm1, xmm2, Assembler::AVX_256bit);
-  evmovdquq(Address(rdi, 0x00), xmm0, Assembler::AVX_256bit);
-  evmovdquq(Address(rdi, 0x20), xmm7, Assembler::AVX_256bit);
-  evmovdquq(Address(rdi, 0x40), xmm6, Assembler::AVX_256bit);
-  evmovdquq(Address(rdi, 0x60), xmm5, Assembler::AVX_256bit);
-  evmovdquq(Address(rdi, 0x80), xmm1, Assembler::AVX_256bit);
+  evmovdquq(Address(c_rarg0, 0x00), xmm0, Assembler::AVX_256bit);
+  evmovdquq(Address(c_rarg0, 0x20), xmm7, Assembler::AVX_256bit);
+  evmovdquq(Address(c_rarg0, 0x40), xmm6, Assembler::AVX_256bit);
+  evmovdquq(Address(c_rarg0, 0x60), xmm5, Assembler::AVX_256bit);
+  evmovdquq(Address(c_rarg0, 0x80), xmm1, Assembler::AVX_256bit);
   vzeroupper();
 
-  pop(r13);
+#ifdef _WIN64
+  pop(rdi);
+  pop(rsi);
+#endif
+  pop(r15);
   pop(r14);
-  pop(r9);
-  pop(r8);
+  pop(r13);
+  pop(r12);
+  pop(rbx);
 
 #if 0
  32b:  48 8d 65 d8            lea    rsp,[rbp-0x28]

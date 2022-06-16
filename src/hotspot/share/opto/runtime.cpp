@@ -1144,6 +1144,29 @@ const TypeFunc* OptoRuntime::mulAdd_Type() {
   return TypeFunc::make(domain, range);
 }
 
+const TypeFunc* OptoRuntime::montgomeryMultiply50xn_Type() {
+  // create input type (domain)
+  int num_args      = 6;
+  int argcnt = num_args;
+  const Type** fields = TypeTuple::fields(argcnt);
+  int argp = TypeFunc::Parms;
+  fields[argp++] = TypePtr::NOTNULL;    // out
+  fields[argp++] = TypePtr::NOTNULL;    // a
+  fields[argp++] = TypePtr::NOTNULL;    // b
+  fields[argp++] = TypeInt::INT;        // n
+  fields[argp++] = TypeLong::LONG;      // inv
+  fields[argp++] = Type::HALF;
+  assert(argp == TypeFunc::Parms+argcnt, "correct decoding");
+  const TypeTuple* domain = TypeTuple::make(TypeFunc::Parms+argcnt, fields);
+
+  // result type needed
+  fields = TypeTuple::fields(1);
+  fields[TypeFunc::Parms+0] = NULL; // void
+
+  const TypeTuple* range = TypeTuple::make(TypeFunc::Parms, fields);
+  return TypeFunc::make(domain, range);
+}
+
 const TypeFunc* OptoRuntime::montgomeryMultiply_Type() {
   // create input type (domain)
   int num_args      = 7;

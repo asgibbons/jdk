@@ -3072,17 +3072,17 @@ public class BigInteger extends Number implements Comparable<BigInteger> {
         return oddModPow_default(this.mag.clone(), y.mag, z.mag);
     }
 
-    @IntrinsicCandidate
+//    @IntrinsicCandidate
     private static BigInteger oddModPow_20(int[] x, int xlen, int[] y, int ylen, int[] z, int zlen) {
         return oddModPow_default(x.clone(), y, z);
     }
 
-    @IntrinsicCandidate
+//    @IntrinsicCandidate
     private static BigInteger oddModPow_30(int[] x, int xlen, int[] y, int ylen, int[] z, int zlen) {
         return oddModPow_default(x.clone(), y, z);
     }
 
-    @IntrinsicCandidate
+//    @IntrinsicCandidate
     private static BigInteger oddModPow_40(int[] x, int xlen, int[] y, int ylen, int[] z, int zlen) {
         return oddModPow_default(x.clone(), y, z);
     }
