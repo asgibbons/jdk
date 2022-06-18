@@ -29,7 +29,7 @@
 #include "runtime/stubRoutines.hpp"
 #include "macroAssembler_x86.hpp"
 
-#if _LP64 || 1
+#if _LP64 || 1   // CHANGE THIS
 void MacroAssembler::montgomeryMultiply52x20(Register out, Register a, Register b, Register m, Register inv)
 {
   // Windows regs    |  Linux regs
@@ -53,103 +53,6 @@ void MacroAssembler::montgomeryMultiply52x20(Register out, Register a, Register 
   const Register rtmp6 = r14;
   const Register rtmp7 = r15;
   const Register rtmp8 = rbx;
-
-  const int LIMIT = 5552;
-  const int BASE = 65521;
-  const int CHUNKSIZE = 16;
-  const int CHUNKSIZE_M1 = CHUNKSIZE - 1;
-
-  const Register s = r11;
-  const Register a_d = r12; // r12d
-  const Register b_d = r8;  // r8d
-  const Register end = r13;
-
-  const XMMRegister ya = xmm0;
-  const XMMRegister yb = xmm1;
-  const XMMRegister ydata0 = xmm2;
-  const XMMRegister ydata1 = xmm3;
-  const XMMRegister ysa = xmm4;
-  const XMMRegister ydata = ysa;
-  const XMMRegister ytmp0 = ydata0;
-  const XMMRegister ytmp1 = ydata1;
-  const XMMRegister ytmp2 = xmm5;
-  const XMMRegister xa = xmm0;
-  const XMMRegister xb = xmm1;
-  const XMMRegister xtmp0 = xmm2;
-  const XMMRegister xtmp1 = xmm3;
-  const XMMRegister xsa = xmm4;
-  const XMMRegister xtmp2 = xmm5;
-
-#if 0
-   U64 R0 = get_zero64();
-   U64 R1 = get_zero64();
-   U64 R2 = get_zero64();
-
-   /* High part of 512bit result in 256bit mode */
-   U64 R0h = get_zero64();
-   U64 R1h = get_zero64();
-   U64 R2h = get_zero64();
-
-   U64 Bi, Yi;
-
-   Ipp64u m0 = m[0];
-   Ipp64u a0 = a[0];
-   Ipp64u acc0 = 0;
-
-   int i;
-   for (i=0; i<20; i++) {
-      Ipp64u t0, t1, t2, yi;
-
-      Bi = set64((long long)b[i]);               /* broadcast(b[i]) */
-      /* compute yi */
-      t0 = _mulx_u64(a0, b[i], &t2);             /* (t2:t0) = acc0 + a[0]*b[i] */
-      ADD104(t2, acc0, 0, t0)
-      yi = (acc0 * k0)  & EXP_DIGIT_MASK_AVX512; /* yi = acc0*k0 */
-      Yi = set64((long long)yi);
-
-      t0 = _mulx_u64(m0, yi, &t1);               /* (t1:t0)   = m0*yi     */
-      ADD104(t2, acc0, t1, t0)                   /* (t2:acc0) += (t1:t0)  */
-      acc0 = SHRD52(t2, acc0);
-
-      fma52x8lo_mem(R0, R0, Bi, a,      64*0)
-      fma52x8lo_mem(R1, R1, Bi, a,      64*1)
-      fma52x8lo_mem_len(R2, R2, Bi, a,  64*2, 4)
-      fma52x8lo_mem(R0, R0, Yi, m,      64*0)
-      fma52x8lo_mem(R1, R1, Yi, m,      64*1)
-      fma52x8lo_mem_len(R2, R2, Yi, m,  64*2, 4)
-
-      shift64_imm(R0, R0h, 1)
-      shift64_imm(R0h, R1, 1)
-      shift64_imm(R1, R1h, 1)
-      shift64_imm(R1h, R2, 1)
-      shift64_imm(R2, get_zero64(), 1)
-
-      /* "shift" R */
-      t0 = get64(R0, 0);
-      acc0 += t0;
-
-      /* U = A*Bi (hi) */
-      fma52x8hi_mem(R0, R0, Bi, a, 64*0)
-      fma52x8hi_mem(R1, R1, Bi, a, 64*1)
-      fma52x8hi_mem_len(R2, R2, Bi, a, 64*2, 4)
-      /* R += M*Yi (hi) */
-      fma52x8hi_mem(R0, R0, Yi, m, 64*0)
-      fma52x8hi_mem(R1, R1, Yi, m, 64*1)
-      fma52x8hi_mem_len(R2, R2, Yi, m, 64*2, 4)
-   }
-
-   /* Set R0[0] == acc0 */
-   Bi = set64((long long)acc0);
-   R0 = blend64(R0, Bi, 1);
-
-   NORMALIZE_52x20(R0, R1, R2)
-
-   storeu64(out + 0*4, R0);
-   storeu64(out + 1*4, R0h);
-   storeu64(out + 2*4, R1);
-   storeu64(out + 3*4, R1h);
-   storeu64(out + 4*4, R2);
-#endif
 
    // On entry:
    //  out points to where the result should be stored (16 qwords)
@@ -537,139 +440,34 @@ void MacroAssembler::montgomeryMultiply52x20(Register out, Register a, Register 
   pop(r13);
   pop(r12);
   pop(rbx);
-
-#if 0
- 32b:  48 8d 65 d8            lea    rsp,[rbp-0x28]
- 32f:  5b                     pop    rbx
- 330:  41 5c                  pop    r12
- 332:  41 5d                  pop    r13
- 334:  41 5e                  pop    r14
- 336:  41 5f                  pop    r15
- 338:  5d                     pop    rbp
- 339:  c3                     ret    
- 33a:  66 0f 1f 44 00 00      nop    WORD PTR [rax+rax*1+0x0]
-
-0000000000000340 <k1_ifma256_ams52x20>:
- 340:  f3 0f 1e fa            endbr64 
- 344:  49 89 c8               mov    r8,rcx
- 347:  48 89 d1               mov    rcx,rdx
- 34a:  48 89 f2               mov    rdx,rsi
- 34d:  e9 00 00 00 00         jmp    352 <k1_ifma256_ams52x20+0x12>
-#endif
 }
 
 
-void MacroAssembler::montgomeryMultiply52x30(Register out, Register kk0)
+void MacroAssembler::montgomeryMultiply52x30(Register out, Register a, Register b, Register m, Register inv)
 {
-  const int LIMIT = 5552;
-  const int BASE = 65521;
-  const int CHUNKSIZE = 16;
-  const int CHUNKSIZE_M1 = CHUNKSIZE - 1;
+  // Windows regs    |  Linux regs
+  // c_rarg0 (rcx)   |  c_rarg0 (rdi)  out
+  // c_rarg1 (rdx)   |  c_rarg1 (rsi)  a
+  // c_rarg2 (r8)    |  c_rarg2 (rdx)  b
+  // c_rarg3 (r9)    |  c_rarg3 (rcx)  m
+  // r10             |  c_rarg4 (r8)   inv
 
-  const Register s = r11;
-  const Register a_d = r12; // r12d
-  const Register b_d = r8;  // r8d
-  const Register end = r13;
-
-  const XMMRegister ya = xmm0;
-  const XMMRegister yb = xmm1;
-  const XMMRegister ydata0 = xmm2;
-  const XMMRegister ydata1 = xmm3;
-  const XMMRegister ysa = xmm4;
-  const XMMRegister ydata = ysa;
-  const XMMRegister ytmp0 = ydata0;
-  const XMMRegister ytmp1 = ydata1;
-  const XMMRegister ytmp2 = xmm5;
-  const XMMRegister xa = xmm0;
-  const XMMRegister xb = xmm1;
-  const XMMRegister xtmp0 = xmm2;
-  const XMMRegister xtmp1 = xmm3;
-  const XMMRegister xsa = xmm4;
-  const XMMRegister xtmp2 = xmm5;
+  const Register rtmp0 = rax;
+#ifdef _WIN64
+  const Register rtmp1 = rdi;
+  const Register rtmp2 = rsi;
+#else
+  const Register rtmp1 = r9;
+  const Register rtmp2 = r10;
+#endif
+  const Register rtmp3 = r11;
+  const Register rtmp4 = r12;
+  const Register rtmp5 = r13;
+  const Register rtmp6 = r14;
+  const Register rtmp7 = r15;
+  const Register rtmp8 = rbx;
 
 #if 0
-   U64 R0 = get_zero64();
-   U64 R1 = get_zero64();
-   U64 R2 = get_zero64();
-   U64 R3 = get_zero64();
-
-   U64 R0h = get_zero64();
-   U64 R1h = get_zero64();
-   U64 R2h = get_zero64();
-   U64 R3h = get_zero64();
-
-   U64 Bi, Yi;
-
-   Ipp64u m0 = m[0];
-   Ipp64u a0 = a[0];
-   Ipp64u acc0 = 0;
-
-   int i;
-   for (i=0; i<30; i++) {
-      Ipp64u t0, t1, t2, yi;
-
-      Bi = set64((long long)b[i]);               /* broadcast(b[i]) */
-      /* compute yi */
-      t0 = _mulx_u64(a0, b[i], &t2);             /* (t2:t0) = acc0 + a[0]*b[i] */
-      ADD104(t2, acc0, 0, t0)
-      yi = (acc0 * k0)  & EXP_DIGIT_MASK_AVX512; /* yi = acc0*k0 */
-      Yi = set64((long long)yi);
-
-      t0 = _mulx_u64(m0, yi, &t1);               /* (t1:t0)   = m0*yi     */
-      ADD104(t2, acc0, t1, t0)                   /* (t2:acc0) += (t1:t0)  */
-      acc0 = SHRD52(t2, acc0);
-
-      fma52x8lo_mem(R0, R0, Bi, a, 64*0)
-      fma52x8lo_mem(R1, R1, Bi, a, 64*1)
-      fma52x8lo_mem(R2, R2, Bi, a, 64*2)
-      fma52x8lo_mem(R3, R3, Bi, a, 64*3)
-
-      fma52x8lo_mem(R0, R0, Yi, m, 64*0)
-      fma52x8lo_mem(R1, R1, Yi, m, 64*1)
-      fma52x8lo_mem(R2, R2, Yi, m, 64*2)
-      fma52x8lo_mem(R3, R3, Yi, m, 64*3)
-
-      shift64_imm(R0, R0h, 1)
-      shift64_imm(R0h, R1, 1)
-      shift64_imm(R1, R1h, 1)
-      shift64_imm(R1h, R2, 1)
-      shift64_imm(R2, R2h, 1)
-      shift64_imm(R2h, R3, 1)
-      shift64_imm(R3, R3h, 1)
-      shift64_imm(R3h, get_zero64(), 1)
-
-      /* "shift" R */
-      t0 = get64(R0, 0);
-      acc0 += t0;
-
-      /* U = A*Bi (hi) */
-      fma52x8hi_mem(R0, R0, Bi, a, 64*0)
-      fma52x8hi_mem(R1, R1, Bi, a, 64*1)
-      fma52x8hi_mem(R2, R2, Bi, a, 64*2)
-      fma52x8hi_mem(R3, R3, Bi, a, 64*3)
-      /* R += M*Yi (hi) */
-      fma52x8hi_mem(R0, R0, Yi, m, 64*0)
-      fma52x8hi_mem(R1, R1, Yi, m, 64*1)
-      fma52x8hi_mem(R2, R2, Yi, m, 64*2)
-      fma52x8hi_mem(R3, R3, Yi, m, 64*3)
-   }
-
-   /* Set R0[0] == acc0 */
-   Bi = set64((long long)acc0);
-   R0 = blend64(R0, Bi, 1);
-
-   NORMALIZE_52x30(R0, R1, R2, R3)
-
-   storeu64(out + 0*4, R0);
-   storeu64(out + 1*4, R0h);
-   storeu64(out + 2*4, R1);
-   storeu64(out + 3*4, R1h);
-   storeu64(out + 4*4, R2);
-   storeu64(out + 5*4, R2h);
-   storeu64(out + 6*4, R3);
-   storeu64(out + 7*4, R3h);
-
-
    4:  55                     push   rbp
    5:  c5 e9 ef d2            vpxor  xmm2,xmm2,xmm2
    9:  31 c0                  xor    eax,eax
@@ -944,127 +742,31 @@ void MacroAssembler::montgomeryMultiply52x30(Register out, Register kk0)
 }
 
 
-void MacroAssembler::montgomeryMultiply52x40(Register out, Register kk0)
+void MacroAssembler::montgomeryMultiply52x40(Register out, Register a, Register b, Register m, Register inv)
 {
-  const int LIMIT = 5552;
-  const int BASE = 65521;
-  const int CHUNKSIZE = 16;
-  const int CHUNKSIZE_M1 = CHUNKSIZE - 1;
+  // Windows regs    |  Linux regs
+  // c_rarg0 (rcx)   |  c_rarg0 (rdi)  out
+  // c_rarg1 (rdx)   |  c_rarg1 (rsi)  a
+  // c_rarg2 (r8)    |  c_rarg2 (rdx)  b
+  // c_rarg3 (r9)    |  c_rarg3 (rcx)  m
+  // r10             |  c_rarg4 (r8)   inv
 
-  const Register s = r11;
-  const Register a_d = r12; // r12d
-  const Register b_d = r8;  // r8d
-  const Register end = r13;
-
-  const XMMRegister ya = xmm0;
-  const XMMRegister yb = xmm1;
-  const XMMRegister ydata0 = xmm2;
-  const XMMRegister ydata1 = xmm3;
-  const XMMRegister ysa = xmm4;
-  const XMMRegister ydata = ysa;
-  const XMMRegister ytmp0 = ydata0;
-  const XMMRegister ytmp1 = ydata1;
-  const XMMRegister ytmp2 = xmm5;
-  const XMMRegister xa = xmm0;
-  const XMMRegister xb = xmm1;
-  const XMMRegister xtmp0 = xmm2;
-  const XMMRegister xtmp1 = xmm3;
-  const XMMRegister xsa = xmm4;
-  const XMMRegister xtmp2 = xmm5;
+  const Register rtmp0 = rax;
+#ifdef _WIN64
+  const Register rtmp1 = rdi;
+  const Register rtmp2 = rsi;
+#else
+  const Register rtmp1 = r9;
+  const Register rtmp2 = r10;
+#endif
+  const Register rtmp3 = r11;
+  const Register rtmp4 = r12;
+  const Register rtmp5 = r13;
+  const Register rtmp6 = r14;
+  const Register rtmp7 = r15;
+  const Register rtmp8 = rbx;
 
 #if 0
-   U64 R0 = get_zero64();
-   U64 R1 = get_zero64();
-   U64 R2 = get_zero64();
-   U64 R3 = get_zero64();
-   U64 R4 = get_zero64();
-
-   U64 R0h = get_zero64();
-   U64 R1h = get_zero64();
-   U64 R2h = get_zero64();
-   U64 R3h = get_zero64();
-   U64 R4h = get_zero64();
-
-   U64 Bi, Yi;
-
-   Ipp64u m0 = m[0];
-   Ipp64u a0 = a[0];
-   Ipp64u acc0 = 0;
-
-   int i;
-   for (i=0; i<40; i++) {
-      Ipp64u t0, t1, t2, yi;
-
-      Bi = set64((long long)b[i]);               /* broadcast(b[i]) */
-      /* compute yi */
-      t0 = _mulx_u64(a0, b[i], &t2);             /* (t2:t0) = acc0 + a[0]*b[i] */
-      ADD104(t2, acc0, 0, t0)
-      yi = (acc0 * k0)  & EXP_DIGIT_MASK_AVX512; /* yi = acc0*k0 */
-      Yi = set64((long long)yi);
-
-      t0 = _mulx_u64(m0, yi, &t1);               /* (t1:t0)   = m0*yi     */
-      ADD104(t2, acc0, t1, t0)                   /* (t2:acc0) += (t1:t0)  */
-      acc0 = SHRD52(t2, acc0);
-
-      fma52x8lo_mem(R0, R0, Bi, a, 64*0)
-      fma52x8lo_mem(R1, R1, Bi, a, 64*1)
-      fma52x8lo_mem(R2, R2, Bi, a, 64*2)
-      fma52x8lo_mem(R3, R3, Bi, a, 64*3)
-      fma52x8lo_mem(R4, R4, Bi, a, 64*4)
-
-      fma52x8lo_mem(R0, R0, Yi, m, 64*0)
-      fma52x8lo_mem(R1, R1, Yi, m, 64*1)
-      fma52x8lo_mem(R2, R2, Yi, m, 64*2)
-      fma52x8lo_mem(R3, R3, Yi, m, 64*3)
-      fma52x8lo_mem(R4, R4, Yi, m, 64*4)
-
-      shift64_imm(R0, R0h, 1)
-      shift64_imm(R0h, R1, 1)
-      shift64_imm(R1, R1h, 1)
-      shift64_imm(R1h, R2, 1)
-      shift64_imm(R2, R2h, 1)
-      shift64_imm(R2h, R3, 1)
-      shift64_imm(R3, R3h, 1)
-      shift64_imm(R3h, R4, 1)
-      shift64_imm(R4, R4h, 1)
-      shift64_imm(R4h, get_zero64(), 1)
-
-      /* "shift" R */
-      t0 = get64(R0, 0);
-      acc0 += t0;
-
-      /* U = A*Bi (hi) */
-      fma52x8hi_mem(R0, R0, Bi, a, 64*0)
-      fma52x8hi_mem(R1, R1, Bi, a, 64*1)
-      fma52x8hi_mem(R2, R2, Bi, a, 64*2)
-      fma52x8hi_mem(R3, R3, Bi, a, 64*3)
-      fma52x8hi_mem(R4, R4, Bi, a, 64*4)
-      /* R += M*Yi (hi) */
-      fma52x8hi_mem(R0, R0, Yi, m, 64*0)
-      fma52x8hi_mem(R1, R1, Yi, m, 64*1)
-      fma52x8hi_mem(R2, R2, Yi, m, 64*2)
-      fma52x8hi_mem(R3, R3, Yi, m, 64*3)
-      fma52x8hi_mem(R4, R4, Yi, m, 64*4)
-   }
-
-   /* Set R0[0] == acc0 */
-   Bi = set64((long long)acc0);
-   R0 = blend64(R0, Bi, 1);
-
-   NORMALIZE_52x40(R0, R1, R2, R3, R4)
-
-   storeu64(out + 0*4, R0);
-   storeu64(out + 1*4, R0h);
-   storeu64(out + 2*4, R1);
-   storeu64(out + 3*4, R1h);
-   storeu64(out + 4*4, R2);
-   storeu64(out + 5*4, R2h);
-   storeu64(out + 6*4, R3);
-   storeu64(out + 7*4, R3h);
-   storeu64(out + 8*4, R4);
-   storeu64(out + 9*4, R4h);
-
-
 
    4:  55                     push   rbp
    5:  c5 e9 ef d2            vpxor  xmm2,xmm2,xmm2
@@ -1386,4 +1088,1386 @@ void MacroAssembler::montgomeryMultiply52x40(Register out, Register kk0)
  62d:  e9 00 00 00 00         jmp    632 <k1_ifma256_ams52x40+0x12>
 #endif
 }
+
+#if 0
+
+/* pair of 52-bit digits occupys 13 bytes (the fact is using in implementation beloow) */
+__INLINE Ipp64u getDig52(const Ipp8u* pStr, int strLen)
+{
+       0:	55                   	push   rbp
+       1:	48 89 e5             	mov    rbp,rsp
+       4:	48 89 7d e8          	mov    QWORD PTR [rbp-0x18],rdi
+       8:	89 75 e4             	mov    DWORD PTR [rbp-0x1c],esi
+   Ipp64u digit = 0;
+       b:	48 c7 45 f8 00 00 00 	mov    QWORD PTR [rbp-0x8],0x0
+      12:	00 
+   for(; strLen>0; strLen--) {
+      13:	eb 22                	jmp    37 <getDig52+0x37>
+      digit <<= 8;
+      15:	48 c1 65 f8 08       	shl    QWORD PTR [rbp-0x8],0x8
+      digit += (Ipp64u)(pStr[strLen-1]);
+      1a:	8b 45 e4             	mov    eax,DWORD PTR [rbp-0x1c]
+      1d:	48 98                	cdqe   
+      1f:	48 8d 50 ff          	lea    rdx,[rax-0x1]
+      23:	48 8b 45 e8          	mov    rax,QWORD PTR [rbp-0x18]
+      27:	48 01 d0             	add    rax,rdx
+      2a:	0f b6 00             	movzx  eax,BYTE PTR [rax]
+      2d:	0f b6 c0             	movzx  eax,al
+      30:	48 01 45 f8          	add    QWORD PTR [rbp-0x8],rax
+   for(; strLen>0; strLen--) {
+      34:	ff 4d e4             	dec    DWORD PTR [rbp-0x1c]
+      37:	83 7d e4 00          	cmp    DWORD PTR [rbp-0x1c],0x0
+      3b:	7f d8                	jg     15 <getDig52+0x15>
+   }
+   return digit;
+      3d:	48 8b 45 f8          	mov    rax,QWORD PTR [rbp-0x8]
+}
+      41:	5d                   	pop    rbp
+      42:	c3                   	ret    
+      43:	66 66 2e 0f 1f 84 00 	data16 nop WORD PTR cs:[rax+rax*1+0x0]
+      4a:	00 00 00 00 
+      4e:	66 66 2e 0f 1f 84 00 	data16 nop WORD PTR cs:[rax+rax*1+0x0]
+      55:	00 00 00 00 
+      59:	0f 1f 80 00 00 00 00 	nop    DWORD PTR [rax+0x0]
+
+0000000000000060 <regular_dig52>:
+
+/* regular => redundant conversion */
+static void regular_dig52(Ipp64u* out, int outLen /* in qwords */, const Ipp64u* in, int inBitSize)
+{
+      60:	f3 0f 1e fa          	endbr64 
+      64:	55                   	push   rbp
+      65:	48 89 e5             	mov    rbp,rsp
+      68:	48 83 ec 28          	sub    rsp,0x28
+      6c:	48 89 7d e8          	mov    QWORD PTR [rbp-0x18],rdi
+      70:	89 75 e4             	mov    DWORD PTR [rbp-0x1c],esi
+      73:	48 89 55 d8          	mov    QWORD PTR [rbp-0x28],rdx
+      77:	89 4d e0             	mov    DWORD PTR [rbp-0x20],ecx
+   Ipp8u* inStr = (Ipp8u*)in;
+      7a:	48 8b 45 d8          	mov    rax,QWORD PTR [rbp-0x28]
+      7e:	48 89 45 f0          	mov    QWORD PTR [rbp-0x10],rax
+
+   for(; inBitSize>=(2*EXP_DIGIT_SIZE_AVX512); inBitSize-=(2*EXP_DIGIT_SIZE_AVX512), out+=2) {
+      82:	eb 58                	jmp    dc <regular_dig52+0x7c>
+      out[0] = (*(Ipp64u*)inStr) & EXP_DIGIT_MASK_AVX512;
+      84:	48 8b 45 f0          	mov    rax,QWORD PTR [rbp-0x10]
+      88:	48 8b 10             	mov    rdx,QWORD PTR [rax]
+      8b:	48 b8 ff ff ff ff ff 	movabs rax,0xfffffffffffff
+      92:	ff 0f 00 
+      95:	48 21 c2             	and    rdx,rax
+      98:	48 8b 45 e8          	mov    rax,QWORD PTR [rbp-0x18]
+      9c:	48 89 10             	mov    QWORD PTR [rax],rdx
+      inStr += 6;
+      9f:	48 83 45 f0 06       	add    QWORD PTR [rbp-0x10],0x6
+      out[1] = ((*(Ipp64u*)inStr) >> 4) & EXP_DIGIT_MASK_AVX512;
+      a4:	48 8b 45 f0          	mov    rax,QWORD PTR [rbp-0x10]
+      a8:	48 8b 00             	mov    rax,QWORD PTR [rax]
+      ab:	48 c1 e8 04          	shr    rax,0x4
+      af:	48 89 c1             	mov    rcx,rax
+      b2:	48 8b 45 e8          	mov    rax,QWORD PTR [rbp-0x18]
+      b6:	48 83 c0 08          	add    rax,0x8
+      ba:	48 ba ff ff ff ff ff 	movabs rdx,0xfffffffffffff
+      c1:	ff 0f 00 
+      c4:	48 21 ca             	and    rdx,rcx
+      c7:	48 89 10             	mov    QWORD PTR [rax],rdx
+      inStr += 7;
+      ca:	48 83 45 f0 07       	add    QWORD PTR [rbp-0x10],0x7
+      outLen -= 2;
+      cf:	83 6d e4 02          	sub    DWORD PTR [rbp-0x1c],0x2
+   for(; inBitSize>=(2*EXP_DIGIT_SIZE_AVX512); inBitSize-=(2*EXP_DIGIT_SIZE_AVX512), out+=2) {
+      d3:	83 6d e0 68          	sub    DWORD PTR [rbp-0x20],0x68
+      d7:	48 83 45 e8 10       	add    QWORD PTR [rbp-0x18],0x10
+      dc:	83 7d e0 67          	cmp    DWORD PTR [rbp-0x20],0x67
+      e0:	7f a2                	jg     84 <regular_dig52+0x24>
+   }
+   if(inBitSize>EXP_DIGIT_SIZE_AVX512) {
+      e2:	83 7d e0 34          	cmp    DWORD PTR [rbp-0x20],0x34
+      e6:	7e 71                	jle    159 <regular_dig52+0xf9>
+      Ipp64u digit = getDig52(inStr, 7);
+      e8:	48 8b 45 f0          	mov    rax,QWORD PTR [rbp-0x10]
+      ec:	be 07 00 00 00       	mov    esi,0x7
+      f1:	48 89 c7             	mov    rdi,rax
+      f4:	e8 07 ff ff ff       	call   0 <getDig52>
+      f9:	48 89 45 f8          	mov    QWORD PTR [rbp-0x8],rax
+      out[0] = digit & EXP_DIGIT_MASK_AVX512;
+      fd:	48 b8 ff ff ff ff ff 	movabs rax,0xfffffffffffff
+     104:	ff 0f 00 
+     107:	48 23 45 f8          	and    rax,QWORD PTR [rbp-0x8]
+     10b:	48 89 c2             	mov    rdx,rax
+     10e:	48 8b 45 e8          	mov    rax,QWORD PTR [rbp-0x18]
+     112:	48 89 10             	mov    QWORD PTR [rax],rdx
+      inStr += 6;
+     115:	48 83 45 f0 06       	add    QWORD PTR [rbp-0x10],0x6
+      inBitSize -= EXP_DIGIT_SIZE_AVX512;
+     11a:	83 6d e0 34          	sub    DWORD PTR [rbp-0x20],0x34
+      digit = getDig52(inStr, BITS2WORD8_SIZE(inBitSize));
+     11e:	8b 45 e0             	mov    eax,DWORD PTR [rbp-0x20]
+     121:	83 c0 07             	add    eax,0x7
+     124:	c1 f8 03             	sar    eax,0x3
+     127:	89 c2                	mov    edx,eax
+     129:	48 8b 45 f0          	mov    rax,QWORD PTR [rbp-0x10]
+     12d:	89 d6                	mov    esi,edx
+     12f:	48 89 c7             	mov    rdi,rax
+     132:	e8 c9 fe ff ff       	call   0 <getDig52>
+     137:	48 89 45 f8          	mov    QWORD PTR [rbp-0x8],rax
+      out[1] = digit>>4;
+     13b:	48 8b 45 e8          	mov    rax,QWORD PTR [rbp-0x18]
+     13f:	48 83 c0 08          	add    rax,0x8
+     143:	48 8b 55 f8          	mov    rdx,QWORD PTR [rbp-0x8]
+     147:	48 c1 ea 04          	shr    rdx,0x4
+     14b:	48 89 10             	mov    QWORD PTR [rax],rdx
+      out += 2;
+     14e:	48 83 45 e8 10       	add    QWORD PTR [rbp-0x18],0x10
+      outLen -= 2;
+     153:	83 6d e4 02          	sub    DWORD PTR [rbp-0x1c],0x2
+     157:	eb 43                	jmp    19c <regular_dig52+0x13c>
+   }
+   else if(inBitSize>0) {
+     159:	83 7d e0 00          	cmp    DWORD PTR [rbp-0x20],0x0
+     15d:	7e 3d                	jle    19c <regular_dig52+0x13c>
+      out[0] = getDig52(inStr, BITS2WORD8_SIZE(inBitSize));
+     15f:	8b 45 e0             	mov    eax,DWORD PTR [rbp-0x20]
+     162:	83 c0 07             	add    eax,0x7
+     165:	c1 f8 03             	sar    eax,0x3
+     168:	89 c2                	mov    edx,eax
+     16a:	48 8b 45 f0          	mov    rax,QWORD PTR [rbp-0x10]
+     16e:	89 d6                	mov    esi,edx
+     170:	48 89 c7             	mov    rdi,rax
+     173:	e8 88 fe ff ff       	call   0 <getDig52>
+     178:	48 8b 55 e8          	mov    rdx,QWORD PTR [rbp-0x18]
+     17c:	48 89 02             	mov    QWORD PTR [rdx],rax
+      out++;
+     17f:	48 83 45 e8 08       	add    QWORD PTR [rbp-0x18],0x8
+      outLen--;
+     184:	ff 4d e4             	dec    DWORD PTR [rbp-0x1c]
+   }
+   for(; outLen>0; outLen--,out++) out[0] = 0;
+     187:	eb 13                	jmp    19c <regular_dig52+0x13c>
+     189:	48 8b 45 e8          	mov    rax,QWORD PTR [rbp-0x18]
+     18d:	48 c7 00 00 00 00 00 	mov    QWORD PTR [rax],0x0
+     194:	ff 4d e4             	dec    DWORD PTR [rbp-0x1c]
+     197:	48 83 45 e8 08       	add    QWORD PTR [rbp-0x18],0x8
+     19c:	83 7d e4 00          	cmp    DWORD PTR [rbp-0x1c],0x0
+     1a0:	7f e7                	jg     189 <regular_dig52+0x129>
+}
+     1a2:	90                   	nop
+     1a3:	90                   	nop
+     1a4:	c9                   	leave  
+     1a5:	c3                   	ret    
+     1a6:	66 66 2e 0f 1f 84 00 	data16 nop WORD PTR cs:[rax+rax*1+0x0]
+     1ad:	00 00 00 00 
+     1b1:	66 66 2e 0f 1f 84 00 	data16 nop WORD PTR cs:[rax+rax*1+0x0]
+     1b8:	00 00 00 00 
+     1bc:	0f 1f 40 00          	nop    DWORD PTR [rax+0x0]
+
+00000000000001c0 <putDig52>:
+/*
+   converts "redundant" (base = 2^DIGIT_SIZE) representation
+   into regular (base = 2^64)
+*/
+__INLINE void putDig52(Ipp8u* pStr, int strLen, Ipp64u digit)
+{
+     1c0:	55                   	push   rbp
+     1c1:	48 89 e5             	mov    rbp,rsp
+     1c4:	48 89 7d f8          	mov    QWORD PTR [rbp-0x8],rdi
+     1c8:	89 75 f4             	mov    DWORD PTR [rbp-0xc],esi
+     1cb:	48 89 55 e8          	mov    QWORD PTR [rbp-0x18],rdx
+   for(; strLen>0; strLen--) {
+     1cf:	eb 1a                	jmp    1eb <putDig52+0x2b>
+      *pStr++ = (Ipp8u)(digit&0xFF);
+     1d1:	48 8b 45 f8          	mov    rax,QWORD PTR [rbp-0x8]
+     1d5:	48 8d 50 01          	lea    rdx,[rax+0x1]
+     1d9:	48 89 55 f8          	mov    QWORD PTR [rbp-0x8],rdx
+     1dd:	48 8b 55 e8          	mov    rdx,QWORD PTR [rbp-0x18]
+     1e1:	88 10                	mov    BYTE PTR [rax],dl
+      digit >>= 8;
+     1e3:	48 c1 6d e8 08       	shr    QWORD PTR [rbp-0x18],0x8
+   for(; strLen>0; strLen--) {
+     1e8:	ff 4d f4             	dec    DWORD PTR [rbp-0xc]
+     1eb:	83 7d f4 00          	cmp    DWORD PTR [rbp-0xc],0x0
+     1ef:	7f e0                	jg     1d1 <putDig52+0x11>
+   }
+}
+     1f1:	90                   	nop
+     1f2:	90                   	nop
+     1f3:	5d                   	pop    rbp
+     1f4:	c3                   	ret    
+     1f5:	66 66 2e 0f 1f 84 00 	data16 nop WORD PTR cs:[rax+rax*1+0x0]
+     1fc:	00 00 00 00 
+
+0000000000000200 <dig52_regular>:
+
+static void dig52_regular(Ipp64u* out, const Ipp64u* in, int outBitSize)
+{
+     200:	f3 0f 1e fa          	endbr64 
+     204:	55                   	push   rbp
+     205:	48 89 e5             	mov    rbp,rsp
+     208:	48 83 ec 28          	sub    rsp,0x28
+     20c:	48 89 7d e8          	mov    QWORD PTR [rbp-0x18],rdi
+     210:	48 89 75 e0          	mov    QWORD PTR [rbp-0x20],rsi
+     214:	89 55 dc             	mov    DWORD PTR [rbp-0x24],edx
+   int i;
+   int outLen = BITS2WORD64_SIZE(outBitSize);
+     217:	8b 45 dc             	mov    eax,DWORD PTR [rbp-0x24]
+     21a:	83 c0 3f             	add    eax,0x3f
+     21d:	c1 f8 06             	sar    eax,0x6
+     220:	89 45 f4             	mov    DWORD PTR [rbp-0xc],eax
+   for(i=0; i<outLen; i++) out[i] = 0;
+     223:	c7 45 f0 00 00 00 00 	mov    DWORD PTR [rbp-0x10],0x0
+     22a:	eb 1e                	jmp    24a <dig52_regular+0x4a>
+     22c:	8b 45 f0             	mov    eax,DWORD PTR [rbp-0x10]
+     22f:	48 98                	cdqe   
+     231:	48 8d 14 c5 00 00 00 	lea    rdx,[rax*8+0x0]
+     238:	00 
+     239:	48 8b 45 e8          	mov    rax,QWORD PTR [rbp-0x18]
+     23d:	48 01 d0             	add    rax,rdx
+     240:	48 c7 00 00 00 00 00 	mov    QWORD PTR [rax],0x0
+     247:	ff 45 f0             	inc    DWORD PTR [rbp-0x10]
+     24a:	8b 45 f0             	mov    eax,DWORD PTR [rbp-0x10]
+     24d:	3b 45 f4             	cmp    eax,DWORD PTR [rbp-0xc]
+     250:	7c da                	jl     22c <dig52_regular+0x2c>
+
+   {
+      Ipp8u* outStr = (Ipp8u*)out;
+     252:	48 8b 45 e8          	mov    rax,QWORD PTR [rbp-0x18]
+     256:	48 89 45 f8          	mov    QWORD PTR [rbp-0x8],rax
+      for(; outBitSize>=(2*EXP_DIGIT_SIZE_AVX512); outBitSize-=(2*EXP_DIGIT_SIZE_AVX512), in+=2) {
+     25a:	eb 41                	jmp    29d <dig52_regular+0x9d>
+         (*(Ipp64u*)outStr) = in[0];
+     25c:	48 8b 45 e0          	mov    rax,QWORD PTR [rbp-0x20]
+     260:	48 8b 10             	mov    rdx,QWORD PTR [rax]
+     263:	48 8b 45 f8          	mov    rax,QWORD PTR [rbp-0x8]
+     267:	48 89 10             	mov    QWORD PTR [rax],rdx
+         outStr+=6;
+     26a:	48 83 45 f8 06       	add    QWORD PTR [rbp-0x8],0x6
+         (*(Ipp64u*)outStr) ^= in[1] << 4;
+     26f:	48 8b 45 f8          	mov    rax,QWORD PTR [rbp-0x8]
+     273:	48 8b 00             	mov    rax,QWORD PTR [rax]
+     276:	48 8b 55 e0          	mov    rdx,QWORD PTR [rbp-0x20]
+     27a:	48 83 c2 08          	add    rdx,0x8
+     27e:	48 8b 12             	mov    rdx,QWORD PTR [rdx]
+     281:	48 c1 e2 04          	shl    rdx,0x4
+     285:	48 31 c2             	xor    rdx,rax
+     288:	48 8b 45 f8          	mov    rax,QWORD PTR [rbp-0x8]
+     28c:	48 89 10             	mov    QWORD PTR [rax],rdx
+         outStr+=7;
+     28f:	48 83 45 f8 07       	add    QWORD PTR [rbp-0x8],0x7
+      for(; outBitSize>=(2*EXP_DIGIT_SIZE_AVX512); outBitSize-=(2*EXP_DIGIT_SIZE_AVX512), in+=2) {
+     294:	83 6d dc 68          	sub    DWORD PTR [rbp-0x24],0x68
+     298:	48 83 45 e0 10       	add    QWORD PTR [rbp-0x20],0x10
+     29d:	83 7d dc 67          	cmp    DWORD PTR [rbp-0x24],0x67
+     2a1:	7f b9                	jg     25c <dig52_regular+0x5c>
+      }
+      if(outBitSize>EXP_DIGIT_SIZE_AVX512) {
+     2a3:	83 7d dc 34          	cmp    DWORD PTR [rbp-0x24],0x34
+     2a7:	7e 5c                	jle    305 <dig52_regular+0x105>
+         putDig52(outStr, 7, in[0]);
+     2a9:	48 8b 45 e0          	mov    rax,QWORD PTR [rbp-0x20]
+     2ad:	48 8b 10             	mov    rdx,QWORD PTR [rax]
+     2b0:	48 8b 45 f8          	mov    rax,QWORD PTR [rbp-0x8]
+     2b4:	be 07 00 00 00       	mov    esi,0x7
+     2b9:	48 89 c7             	mov    rdi,rax
+     2bc:	e8 ff fe ff ff       	call   1c0 <putDig52>
+         outStr+=6;
+     2c1:	48 83 45 f8 06       	add    QWORD PTR [rbp-0x8],0x6
+         outBitSize -= EXP_DIGIT_SIZE_AVX512;
+     2c6:	83 6d dc 34          	sub    DWORD PTR [rbp-0x24],0x34
+         putDig52(outStr, BITS2WORD8_SIZE(outBitSize), (in[1]<<4 | in[0]>>48));
+     2ca:	48 8b 45 e0          	mov    rax,QWORD PTR [rbp-0x20]
+     2ce:	48 83 c0 08          	add    rax,0x8
+     2d2:	48 8b 00             	mov    rax,QWORD PTR [rax]
+     2d5:	48 c1 e0 04          	shl    rax,0x4
+     2d9:	48 89 c2             	mov    rdx,rax
+     2dc:	48 8b 45 e0          	mov    rax,QWORD PTR [rbp-0x20]
+     2e0:	48 8b 00             	mov    rax,QWORD PTR [rax]
+     2e3:	48 c1 e8 30          	shr    rax,0x30
+     2e7:	48 09 c2             	or     rdx,rax
+     2ea:	8b 45 dc             	mov    eax,DWORD PTR [rbp-0x24]
+     2ed:	83 c0 07             	add    eax,0x7
+     2f0:	c1 f8 03             	sar    eax,0x3
+     2f3:	89 c1                	mov    ecx,eax
+     2f5:	48 8b 45 f8          	mov    rax,QWORD PTR [rbp-0x8]
+     2f9:	89 ce                	mov    esi,ecx
+     2fb:	48 89 c7             	mov    rdi,rax
+     2fe:	e8 bd fe ff ff       	call   1c0 <putDig52>
+      }
+      else if(outBitSize) {
+         putDig52(outStr, BITS2WORD8_SIZE(outBitSize), in[0]);
+      }
+   }
+}
+     303:	eb 26                	jmp    32b <dig52_regular+0x12b>
+      else if(outBitSize) {
+     305:	83 7d dc 00          	cmp    DWORD PTR [rbp-0x24],0x0
+     309:	74 20                	je     32b <dig52_regular+0x12b>
+         putDig52(outStr, BITS2WORD8_SIZE(outBitSize), in[0]);
+     30b:	48 8b 45 e0          	mov    rax,QWORD PTR [rbp-0x20]
+     30f:	48 8b 10             	mov    rdx,QWORD PTR [rax]
+     312:	8b 45 dc             	mov    eax,DWORD PTR [rbp-0x24]
+     315:	83 c0 07             	add    eax,0x7
+     318:	c1 f8 03             	sar    eax,0x3
+     31b:	89 c1                	mov    ecx,eax
+     31d:	48 8b 45 f8          	mov    rax,QWORD PTR [rbp-0x8]
+     321:	89 ce                	mov    esi,ecx
+     323:	48 89 c7             	mov    rdi,rax
+     326:	e8 95 fe ff ff       	call   1c0 <putDig52>
+}
+     32b:	90                   	nop
+     32c:	c9                   	leave  
+     32d:	c3                   	ret    
+     32e:	66 66 2e 0f 1f 84 00 	data16 nop WORD PTR cs:[rax+rax*1+0x0]
+     335:	00 00 00 00 
+     339:	0f 1f 80 00 00 00 00 	nop    DWORD PTR [rax+0x0]
+
+0000000000000340 <loadu64>:
+// #if (SIMD_LEN == 256)
+  SIMD_TYPE(256)
+  #define SIMD_BYTES  (SIMD_LEN/8)
+  #define SIMD_QWORDS (SIMD_LEN/64)
+
+  __INLINE U64 loadu64(const void *p) {
+     340:	55                   	push   rbp
+     341:	48 89 e5             	mov    rbp,rsp
+     344:	48 83 e4 e0          	and    rsp,0xffffffffffffffe0
+     348:	48 89 7c 24 e8       	mov    QWORD PTR [rsp-0x18],rdi
+     34d:	48 8b 44 24 e8       	mov    rax,QWORD PTR [rsp-0x18]
+     352:	48 89 44 24 f8       	mov    QWORD PTR [rsp-0x8],rax
+}
+
+extern __inline __m256i __attribute__((__gnu_inline__, __always_inline__, __artificial__))
+_mm256_loadu_si256 (__m256i_u const *__P)
+{
+  return *__P;
+     357:	48 8b 44 24 f8       	mov    rax,QWORD PTR [rsp-0x8]
+     35c:	62 f1 fe 28 6f 00    	vmovdqu64 ymm0,YMMWORD PTR [rax]
+    return _mm256_loadu_si256((U64*)p);
+  }
+     362:	c9                   	leave  
+     363:	c3                   	ret    
+     364:	66 66 2e 0f 1f 84 00 	data16 nop WORD PTR cs:[rax+rax*1+0x0]
+     36b:	00 00 00 00 
+     36f:	66 66 2e 0f 1f 84 00 	data16 nop WORD PTR cs:[rax+rax*1+0x0]
+     376:	00 00 00 00 
+     37a:	66 0f 1f 44 00 00    	nop    WORD PTR [rax+rax*1+0x0]
+
+0000000000000380 <storeu64>:
+
+  __INLINE void storeu64(const void *p, U64 v) {
+     380:	55                   	push   rbp
+     381:	48 89 e5             	mov    rbp,rsp
+     384:	48 83 e4 e0          	and    rsp,0xffffffffffffffe0
+     388:	48 89 7c 24 c8       	mov    QWORD PTR [rsp-0x38],rdi
+     38d:	62 f1 fd 28 7f 44 24 	vmovdqa64 YMMWORD PTR [rsp-0x60],ymm0
+     394:	fd 
+     395:	48 8b 44 24 c8       	mov    rax,QWORD PTR [rsp-0x38]
+     39a:	48 89 44 24 d8       	mov    QWORD PTR [rsp-0x28],rax
+     39f:	62 f1 fd 28 6f 44 24 	vmovdqa64 ymm0,YMMWORD PTR [rsp-0x60]
+     3a6:	fd 
+     3a7:	62 f1 fd 28 7f 44 24 	vmovdqa64 YMMWORD PTR [rsp-0x20],ymm0
+     3ae:	ff 
+}
+
+extern __inline void __attribute__((__gnu_inline__, __always_inline__, __artificial__))
+_mm256_storeu_si256 (__m256i_u *__P, __m256i __A)
+{
+  *__P = __A;
+     3af:	62 f1 fd 28 6f 44 24 	vmovdqa64 ymm0,YMMWORD PTR [rsp-0x20]
+     3b6:	ff 
+     3b7:	48 8b 44 24 d8       	mov    rax,QWORD PTR [rsp-0x28]
+     3bc:	62 f1 fe 28 7f 00    	vmovdqu64 YMMWORD PTR [rax],ymm0
+}
+     3c2:	90                   	nop
+    _mm256_storeu_si256((U64*)p, v);
+  }
+     3c3:	90                   	nop
+     3c4:	c9                   	leave  
+     3c5:	c3                   	ret    
+     3c6:	66 66 2e 0f 1f 84 00 	data16 nop WORD PTR cs:[rax+rax*1+0x0]
+     3cd:	00 00 00 00 
+     3d1:	66 66 2e 0f 1f 84 00 	data16 nop WORD PTR cs:[rax+rax*1+0x0]
+     3d8:	00 00 00 00 
+     3dc:	0f 1f 40 00          	nop    DWORD PTR [rax+0x0]
+
+00000000000003e0 <fma52lo>:
+
+  #define set64 _mm256_set1_epi64x
+
+  #ifdef __GNUC__
+      static U64 fma52lo(U64 a, U64 b, U64 c)
+      {
+     3e0:	f3 0f 1e fa          	endbr64 
+     3e4:	55                   	push   rbp
+     3e5:	48 89 e5             	mov    rbp,rsp
+     3e8:	48 83 e4 e0          	and    rsp,0xffffffffffffffe0
+     3ec:	62 f1 fd 28 7f 44 24 	vmovdqa64 YMMWORD PTR [rsp-0x20],ymm0
+     3f3:	ff 
+     3f4:	62 f1 fd 28 7f 4c 24 	vmovdqa64 YMMWORD PTR [rsp-0x40],ymm1
+     3fb:	fe 
+     3fc:	62 f1 fd 28 7f 54 24 	vmovdqa64 YMMWORD PTR [rsp-0x60],ymm2
+     403:	fd 
+        __asm__ ( "vpmadd52luq %2, %1, %0" : "+x" (a): "x" (b), "x" (c) );
+     404:	62 f1 fd 28 6f 4c 24 	vmovdqa64 ymm1,YMMWORD PTR [rsp-0x40]
+     40b:	fe 
+     40c:	62 f1 fd 28 6f 54 24 	vmovdqa64 ymm2,YMMWORD PTR [rsp-0x60]
+     413:	fd 
+     414:	62 f1 fd 28 6f 44 24 	vmovdqa64 ymm0,YMMWORD PTR [rsp-0x20]
+     41b:	ff 
+     41c:	62 f2 f5 28 b4 c2    	vpmadd52luq ymm0,ymm1,ymm2
+     422:	62 f1 fd 28 7f 44 24 	vmovdqa64 YMMWORD PTR [rsp-0x20],ymm0
+     429:	ff 
+        return a;
+     42a:	62 f1 fd 28 6f 44 24 	vmovdqa64 ymm0,YMMWORD PTR [rsp-0x20]
+     431:	ff 
+      }
+     432:	c9                   	leave  
+     433:	c3                   	ret    
+     434:	66 66 2e 0f 1f 84 00 	data16 nop WORD PTR cs:[rax+rax*1+0x0]
+     43b:	00 00 00 00 
+     43f:	90                   	nop
+
+0000000000000440 <fma52hi>:
+
+      static U64 fma52hi(U64 a, U64 b, U64 c)
+      {
+     440:	f3 0f 1e fa          	endbr64 
+     444:	55                   	push   rbp
+     445:	48 89 e5             	mov    rbp,rsp
+     448:	48 83 e4 e0          	and    rsp,0xffffffffffffffe0
+     44c:	62 f1 fd 28 7f 44 24 	vmovdqa64 YMMWORD PTR [rsp-0x20],ymm0
+     453:	ff 
+     454:	62 f1 fd 28 7f 4c 24 	vmovdqa64 YMMWORD PTR [rsp-0x40],ymm1
+     45b:	fe 
+     45c:	62 f1 fd 28 7f 54 24 	vmovdqa64 YMMWORD PTR [rsp-0x60],ymm2
+     463:	fd 
+        __asm__ ( "vpmadd52huq %2, %1, %0" : "+x" (a): "x" (b), "x" (c) );
+     464:	62 f1 fd 28 6f 4c 24 	vmovdqa64 ymm1,YMMWORD PTR [rsp-0x40]
+     46b:	fe 
+     46c:	62 f1 fd 28 6f 54 24 	vmovdqa64 ymm2,YMMWORD PTR [rsp-0x60]
+     473:	fd 
+     474:	62 f1 fd 28 6f 44 24 	vmovdqa64 ymm0,YMMWORD PTR [rsp-0x20]
+     47b:	ff 
+     47c:	62 f2 f5 28 b5 c2    	vpmadd52huq ymm0,ymm1,ymm2
+     482:	62 f1 fd 28 7f 44 24 	vmovdqa64 YMMWORD PTR [rsp-0x20],ymm0
+     489:	ff 
+        return a;
+     48a:	62 f1 fd 28 6f 44 24 	vmovdqa64 ymm0,YMMWORD PTR [rsp-0x20]
+     491:	ff 
+      }
+     492:	c9                   	leave  
+     493:	c3                   	ret    
+     494:	66 66 2e 0f 1f 84 00 	data16 nop WORD PTR cs:[rax+rax*1+0x0]
+     49b:	00 00 00 00 
+     49f:	90                   	nop
+
+00000000000004a0 <add64>:
+
+  #define fma52lo_mem(r, a, b, c, o) _mm_madd52lo_epu64_(r, a, b, c, o)
+  #define fma52hi_mem(r, a, b, c, o) _mm_madd52hi_epu64_(r, a, b, c, o)
+
+  __INLINE U64 add64(U64 a, U64 b)
+  {
+     4a0:	55                   	push   rbp
+     4a1:	48 89 e5             	mov    rbp,rsp
+     4a4:	48 83 e4 e0          	and    rsp,0xffffffffffffffe0
+     4a8:	48 83 ec 08          	sub    rsp,0x8
+     4ac:	62 f1 fd 28 7f 84 24 	vmovdqa64 YMMWORD PTR [rsp-0x58],ymm0
+     4b3:	a8 ff ff ff 
+     4b7:	62 f1 fd 28 7f 8c 24 	vmovdqa64 YMMWORD PTR [rsp-0x78],ymm1
+     4be:	88 ff ff ff 
+     4c2:	62 f1 fd 28 6f 84 24 	vmovdqa64 ymm0,YMMWORD PTR [rsp-0x58]
+     4c9:	a8 ff ff ff 
+     4cd:	62 f1 fd 28 7f 84 24 	vmovdqa64 YMMWORD PTR [rsp-0x38],ymm0
+     4d4:	c8 ff ff ff 
+     4d8:	62 f1 fd 28 6f 84 24 	vmovdqa64 ymm0,YMMWORD PTR [rsp-0x78]
+     4df:	88 ff ff ff 
+     4e3:	62 f1 fd 28 7f 84 24 	vmovdqa64 YMMWORD PTR [rsp-0x18],ymm0
+     4ea:	e8 ff ff ff 
+
+extern __inline __m256i
+__attribute__ ((__gnu_inline__, __always_inline__, __artificial__))
+_mm256_add_epi64 (__m256i __A, __m256i __B)
+{
+  return (__m256i) ((__v4du)__A + (__v4du)__B);
+     4ee:	62 f1 fd 28 6f 8c 24 	vmovdqa64 ymm1,YMMWORD PTR [rsp-0x38]
+     4f5:	c8 ff ff ff 
+     4f9:	62 f1 fd 28 6f 84 24 	vmovdqa64 ymm0,YMMWORD PTR [rsp-0x18]
+     500:	e8 ff ff ff 
+     504:	c5 f5 d4 c0          	vpaddq ymm0,ymm1,ymm0
+    return _mm256_add_epi64(a, b);
+  }
+     508:	c9                   	leave  
+     509:	c3                   	ret    
+     50a:	66 66 2e 0f 1f 84 00 	data16 nop WORD PTR cs:[rax+rax*1+0x0]
+     511:	00 00 00 00 
+     515:	66 66 2e 0f 1f 84 00 	data16 nop WORD PTR cs:[rax+rax*1+0x0]
+     51c:	00 00 00 00 
+
+0000000000000520 <get_zero64>:
+}
+
+extern __inline __m256i __attribute__((__gnu_inline__, __always_inline__, __artificial__))
+_mm256_setzero_si256 (void)
+{
+  return __extension__ (__m256i)(__v4di){ 0, 0, 0, 0 };
+     520:	c5 f9 ef c0          	vpxor  xmm0,xmm0,xmm0
+  }
+
+  __INLINE U64 get_zero64()
+  {
+    return _mm256_setzero_si256();
+  }
+     524:	c3                   	ret    
+     525:	66 66 2e 0f 1f 84 00 	data16 nop WORD PTR cs:[rax+rax*1+0x0]
+     52c:	00 00 00 00 
+     530:	66 66 2e 0f 1f 84 00 	data16 nop WORD PTR cs:[rax+rax*1+0x0]
+     537:	00 00 00 00 
+     53b:	0f 1f 44 00 00       	nop    DWORD PTR [rax+rax*1+0x0]
+
+0000000000000540 <get64>:
+  }
+
+  #define or64 _mm256_or_si256
+  #define xor64 _mm256_xor_si256
+
+  static Ipp64u get64(U64 v, int idx) {
+     540:	f3 0f 1e fa          	endbr64 
+     544:	55                   	push   rbp
+     545:	48 89 e5             	mov    rbp,rsp
+     548:	48 83 e4 e0          	and    rsp,0xffffffffffffffe0
+     54c:	48 83 ec 08          	sub    rsp,0x8
+     550:	62 f1 fd 28 7f 84 24 	vmovdqa64 YMMWORD PTR [rsp-0x78],ymm0
+     557:	88 ff ff ff 
+     55b:	89 7c 24 b4          	mov    DWORD PTR [rsp-0x4c],edi
+    long long int res;
+    switch (idx) {
+     55f:	83 7c 24 b4 03       	cmp    DWORD PTR [rsp-0x4c],0x3
+     564:	74 78                	je     5de <get64+0x9e>
+     566:	83 7c 24 b4 03       	cmp    DWORD PTR [rsp-0x4c],0x3
+     56b:	0f 8f 9c 00 00 00    	jg     60d <get64+0xcd>
+     571:	83 7c 24 b4 01       	cmp    DWORD PTR [rsp-0x4c],0x1
+     576:	74 0c                	je     584 <get64+0x44>
+     578:	83 7c 24 b4 02       	cmp    DWORD PTR [rsp-0x4c],0x2
+     57d:	74 31                	je     5b0 <get64+0x70>
+     57f:	e9 89 00 00 00       	jmp    60d <get64+0xcd>
+      case 1: res = _mm256_extract_epi64(v, 1); break;
+     584:	62 f1 fd 28 6f 84 24 	vmovdqa64 ymm0,YMMWORD PTR [rsp-0x78]
+     58b:	88 ff ff ff 
+     58f:	c5 f8 29 44 24 e8    	vmovaps XMMWORD PTR [rsp-0x18],xmm0
+     595:	62 f1 fd 08 6f 84 24 	vmovdqa64 xmm0,XMMWORD PTR [rsp-0x18]
+     59c:	e8 ff ff ff 
+     5a0:	c4 e3 f9 16 c0 01    	vpextrq rax,xmm0,0x1
+     5a6:	48 89 44 24 c0       	mov    QWORD PTR [rsp-0x40],rax
+     5ab:	e9 83 00 00 00       	jmp    633 <get64+0xf3>
+      case 2: res = _mm256_extract_epi64(v, 2); break;
+     5b0:	62 f1 fd 28 6f 84 24 	vmovdqa64 ymm0,YMMWORD PTR [rsp-0x78]
+     5b7:	88 ff ff ff 
+     5bb:	c4 e3 7d 39 c0 01    	vextracti128 xmm0,ymm0,0x1
+     5c1:	c5 f8 29 44 24 d8    	vmovaps XMMWORD PTR [rsp-0x28],xmm0
+     5c7:	62 f1 fd 08 6f 84 24 	vmovdqa64 xmm0,XMMWORD PTR [rsp-0x28]
+     5ce:	d8 ff ff ff 
+     5d2:	c4 e1 f9 7e c0       	vmovq  rax,xmm0
+     5d7:	48 89 44 24 c0       	mov    QWORD PTR [rsp-0x40],rax
+     5dc:	eb 55                	jmp    633 <get64+0xf3>
+      case 3: res = _mm256_extract_epi64(v, 3); break;
+     5de:	62 f1 fd 28 6f 84 24 	vmovdqa64 ymm0,YMMWORD PTR [rsp-0x78]
+     5e5:	88 ff ff ff 
+     5e9:	c4 e3 7d 39 c0 01    	vextracti128 xmm0,ymm0,0x1
+     5ef:	c5 f8 29 44 24 c8    	vmovaps XMMWORD PTR [rsp-0x38],xmm0
+     5f5:	62 f1 fd 08 6f 84 24 	vmovdqa64 xmm0,XMMWORD PTR [rsp-0x38]
+     5fc:	c8 ff ff ff 
+     600:	c4 e3 f9 16 c0 01    	vpextrq rax,xmm0,0x1
+     606:	48 89 44 24 c0       	mov    QWORD PTR [rsp-0x40],rax
+     60b:	eb 26                	jmp    633 <get64+0xf3>
+      default: res = _mm256_extract_epi64(v, 0);
+     60d:	62 f1 fd 28 6f 84 24 	vmovdqa64 ymm0,YMMWORD PTR [rsp-0x78]
+     614:	88 ff ff ff 
+     618:	c5 f8 29 44 24 f8    	vmovaps XMMWORD PTR [rsp-0x8],xmm0
+     61e:	62 f1 fd 08 6f 84 24 	vmovdqa64 xmm0,XMMWORD PTR [rsp-0x8]
+     625:	f8 ff ff ff 
+     629:	c4 e1 f9 7e c0       	vmovq  rax,xmm0
+     62e:	48 89 44 24 c0       	mov    QWORD PTR [rsp-0x40],rax
+    }
+    return (Ipp64u)res;
+     633:	48 8b 44 24 c0       	mov    rax,QWORD PTR [rsp-0x40]
+  }
+     638:	c9                   	leave  
+     639:	c3                   	ret    
+     63a:	66 0f 1f 44 00 00    	nop    WORD PTR [rax+rax*1+0x0]
+
+0000000000000640 <extract_multiplier>:
+#define AMS ifma256_ams52x20
+
+__INLINE void extract_multiplier(Ipp64u *red_Y,
+                           const Ipp64u red_table[1U << EXP_WIN_SIZE][LEN52],
+                                 int red_table_idx)
+{
+     640:	4c 8d 54 24 08       	lea    r10,[rsp+0x8]
+     645:	48 83 e4 e0          	and    rsp,0xffffffffffffffe0
+     649:	41 ff 72 f8          	push   QWORD PTR [r10-0x8]
+     64d:	55                   	push   rbp
+     64e:	48 89 e5             	mov    rbp,rsp
+     651:	41 52                	push   r10
+     653:	48 81 ec 68 03 00 00 	sub    rsp,0x368
+     65a:	48 89 bd b8 fc ff ff 	mov    QWORD PTR [rbp-0x348],rdi
+     661:	48 89 b5 b0 fc ff ff 	mov    QWORD PTR [rbp-0x350],rsi
+     668:	89 95 ac fc ff ff    	mov    DWORD PTR [rbp-0x354],edx
+    U64 idx = set64(red_table_idx);
+     66e:	8b 85 ac fc ff ff    	mov    eax,DWORD PTR [rbp-0x354]
+     674:	48 98                	cdqe   
+     676:	48 89 85 e0 fc ff ff 	mov    QWORD PTR [rbp-0x320],rax
+}
+
+extern __inline __m256i __attribute__((__gnu_inline__, __always_inline__, __artificial__))
+_mm256_set1_epi64x (long long __A)
+{
+  return __extension__ (__m256i)(__v4di){ __A, __A, __A, __A };
+     67d:	c4 e2 7d 59 85 e0 fc 	vpbroadcastq ymm0,QWORD PTR [rbp-0x320]
+     684:	ff ff 
+     686:	62 f1 fd 28 7f 85 b0 	vmovdqa64 YMMWORD PTR [rbp-0x250],ymm0
+     68d:	fd ff ff 
+     690:	48 c7 85 d8 fc ff ff 	mov    QWORD PTR [rbp-0x328],0x0
+     697:	00 00 00 00 
+     69b:	c4 e2 7d 59 85 d8 fc 	vpbroadcastq ymm0,QWORD PTR [rbp-0x328]
+     6a2:	ff ff 
+    U64 cur_idx = set64(0);
+     6a4:	62 f1 fd 28 7f 85 f0 	vmovdqa64 YMMWORD PTR [rbp-0x310],ymm0
+     6ab:	fc ff ff 
+
+    U64 t0, t1, t2, t3, t4;
+    t0 = t1 = t2 = t3 = t4 = get_zero64();
+     6ae:	b8 00 00 00 00       	mov    eax,0x0
+     6b3:	e8 68 fe ff ff       	call   520 <get_zero64>
+     6b8:	62 f1 fd 28 7f 85 90 	vmovdqa64 YMMWORD PTR [rbp-0x270],ymm0
+     6bf:	fd ff ff 
+     6c2:	62 f1 fd 28 6f 85 90 	vmovdqa64 ymm0,YMMWORD PTR [rbp-0x270]
+     6c9:	fd ff ff 
+     6cc:	62 f1 fd 28 7f 85 70 	vmovdqa64 YMMWORD PTR [rbp-0x290],ymm0
+     6d3:	fd ff ff 
+     6d6:	62 f1 fd 28 6f 85 70 	vmovdqa64 ymm0,YMMWORD PTR [rbp-0x290]
+     6dd:	fd ff ff 
+     6e0:	62 f1 fd 28 7f 85 50 	vmovdqa64 YMMWORD PTR [rbp-0x2b0],ymm0
+     6e7:	fd ff ff 
+     6ea:	62 f1 fd 28 6f 85 50 	vmovdqa64 ymm0,YMMWORD PTR [rbp-0x2b0]
+     6f1:	fd ff ff 
+     6f4:	62 f1 fd 28 7f 85 30 	vmovdqa64 YMMWORD PTR [rbp-0x2d0],ymm0
+     6fb:	fd ff ff 
+     6fe:	62 f1 fd 28 6f 85 30 	vmovdqa64 ymm0,YMMWORD PTR [rbp-0x2d0]
+     705:	fd ff ff 
+     708:	62 f1 fd 28 7f 85 10 	vmovdqa64 YMMWORD PTR [rbp-0x2f0],ymm0
+     70f:	fd ff ff 
+
+    for (int t = 0; t < (1U << EXP_WIN_SIZE); ++t, cur_idx = add64(cur_idx, set64(1))) {
+     712:	c7 85 d4 fc ff ff 00 	mov    DWORD PTR [rbp-0x32c],0x0
+     719:	00 00 00 
+     71c:	e9 8b 03 00 00       	jmp    aac <extract_multiplier+0x46c>
+        __mmask8 m = _mm256_cmp_epi64_mask(idx, cur_idx, _MM_CMPINT_EQ);
+     721:	62 f1 fd 28 6f 85 b0 	vmovdqa64 ymm0,YMMWORD PTR [rbp-0x250]
+     728:	fd ff ff 
+     72b:	62 f1 fd 28 6f 8d f0 	vmovdqa64 ymm1,YMMWORD PTR [rbp-0x310]
+     732:	fc ff ff 
+     735:	c5 f5 46 c9          	kxnorb k1,k1,k1
+     739:	62 f3 fd 29 1f c1 00 	vpcmpeqq k0{k1},ymm0,ymm1
+     740:	c5 f9 91 85 ce fc ff 	kmovb  BYTE PTR [rbp-0x332],k0
+     747:	ff 
+
+        t0 = _mm256_mask_xor_epi64(t0, m, t0, loadu64(&red_table[t][4*0]));
+     748:	8b 85 d4 fc ff ff    	mov    eax,DWORD PTR [rbp-0x32c]
+     74e:	48 63 d0             	movsxd rdx,eax
+     751:	48 89 d0             	mov    rax,rdx
+     754:	48 c1 e0 02          	shl    rax,0x2
+     758:	48 01 d0             	add    rax,rdx
+     75b:	48 c1 e0 05          	shl    rax,0x5
+     75f:	48 89 c2             	mov    rdx,rax
+     762:	48 8b 85 b0 fc ff ff 	mov    rax,QWORD PTR [rbp-0x350]
+     769:	48 01 d0             	add    rax,rdx
+     76c:	48 89 c7             	mov    rdi,rax
+     76f:	e8 cc fb ff ff       	call   340 <loadu64>
+     774:	0f b6 85 ce fc ff ff 	movzx  eax,BYTE PTR [rbp-0x332]
+     77b:	62 f1 fd 28 6f 8d 10 	vmovdqa64 ymm1,YMMWORD PTR [rbp-0x2f0]
+     782:	fd ff ff 
+     785:	62 f1 fd 28 7f 8d 50 	vmovdqa64 YMMWORD PTR [rbp-0xb0],ymm1
+     78c:	ff ff ff 
+     78f:	88 85 d3 fc ff ff    	mov    BYTE PTR [rbp-0x32d],al
+     795:	62 f1 fd 28 6f 8d 10 	vmovdqa64 ymm1,YMMWORD PTR [rbp-0x2f0]
+     79c:	fd ff ff 
+     79f:	62 f1 fd 28 7f 8d 70 	vmovdqa64 YMMWORD PTR [rbp-0x90],ymm1
+     7a6:	ff ff ff 
+     7a9:	62 f1 fd 28 7f 85 90 	vmovdqa64 YMMWORD PTR [rbp-0x70],ymm0
+     7b0:	ff ff ff 
+extern __inline __m256i
+__attribute__ ((__gnu_inline__, __always_inline__, __artificial__))
+_mm256_mask_xor_epi64 (__m256i __W, __mmask8 __U, __m256i __A,
+		       __m256i __B)
+{
+  return (__m256i) __builtin_ia32_pxorq256_mask ((__v4di) __A,
+     7b3:	0f b6 85 d3 fc ff ff 	movzx  eax,BYTE PTR [rbp-0x32d]
+     7ba:	62 f1 fd 28 6f 8d 90 	vmovdqa64 ymm1,YMMWORD PTR [rbp-0x70]
+     7c1:	ff ff ff 
+     7c4:	62 f1 fd 28 6f 85 50 	vmovdqa64 ymm0,YMMWORD PTR [rbp-0xb0]
+     7cb:	ff ff ff 
+     7ce:	c5 f9 92 d0          	kmovb  k2,eax
+     7d2:	62 f1 f5 2a ef 85 70 	vpxorq ymm0{k2},ymm1,YMMWORD PTR [rbp-0x90]
+     7d9:	ff ff ff 
+     7dc:	90                   	nop
+     7dd:	62 f1 fd 28 7f 85 10 	vmovdqa64 YMMWORD PTR [rbp-0x2f0],ymm0
+     7e4:	fd ff ff 
+        t1 = _mm256_mask_xor_epi64(t1, m, t1, loadu64(&red_table[t][4*1]));
+     7e7:	8b 85 d4 fc ff ff    	mov    eax,DWORD PTR [rbp-0x32c]
+     7ed:	48 63 d0             	movsxd rdx,eax
+     7f0:	48 89 d0             	mov    rax,rdx
+     7f3:	48 c1 e0 02          	shl    rax,0x2
+     7f7:	48 01 d0             	add    rax,rdx
+     7fa:	48 c1 e0 05          	shl    rax,0x5
+     7fe:	48 89 c2             	mov    rdx,rax
+     801:	48 8b 85 b0 fc ff ff 	mov    rax,QWORD PTR [rbp-0x350]
+     808:	48 01 d0             	add    rax,rdx
+     80b:	48 83 c0 20          	add    rax,0x20
+     80f:	48 89 c7             	mov    rdi,rax
+     812:	e8 29 fb ff ff       	call   340 <loadu64>
+     817:	0f b6 85 ce fc ff ff 	movzx  eax,BYTE PTR [rbp-0x332]
+     81e:	62 f1 fd 28 6f 8d 30 	vmovdqa64 ymm1,YMMWORD PTR [rbp-0x2d0]
+     825:	fd ff ff 
+     828:	62 f1 fd 28 7f 8d f0 	vmovdqa64 YMMWORD PTR [rbp-0x110],ymm1
+     82f:	fe ff ff 
+     832:	88 85 d2 fc ff ff    	mov    BYTE PTR [rbp-0x32e],al
+     838:	62 f1 fd 28 6f 8d 30 	vmovdqa64 ymm1,YMMWORD PTR [rbp-0x2d0]
+     83f:	fd ff ff 
+     842:	62 f1 fd 28 7f 8d 10 	vmovdqa64 YMMWORD PTR [rbp-0xf0],ymm1
+     849:	ff ff ff 
+     84c:	62 f1 fd 28 7f 85 30 	vmovdqa64 YMMWORD PTR [rbp-0xd0],ymm0
+     853:	ff ff ff 
+     856:	0f b6 85 d2 fc ff ff 	movzx  eax,BYTE PTR [rbp-0x32e]
+     85d:	62 f1 fd 28 6f 8d 30 	vmovdqa64 ymm1,YMMWORD PTR [rbp-0xd0]
+     864:	ff ff ff 
+     867:	62 f1 fd 28 6f 85 f0 	vmovdqa64 ymm0,YMMWORD PTR [rbp-0x110]
+     86e:	fe ff ff 
+     871:	c5 f9 92 d8          	kmovb  k3,eax
+     875:	62 f1 f5 2b ef 85 10 	vpxorq ymm0{k3},ymm1,YMMWORD PTR [rbp-0xf0]
+     87c:	ff ff ff 
+     87f:	90                   	nop
+     880:	62 f1 fd 28 7f 85 30 	vmovdqa64 YMMWORD PTR [rbp-0x2d0],ymm0
+     887:	fd ff ff 
+        t2 = _mm256_mask_xor_epi64(t2, m, t2, loadu64(&red_table[t][4*2]));
+     88a:	8b 85 d4 fc ff ff    	mov    eax,DWORD PTR [rbp-0x32c]
+     890:	48 63 d0             	movsxd rdx,eax
+     893:	48 89 d0             	mov    rax,rdx
+     896:	48 c1 e0 02          	shl    rax,0x2
+     89a:	48 01 d0             	add    rax,rdx
+     89d:	48 c1 e0 05          	shl    rax,0x5
+     8a1:	48 89 c2             	mov    rdx,rax
+     8a4:	48 8b 85 b0 fc ff ff 	mov    rax,QWORD PTR [rbp-0x350]
+     8ab:	48 01 d0             	add    rax,rdx
+     8ae:	48 83 c0 40          	add    rax,0x40
+     8b2:	48 89 c7             	mov    rdi,rax
+     8b5:	e8 86 fa ff ff       	call   340 <loadu64>
+     8ba:	0f b6 85 ce fc ff ff 	movzx  eax,BYTE PTR [rbp-0x332]
+     8c1:	62 f1 fd 28 6f 8d 50 	vmovdqa64 ymm1,YMMWORD PTR [rbp-0x2b0]
+     8c8:	fd ff ff 
+     8cb:	62 f1 fd 28 7f 8d 90 	vmovdqa64 YMMWORD PTR [rbp-0x170],ymm1
+     8d2:	fe ff ff 
+     8d5:	88 85 d1 fc ff ff    	mov    BYTE PTR [rbp-0x32f],al
+     8db:	62 f1 fd 28 6f 8d 50 	vmovdqa64 ymm1,YMMWORD PTR [rbp-0x2b0]
+     8e2:	fd ff ff 
+     8e5:	62 f1 fd 28 7f 8d b0 	vmovdqa64 YMMWORD PTR [rbp-0x150],ymm1
+     8ec:	fe ff ff 
+     8ef:	62 f1 fd 28 7f 85 d0 	vmovdqa64 YMMWORD PTR [rbp-0x130],ymm0
+     8f6:	fe ff ff 
+     8f9:	0f b6 85 d1 fc ff ff 	movzx  eax,BYTE PTR [rbp-0x32f]
+     900:	62 f1 fd 28 6f 8d d0 	vmovdqa64 ymm1,YMMWORD PTR [rbp-0x130]
+     907:	fe ff ff 
+     90a:	62 f1 fd 28 6f 85 90 	vmovdqa64 ymm0,YMMWORD PTR [rbp-0x170]
+     911:	fe ff ff 
+     914:	c5 f9 92 e0          	kmovb  k4,eax
+     918:	62 f1 f5 2c ef 85 b0 	vpxorq ymm0{k4},ymm1,YMMWORD PTR [rbp-0x150]
+     91f:	fe ff ff 
+     922:	90                   	nop
+     923:	62 f1 fd 28 7f 85 50 	vmovdqa64 YMMWORD PTR [rbp-0x2b0],ymm0
+     92a:	fd ff ff 
+        t3 = _mm256_mask_xor_epi64(t3, m, t3, loadu64(&red_table[t][4*3]));
+     92d:	8b 85 d4 fc ff ff    	mov    eax,DWORD PTR [rbp-0x32c]
+     933:	48 63 d0             	movsxd rdx,eax
+     936:	48 89 d0             	mov    rax,rdx
+     939:	48 c1 e0 02          	shl    rax,0x2
+     93d:	48 01 d0             	add    rax,rdx
+     940:	48 c1 e0 05          	shl    rax,0x5
+     944:	48 89 c2             	mov    rdx,rax
+     947:	48 8b 85 b0 fc ff ff 	mov    rax,QWORD PTR [rbp-0x350]
+     94e:	48 01 d0             	add    rax,rdx
+     951:	48 83 c0 60          	add    rax,0x60
+     955:	48 89 c7             	mov    rdi,rax
+     958:	e8 e3 f9 ff ff       	call   340 <loadu64>
+     95d:	0f b6 85 ce fc ff ff 	movzx  eax,BYTE PTR [rbp-0x332]
+     964:	62 f1 fd 28 6f 8d 70 	vmovdqa64 ymm1,YMMWORD PTR [rbp-0x290]
+     96b:	fd ff ff 
+     96e:	62 f1 fd 28 7f 8d 30 	vmovdqa64 YMMWORD PTR [rbp-0x1d0],ymm1
+     975:	fe ff ff 
+     978:	88 85 d0 fc ff ff    	mov    BYTE PTR [rbp-0x330],al
+     97e:	62 f1 fd 28 6f 8d 70 	vmovdqa64 ymm1,YMMWORD PTR [rbp-0x290]
+     985:	fd ff ff 
+     988:	62 f1 fd 28 7f 8d 50 	vmovdqa64 YMMWORD PTR [rbp-0x1b0],ymm1
+     98f:	fe ff ff 
+     992:	62 f1 fd 28 7f 85 70 	vmovdqa64 YMMWORD PTR [rbp-0x190],ymm0
+     999:	fe ff ff 
+     99c:	0f b6 85 d0 fc ff ff 	movzx  eax,BYTE PTR [rbp-0x330]
+     9a3:	62 f1 fd 28 6f 8d 70 	vmovdqa64 ymm1,YMMWORD PTR [rbp-0x190]
+     9aa:	fe ff ff 
+     9ad:	62 f1 fd 28 6f 85 30 	vmovdqa64 ymm0,YMMWORD PTR [rbp-0x1d0]
+     9b4:	fe ff ff 
+     9b7:	c5 f9 92 e8          	kmovb  k5,eax
+     9bb:	62 f1 f5 2d ef 85 50 	vpxorq ymm0{k5},ymm1,YMMWORD PTR [rbp-0x1b0]
+     9c2:	fe ff ff 
+     9c5:	90                   	nop
+     9c6:	62 f1 fd 28 7f 85 70 	vmovdqa64 YMMWORD PTR [rbp-0x290],ymm0
+     9cd:	fd ff ff 
+        t4 = _mm256_mask_xor_epi64(t4, m, t4, loadu64(&red_table[t][4*4]));
+     9d0:	8b 85 d4 fc ff ff    	mov    eax,DWORD PTR [rbp-0x32c]
+     9d6:	48 63 d0             	movsxd rdx,eax
+     9d9:	48 89 d0             	mov    rax,rdx
+     9dc:	48 c1 e0 02          	shl    rax,0x2
+     9e0:	48 01 d0             	add    rax,rdx
+     9e3:	48 c1 e0 05          	shl    rax,0x5
+     9e7:	48 89 c2             	mov    rdx,rax
+     9ea:	48 8b 85 b0 fc ff ff 	mov    rax,QWORD PTR [rbp-0x350]
+     9f1:	48 01 d0             	add    rax,rdx
+     9f4:	48 83 e8 80          	sub    rax,0xffffffffffffff80
+     9f8:	48 89 c7             	mov    rdi,rax
+     9fb:	e8 40 f9 ff ff       	call   340 <loadu64>
+     a00:	0f b6 85 ce fc ff ff 	movzx  eax,BYTE PTR [rbp-0x332]
+     a07:	62 f1 fd 28 6f 8d 90 	vmovdqa64 ymm1,YMMWORD PTR [rbp-0x270]
+     a0e:	fd ff ff 
+     a11:	62 f1 fd 28 7f 8d d0 	vmovdqa64 YMMWORD PTR [rbp-0x230],ymm1
+     a18:	fd ff ff 
+     a1b:	88 85 cf fc ff ff    	mov    BYTE PTR [rbp-0x331],al
+     a21:	62 f1 fd 28 6f 8d 90 	vmovdqa64 ymm1,YMMWORD PTR [rbp-0x270]
+     a28:	fd ff ff 
+     a2b:	62 f1 fd 28 7f 8d f0 	vmovdqa64 YMMWORD PTR [rbp-0x210],ymm1
+     a32:	fd ff ff 
+     a35:	62 f1 fd 28 7f 85 10 	vmovdqa64 YMMWORD PTR [rbp-0x1f0],ymm0
+     a3c:	fe ff ff 
+     a3f:	0f b6 85 cf fc ff ff 	movzx  eax,BYTE PTR [rbp-0x331]
+     a46:	62 f1 fd 28 6f 8d 10 	vmovdqa64 ymm1,YMMWORD PTR [rbp-0x1f0]
+     a4d:	fe ff ff 
+     a50:	62 f1 fd 28 6f 85 d0 	vmovdqa64 ymm0,YMMWORD PTR [rbp-0x230]
+     a57:	fd ff ff 
+     a5a:	c5 f9 92 f0          	kmovb  k6,eax
+     a5e:	62 f1 f5 2e ef 85 f0 	vpxorq ymm0{k6},ymm1,YMMWORD PTR [rbp-0x210]
+     a65:	fd ff ff 
+     a68:	90                   	nop
+     a69:	62 f1 fd 28 7f 85 90 	vmovdqa64 YMMWORD PTR [rbp-0x270],ymm0
+     a70:	fd ff ff 
+    for (int t = 0; t < (1U << EXP_WIN_SIZE); ++t, cur_idx = add64(cur_idx, set64(1))) {
+     a73:	ff 85 d4 fc ff ff    	inc    DWORD PTR [rbp-0x32c]
+     a79:	48 c7 85 e8 fc ff ff 	mov    QWORD PTR [rbp-0x318],0x1
+     a80:	01 00 00 00 
+     a84:	c4 e2 7d 59 85 e8 fc 	vpbroadcastq ymm0,QWORD PTR [rbp-0x318]
+     a8b:	ff ff 
+     a8d:	62 f1 fd 28 6f c8    	vmovdqa64 ymm1,ymm0
+     a93:	62 f1 fd 28 6f 85 f0 	vmovdqa64 ymm0,YMMWORD PTR [rbp-0x310]
+     a9a:	fc ff ff 
+     a9d:	e8 fe f9 ff ff       	call   4a0 <add64>
+     aa2:	62 f1 fd 28 7f 85 f0 	vmovdqa64 YMMWORD PTR [rbp-0x310],ymm0
+     aa9:	fc ff ff 
+     aac:	8b 85 d4 fc ff ff    	mov    eax,DWORD PTR [rbp-0x32c]
+     ab2:	83 f8 1f             	cmp    eax,0x1f
+     ab5:	0f 86 66 fc ff ff    	jbe    721 <extract_multiplier+0xe1>
+     abb:	62 f1 fd 28 6f 85 b0 	vmovdqa64 ymm0,YMMWORD PTR [rbp-0x250]
+     ac2:	fd ff ff 
+     ac5:	62 f1 fd 28 7f 85 b0 	vmovdqa64 YMMWORD PTR [rbp-0x50],ymm0
+     acc:	ff ff ff 
+     acf:	62 f1 fd 28 6f 85 b0 	vmovdqa64 ymm0,YMMWORD PTR [rbp-0x250]
+     ad6:	fd ff ff 
+     ad9:	62 f1 fd 28 7f 85 d0 	vmovdqa64 YMMWORD PTR [rbp-0x30],ymm0
+     ae0:	ff ff ff 
+
+extern __inline __m256i
+__attribute__ ((__gnu_inline__, __always_inline__, __artificial__))
+_mm256_xor_si256 (__m256i __A, __m256i __B)
+{
+  return (__m256i) ((__v4du)__A ^ (__v4du)__B);
+     ae3:	62 f1 fd 28 6f 8d b0 	vmovdqa64 ymm1,YMMWORD PTR [rbp-0x50]
+     aea:	ff ff ff 
+     aed:	62 f1 fd 28 6f 85 d0 	vmovdqa64 ymm0,YMMWORD PTR [rbp-0x30]
+     af4:	ff ff ff 
+     af7:	c5 f5 ef c0          	vpxor  ymm0,ymm1,ymm0
+    }
+
+    /* Clear index */
+    idx = xor64(idx, idx);
+     afb:	62 f1 fd 28 7f 85 b0 	vmovdqa64 YMMWORD PTR [rbp-0x250],ymm0
+     b02:	fd ff ff 
+
+    storeu64(&red_Y[4*0], t0);
+     b05:	62 f1 fd 28 6f 85 10 	vmovdqa64 ymm0,YMMWORD PTR [rbp-0x2f0]
+     b0c:	fd ff ff 
+     b0f:	48 8b 85 b8 fc ff ff 	mov    rax,QWORD PTR [rbp-0x348]
+     b16:	48 89 c7             	mov    rdi,rax
+     b19:	e8 62 f8 ff ff       	call   380 <storeu64>
+    storeu64(&red_Y[4*1], t1);
+     b1e:	48 8b 85 b8 fc ff ff 	mov    rax,QWORD PTR [rbp-0x348]
+     b25:	48 83 c0 20          	add    rax,0x20
+     b29:	62 f1 fd 28 6f 85 30 	vmovdqa64 ymm0,YMMWORD PTR [rbp-0x2d0]
+     b30:	fd ff ff 
+     b33:	48 89 c7             	mov    rdi,rax
+     b36:	e8 45 f8 ff ff       	call   380 <storeu64>
+    storeu64(&red_Y[4*2], t2);
+     b3b:	48 8b 85 b8 fc ff ff 	mov    rax,QWORD PTR [rbp-0x348]
+     b42:	48 83 c0 40          	add    rax,0x40
+     b46:	62 f1 fd 28 6f 85 50 	vmovdqa64 ymm0,YMMWORD PTR [rbp-0x2b0]
+     b4d:	fd ff ff 
+     b50:	48 89 c7             	mov    rdi,rax
+     b53:	e8 28 f8 ff ff       	call   380 <storeu64>
+    storeu64(&red_Y[4*3], t3);
+     b58:	48 8b 85 b8 fc ff ff 	mov    rax,QWORD PTR [rbp-0x348]
+     b5f:	48 83 c0 60          	add    rax,0x60
+     b63:	62 f1 fd 28 6f 85 70 	vmovdqa64 ymm0,YMMWORD PTR [rbp-0x290]
+     b6a:	fd ff ff 
+     b6d:	48 89 c7             	mov    rdi,rax
+     b70:	e8 0b f8 ff ff       	call   380 <storeu64>
+    storeu64(&red_Y[4*4], t4);
+     b75:	48 8b 85 b8 fc ff ff 	mov    rax,QWORD PTR [rbp-0x348]
+     b7c:	48 83 e8 80          	sub    rax,0xffffffffffffff80
+     b80:	62 f1 fd 28 6f 85 90 	vmovdqa64 ymm0,YMMWORD PTR [rbp-0x270]
+     b87:	fd ff ff 
+     b8a:	48 89 c7             	mov    rdi,rax
+     b8d:	e8 ee f7 ff ff       	call   380 <storeu64>
+}
+     b92:	90                   	nop
+     b93:	48 81 c4 68 03 00 00 	add    rsp,0x368
+     b9a:	41 5a                	pop    r10
+     b9c:	5d                   	pop    rbp
+     b9d:	49 8d 62 f8          	lea    rsp,[r10-0x8]
+     ba1:	c3                   	ret    
+     ba2:	66 66 2e 0f 1f 84 00 	data16 nop WORD PTR cs:[rax+rax*1+0x0]
+     ba9:	00 00 00 00 
+     bad:	66 66 2e 0f 1f 84 00 	data16 nop WORD PTR cs:[rax+rax*1+0x0]
+     bb4:	00 00 00 00 
+     bb8:	0f 1f 84 00 00 00 00 	nop    DWORD PTR [rax+rax*1+0x0]
+     bbf:	00 
+
+0000000000000bc0 <k1_ifma256_exp52x20>:
+                                 const Ipp64u *base,
+                                 const Ipp64u *exp,
+                                 const Ipp64u *modulus,
+                                 const Ipp64u *toMont,
+                                 const Ipp64u k0))
+{
+     bc0:	f3 0f 1e fa          	endbr64 
+     bc4:	55                   	push   rbp
+     bc5:	48 89 e5             	mov    rbp,rsp
+     bc8:	48 83 e4 c0          	and    rsp,0xffffffffffffffc0
+     bcc:	48 81 ec 00 10 00 00 	sub    rsp,0x1000
+     bd3:	48 83 0c 24 00       	or     QWORD PTR [rsp],0x0
+     bd8:	48 81 ec c0 06 00 00 	sub    rsp,0x6c0
+     bdf:	48 89 7c 24 28       	mov    QWORD PTR [rsp+0x28],rdi
+     be4:	48 89 74 24 20       	mov    QWORD PTR [rsp+0x20],rsi
+     be9:	48 89 54 24 18       	mov    QWORD PTR [rsp+0x18],rdx
+     bee:	48 89 4c 24 10       	mov    QWORD PTR [rsp+0x10],rcx
+     bf3:	4c 89 44 24 08       	mov    QWORD PTR [rsp+0x8],r8
+     bf8:	4c 89 0c 24          	mov    QWORD PTR [rsp],r9
+
+   /* pre-computed table of base powers */
+   __ALIGN64 Ipp64u red_table[1U << EXP_WIN_SIZE][LEN52];
+
+   /* zero all temp buffers (due to zero padding) */
+   ZEXPAND_BNU(red_Y, 0, LEN52);
+     bfc:	c7 44 24 3c 00 00 00 	mov    DWORD PTR [rsp+0x3c],0x0
+     c03:	00 
+     c04:	eb 16                	jmp    c1c <k1_ifma256_exp52x20+0x5c>
+     c06:	8b 44 24 3c          	mov    eax,DWORD PTR [rsp+0x3c]
+     c0a:	48 98                	cdqe   
+     c0c:	48 c7 84 c4 40 01 00 	mov    QWORD PTR [rsp+rax*8+0x140],0x0
+     c13:	00 00 00 00 00 
+     c18:	ff 44 24 3c          	inc    DWORD PTR [rsp+0x3c]
+     c1c:	83 7c 24 3c 13       	cmp    DWORD PTR [rsp+0x3c],0x13
+     c21:	7e e3                	jle    c06 <k1_ifma256_exp52x20+0x46>
+   ZEXPAND_BNU((Ipp64u*)red_table, 0, LEN52 * (1U << EXP_WIN_SIZE));
+     c23:	c7 44 24 40 00 00 00 	mov    DWORD PTR [rsp+0x40],0x0
+     c2a:	00 
+     c2b:	eb 24                	jmp    c51 <k1_ifma256_exp52x20+0x91>
+     c2d:	8b 44 24 40          	mov    eax,DWORD PTR [rsp+0x40]
+     c31:	48 98                	cdqe   
+     c33:	48 8d 14 c5 00 00 00 	lea    rdx,[rax*8+0x0]
+     c3a:	00 
+     c3b:	48 8d 84 24 c0 02 00 	lea    rax,[rsp+0x2c0]
+     c42:	00 
+     c43:	48 01 d0             	add    rax,rdx
+     c46:	48 c7 00 00 00 00 00 	mov    QWORD PTR [rax],0x0
+     c4d:	ff 44 24 40          	inc    DWORD PTR [rsp+0x40]
+     c51:	8b 44 24 40          	mov    eax,DWORD PTR [rsp+0x40]
+     c55:	3d 7f 02 00 00       	cmp    eax,0x27f
+     c5a:	76 d1                	jbe    c2d <k1_ifma256_exp52x20+0x6d>
+   ZEXPAND_BNU(red_X, 0, LEN52); /* table[0] = mont(x^0) = mont(1) */
+     c5c:	c7 44 24 44 00 00 00 	mov    DWORD PTR [rsp+0x44],0x0
+     c63:	00 
+     c64:	eb 16                	jmp    c7c <k1_ifma256_exp52x20+0xbc>
+     c66:	8b 44 24 44          	mov    eax,DWORD PTR [rsp+0x44]
+     c6a:	48 98                	cdqe   
+     c6c:	48 c7 84 c4 00 02 00 	mov    QWORD PTR [rsp+rax*8+0x200],0x0
+     c73:	00 00 00 00 00 
+     c78:	ff 44 24 44          	inc    DWORD PTR [rsp+0x44]
+     c7c:	83 7c 24 44 13       	cmp    DWORD PTR [rsp+0x44],0x13
+     c81:	7e e3                	jle    c66 <k1_ifma256_exp52x20+0xa6>
+   int idx;
+
+   /*
+   // compute table of powers base^i, i=0, ..., (2^EXP_WIN_SIZE) -1
+   */
+   red_X[0] = 1ULL;
+     c83:	48 c7 84 24 00 02 00 	mov    QWORD PTR [rsp+0x200],0x1
+     c8a:	00 01 00 00 00 
+   AMM(red_table[0], red_X, toMont, modulus, k0);
+     c8f:	48 8b 3c 24          	mov    rdi,QWORD PTR [rsp]
+     c93:	48 8b 4c 24 10       	mov    rcx,QWORD PTR [rsp+0x10]
+     c98:	48 8b 54 24 08       	mov    rdx,QWORD PTR [rsp+0x8]
+     c9d:	48 8d b4 24 00 02 00 	lea    rsi,[rsp+0x200]
+     ca4:	00 
+     ca5:	48 8d 84 24 c0 02 00 	lea    rax,[rsp+0x2c0]
+     cac:	00 
+     cad:	49 89 f8             	mov    r8,rdi
+     cb0:	48 89 c7             	mov    rdi,rax
+     cb3:	e8 00 00 00 00       	call   cb8 <k1_ifma256_exp52x20+0xf8>
+   AMM(red_table[1], base, toMont, modulus, k0);
+     cb8:	4c 8b 04 24          	mov    r8,QWORD PTR [rsp]
+     cbc:	48 8b 4c 24 10       	mov    rcx,QWORD PTR [rsp+0x10]
+     cc1:	48 8b 54 24 08       	mov    rdx,QWORD PTR [rsp+0x8]
+     cc6:	48 8b 44 24 20       	mov    rax,QWORD PTR [rsp+0x20]
+     ccb:	48 8d b4 24 c0 02 00 	lea    rsi,[rsp+0x2c0]
+     cd2:	00 
+     cd3:	48 8d be a0 00 00 00 	lea    rdi,[rsi+0xa0]
+     cda:	48 89 c6             	mov    rsi,rax
+     cdd:	e8 00 00 00 00       	call   ce2 <k1_ifma256_exp52x20+0x122>
+
+   for (idx = 1; idx < (1U << EXP_WIN_SIZE)/2; idx++) {
+     ce2:	c7 44 24 48 01 00 00 	mov    DWORD PTR [rsp+0x48],0x1
+     ce9:	00 
+     cea:	e9 c7 00 00 00       	jmp    db6 <k1_ifma256_exp52x20+0x1f6>
+      AMS(red_table[2*idx],   red_table[idx],  modulus, k0);
+     cef:	48 8d 8c 24 c0 02 00 	lea    rcx,[rsp+0x2c0]
+     cf6:	00 
+     cf7:	8b 44 24 48          	mov    eax,DWORD PTR [rsp+0x48]
+     cfb:	48 63 d0             	movsxd rdx,eax
+     cfe:	48 89 d0             	mov    rax,rdx
+     d01:	48 c1 e0 02          	shl    rax,0x2
+     d05:	48 01 d0             	add    rax,rdx
+     d08:	48 c1 e0 05          	shl    rax,0x5
+     d0c:	48 8d 34 01          	lea    rsi,[rcx+rax*1]
+     d10:	8b 44 24 48          	mov    eax,DWORD PTR [rsp+0x48]
+     d14:	01 c0                	add    eax,eax
+     d16:	48 8d 8c 24 c0 02 00 	lea    rcx,[rsp+0x2c0]
+     d1d:	00 
+     d1e:	48 63 d0             	movsxd rdx,eax
+     d21:	48 89 d0             	mov    rax,rdx
+     d24:	48 c1 e0 02          	shl    rax,0x2
+     d28:	48 01 d0             	add    rax,rdx
+     d2b:	48 c1 e0 05          	shl    rax,0x5
+     d2f:	48 8d 3c 01          	lea    rdi,[rcx+rax*1]
+     d33:	48 8b 14 24          	mov    rdx,QWORD PTR [rsp]
+     d37:	48 8b 44 24 10       	mov    rax,QWORD PTR [rsp+0x10]
+     d3c:	48 89 d1             	mov    rcx,rdx
+     d3f:	48 89 c2             	mov    rdx,rax
+     d42:	e8 00 00 00 00       	call   d47 <k1_ifma256_exp52x20+0x187>
+      AMM(red_table[2*idx+1], red_table[2*idx],red_table[1], modulus, k0);
+     d47:	8b 44 24 48          	mov    eax,DWORD PTR [rsp+0x48]
+     d4b:	01 c0                	add    eax,eax
+     d4d:	48 8d 8c 24 c0 02 00 	lea    rcx,[rsp+0x2c0]
+     d54:	00 
+     d55:	48 63 d0             	movsxd rdx,eax
+     d58:	48 89 d0             	mov    rax,rdx
+     d5b:	48 c1 e0 02          	shl    rax,0x2
+     d5f:	48 01 d0             	add    rax,rdx
+     d62:	48 c1 e0 05          	shl    rax,0x5
+     d66:	48 8d 34 01          	lea    rsi,[rcx+rax*1]
+     d6a:	8b 44 24 48          	mov    eax,DWORD PTR [rsp+0x48]
+     d6e:	01 c0                	add    eax,eax
+     d70:	ff c0                	inc    eax
+     d72:	48 8d 8c 24 c0 02 00 	lea    rcx,[rsp+0x2c0]
+     d79:	00 
+     d7a:	48 63 d0             	movsxd rdx,eax
+     d7d:	48 89 d0             	mov    rax,rdx
+     d80:	48 c1 e0 02          	shl    rax,0x2
+     d84:	48 01 d0             	add    rax,rdx
+     d87:	48 c1 e0 05          	shl    rax,0x5
+     d8b:	48 8d 3c 01          	lea    rdi,[rcx+rax*1]
+     d8f:	48 8b 0c 24          	mov    rcx,QWORD PTR [rsp]
+     d93:	48 8b 44 24 10       	mov    rax,QWORD PTR [rsp+0x10]
+     d98:	48 8d 94 24 c0 02 00 	lea    rdx,[rsp+0x2c0]
+     d9f:	00 
+     da0:	48 81 c2 a0 00 00 00 	add    rdx,0xa0
+     da7:	49 89 c8             	mov    r8,rcx
+     daa:	48 89 c1             	mov    rcx,rax
+     dad:	e8 00 00 00 00       	call   db2 <k1_ifma256_exp52x20+0x1f2>
+   for (idx = 1; idx < (1U << EXP_WIN_SIZE)/2; idx++) {
+     db2:	ff 44 24 48          	inc    DWORD PTR [rsp+0x48]
+     db6:	8b 44 24 48          	mov    eax,DWORD PTR [rsp+0x48]
+     dba:	83 f8 0f             	cmp    eax,0xf
+     dbd:	0f 86 2c ff ff ff    	jbe    cef <k1_ifma256_exp52x20+0x12f>
+   }
+
+   /* copy and expand exponents */
+   ZEXPAND_COPY_BNU(expz, LEN64+1, exp, LEN64);
+     dc3:	c7 44 24 4c 00 00 00 	mov    DWORD PTR [rsp+0x4c],0x0
+     dca:	00 
+     dcb:	eb 2b                	jmp    df8 <k1_ifma256_exp52x20+0x238>
+     dcd:	8b 44 24 4c          	mov    eax,DWORD PTR [rsp+0x4c]
+     dd1:	48 98                	cdqe   
+     dd3:	48 8d 14 c5 00 00 00 	lea    rdx,[rax*8+0x0]
+     dda:	00 
+     ddb:	48 8b 44 24 18       	mov    rax,QWORD PTR [rsp+0x18]
+     de0:	48 01 d0             	add    rax,rdx
+     de3:	48 8b 10             	mov    rdx,QWORD PTR [rax]
+     de6:	8b 44 24 4c          	mov    eax,DWORD PTR [rsp+0x4c]
+     dea:	48 98                	cdqe   
+     dec:	48 89 94 c4 80 00 00 	mov    QWORD PTR [rsp+rax*8+0x80],rdx
+     df3:	00 
+     df4:	ff 44 24 4c          	inc    DWORD PTR [rsp+0x4c]
+     df8:	83 7c 24 4c 0f       	cmp    DWORD PTR [rsp+0x4c],0xf
+     dfd:	7e ce                	jle    dcd <k1_ifma256_exp52x20+0x20d>
+     dff:	eb 16                	jmp    e17 <k1_ifma256_exp52x20+0x257>
+     e01:	8b 44 24 4c          	mov    eax,DWORD PTR [rsp+0x4c]
+     e05:	48 98                	cdqe   
+     e07:	48 c7 84 c4 80 00 00 	mov    QWORD PTR [rsp+rax*8+0x80],0x0
+     e0e:	00 00 00 00 00 
+     e13:	ff 44 24 4c          	inc    DWORD PTR [rsp+0x4c]
+     e17:	83 7c 24 4c 10       	cmp    DWORD PTR [rsp+0x4c],0x10
+     e1c:	7e e3                	jle    e01 <k1_ifma256_exp52x20+0x241>
+
+   /* exponentiation */
+   {
+      int rem = BITSIZE_MODULUS % EXP_WIN_SIZE;
+     e1e:	c7 44 24 58 04 00 00 	mov    DWORD PTR [rsp+0x58],0x4
+     e25:	00 
+      int delta = rem ? rem : EXP_WIN_SIZE;
+     e26:	83 7c 24 58 00       	cmp    DWORD PTR [rsp+0x58],0x0
+     e2b:	74 06                	je     e33 <k1_ifma256_exp52x20+0x273>
+     e2d:	8b 44 24 58          	mov    eax,DWORD PTR [rsp+0x58]
+     e31:	eb 05                	jmp    e38 <k1_ifma256_exp52x20+0x278>
+     e33:	b8 05 00 00 00       	mov    eax,0x5
+     e38:	89 44 24 5c          	mov    DWORD PTR [rsp+0x5c],eax
+      Ipp64u table_idx_mask = EXP_WIN_MASK;
+     e3c:	48 c7 44 24 68 1f 00 	mov    QWORD PTR [rsp+0x68],0x1f
+     e43:	00 00 
+
+      int exp_bit_no = BITSIZE_MODULUS - delta;
+     e45:	b8 00 04 00 00       	mov    eax,0x400
+     e4a:	2b 44 24 5c          	sub    eax,DWORD PTR [rsp+0x5c]
+     e4e:	89 44 24 50          	mov    DWORD PTR [rsp+0x50],eax
+      int exp_chunk_no = exp_bit_no / 64;
+     e52:	8b 44 24 50          	mov    eax,DWORD PTR [rsp+0x50]
+     e56:	8d 50 3f             	lea    edx,[rax+0x3f]
+     e59:	85 c0                	test   eax,eax
+     e5b:	0f 48 c2             	cmovs  eax,edx
+     e5e:	c1 f8 06             	sar    eax,0x6
+     e61:	89 44 24 60          	mov    DWORD PTR [rsp+0x60],eax
+      int exp_chunk_shift = exp_bit_no % 64;
+     e65:	8b 44 24 50          	mov    eax,DWORD PTR [rsp+0x50]
+     e69:	99                   	cdq    
+     e6a:	c1 ea 1a             	shr    edx,0x1a
+     e6d:	01 d0                	add    eax,edx
+     e6f:	83 e0 3f             	and    eax,0x3f
+     e72:	29 d0                	sub    eax,edx
+     e74:	89 44 24 64          	mov    DWORD PTR [rsp+0x64],eax
+
+      /* process 1-st exp window - just init result */
+      Ipp64u red_table_idx = expz[exp_chunk_no];
+     e78:	8b 44 24 60          	mov    eax,DWORD PTR [rsp+0x60]
+     e7c:	48 98                	cdqe   
+     e7e:	48 8b 84 c4 80 00 00 	mov    rax,QWORD PTR [rsp+rax*8+0x80]
+     e85:	00 
+     e86:	48 89 44 24 70       	mov    QWORD PTR [rsp+0x70],rax
+      red_table_idx = red_table_idx >> exp_chunk_shift;
+     e8b:	8b 44 24 64          	mov    eax,DWORD PTR [rsp+0x64]
+     e8f:	89 c1                	mov    ecx,eax
+     e91:	48 d3 6c 24 70       	shr    QWORD PTR [rsp+0x70],cl
+
+      extract_multiplier(red_Y, (const Ipp64u(*)[LEN52])red_table, (int)red_table_idx);
+     e96:	48 8b 44 24 70       	mov    rax,QWORD PTR [rsp+0x70]
+     e9b:	89 c2                	mov    edx,eax
+     e9d:	48 8d 8c 24 c0 02 00 	lea    rcx,[rsp+0x2c0]
+     ea4:	00 
+     ea5:	48 8d 84 24 40 01 00 	lea    rax,[rsp+0x140]
+     eac:	00 
+     ead:	48 89 ce             	mov    rsi,rcx
+     eb0:	48 89 c7             	mov    rdi,rax
+     eb3:	e8 88 f7 ff ff       	call   640 <extract_multiplier>
+
+      /* process other exp windows */
+      for (exp_bit_no -= EXP_WIN_SIZE; exp_bit_no >= 0; exp_bit_no -= EXP_WIN_SIZE) {
+     eb8:	8b 44 24 50          	mov    eax,DWORD PTR [rsp+0x50]
+     ebc:	83 e8 05             	sub    eax,0x5
+     ebf:	89 44 24 50          	mov    DWORD PTR [rsp+0x50],eax
+     ec3:	e9 91 01 00 00       	jmp    1059 <k1_ifma256_exp52x20+0x499>
+         /* series of squaring */
+         AMS(red_Y, red_Y, modulus, k0);
+     ec8:	48 8b 0c 24          	mov    rcx,QWORD PTR [rsp]
+     ecc:	48 8b 54 24 10       	mov    rdx,QWORD PTR [rsp+0x10]
+     ed1:	48 8d b4 24 40 01 00 	lea    rsi,[rsp+0x140]
+     ed8:	00 
+     ed9:	48 8d 84 24 40 01 00 	lea    rax,[rsp+0x140]
+     ee0:	00 
+     ee1:	48 89 c7             	mov    rdi,rax
+     ee4:	e8 00 00 00 00       	call   ee9 <k1_ifma256_exp52x20+0x329>
+         AMS(red_Y, red_Y, modulus, k0);
+     ee9:	48 8b 0c 24          	mov    rcx,QWORD PTR [rsp]
+     eed:	48 8b 54 24 10       	mov    rdx,QWORD PTR [rsp+0x10]
+     ef2:	48 8d b4 24 40 01 00 	lea    rsi,[rsp+0x140]
+     ef9:	00 
+     efa:	48 8d 84 24 40 01 00 	lea    rax,[rsp+0x140]
+     f01:	00 
+     f02:	48 89 c7             	mov    rdi,rax
+     f05:	e8 00 00 00 00       	call   f0a <k1_ifma256_exp52x20+0x34a>
+         AMS(red_Y, red_Y, modulus, k0);
+     f0a:	48 8b 0c 24          	mov    rcx,QWORD PTR [rsp]
+     f0e:	48 8b 54 24 10       	mov    rdx,QWORD PTR [rsp+0x10]
+     f13:	48 8d b4 24 40 01 00 	lea    rsi,[rsp+0x140]
+     f1a:	00 
+     f1b:	48 8d 84 24 40 01 00 	lea    rax,[rsp+0x140]
+     f22:	00 
+     f23:	48 89 c7             	mov    rdi,rax
+     f26:	e8 00 00 00 00       	call   f2b <k1_ifma256_exp52x20+0x36b>
+         AMS(red_Y, red_Y, modulus, k0);
+     f2b:	48 8b 0c 24          	mov    rcx,QWORD PTR [rsp]
+     f2f:	48 8b 54 24 10       	mov    rdx,QWORD PTR [rsp+0x10]
+     f34:	48 8d b4 24 40 01 00 	lea    rsi,[rsp+0x140]
+     f3b:	00 
+     f3c:	48 8d 84 24 40 01 00 	lea    rax,[rsp+0x140]
+     f43:	00 
+     f44:	48 89 c7             	mov    rdi,rax
+     f47:	e8 00 00 00 00       	call   f4c <k1_ifma256_exp52x20+0x38c>
+         AMS(red_Y, red_Y, modulus, k0);
+     f4c:	48 8b 0c 24          	mov    rcx,QWORD PTR [rsp]
+     f50:	48 8b 54 24 10       	mov    rdx,QWORD PTR [rsp+0x10]
+     f55:	48 8d b4 24 40 01 00 	lea    rsi,[rsp+0x140]
+     f5c:	00 
+     f5d:	48 8d 84 24 40 01 00 	lea    rax,[rsp+0x140]
+     f64:	00 
+     f65:	48 89 c7             	mov    rdi,rax
+     f68:	e8 00 00 00 00       	call   f6d <k1_ifma256_exp52x20+0x3ad>
+
+         /* extract pre-computed multiplier from the table */
+         {
+            Ipp64u T;
+            exp_chunk_no = exp_bit_no / 64;
+     f6d:	8b 44 24 50          	mov    eax,DWORD PTR [rsp+0x50]
+     f71:	8d 50 3f             	lea    edx,[rax+0x3f]
+     f74:	85 c0                	test   eax,eax
+     f76:	0f 48 c2             	cmovs  eax,edx
+     f79:	c1 f8 06             	sar    eax,0x6
+     f7c:	89 44 24 60          	mov    DWORD PTR [rsp+0x60],eax
+            exp_chunk_shift = exp_bit_no % 64;
+     f80:	8b 44 24 50          	mov    eax,DWORD PTR [rsp+0x50]
+     f84:	99                   	cdq    
+     f85:	c1 ea 1a             	shr    edx,0x1a
+     f88:	01 d0                	add    eax,edx
+     f8a:	83 e0 3f             	and    eax,0x3f
+     f8d:	29 d0                	sub    eax,edx
+     f8f:	89 44 24 64          	mov    DWORD PTR [rsp+0x64],eax
+
+            red_table_idx = expz[exp_chunk_no];
+     f93:	8b 44 24 60          	mov    eax,DWORD PTR [rsp+0x60]
+     f97:	48 98                	cdqe   
+     f99:	48 8b 84 c4 80 00 00 	mov    rax,QWORD PTR [rsp+rax*8+0x80]
+     fa0:	00 
+     fa1:	48 89 44 24 70       	mov    QWORD PTR [rsp+0x70],rax
+            T = expz[exp_chunk_no+1];
+     fa6:	8b 44 24 60          	mov    eax,DWORD PTR [rsp+0x60]
+     faa:	ff c0                	inc    eax
+     fac:	48 98                	cdqe   
+     fae:	48 8b 84 c4 80 00 00 	mov    rax,QWORD PTR [rsp+rax*8+0x80]
+     fb5:	00 
+     fb6:	48 89 44 24 78       	mov    QWORD PTR [rsp+0x78],rax
+
+            red_table_idx = red_table_idx >> exp_chunk_shift;
+     fbb:	8b 44 24 64          	mov    eax,DWORD PTR [rsp+0x64]
+     fbf:	89 c1                	mov    ecx,eax
+     fc1:	48 d3 6c 24 70       	shr    QWORD PTR [rsp+0x70],cl
+            T = exp_chunk_shift == 0 ? 0 : T << (64 - exp_chunk_shift);
+     fc6:	83 7c 24 64 00       	cmp    DWORD PTR [rsp+0x64],0x0
+     fcb:	74 15                	je     fe2 <k1_ifma256_exp52x20+0x422>
+     fcd:	b8 40 00 00 00       	mov    eax,0x40
+     fd2:	2b 44 24 64          	sub    eax,DWORD PTR [rsp+0x64]
+     fd6:	48 8b 54 24 78       	mov    rdx,QWORD PTR [rsp+0x78]
+     fdb:	c4 e2 f9 f7 c2       	shlx   rax,rdx,rax
+     fe0:	eb 05                	jmp    fe7 <k1_ifma256_exp52x20+0x427>
+     fe2:	b8 00 00 00 00       	mov    eax,0x0
+     fe7:	48 89 44 24 78       	mov    QWORD PTR [rsp+0x78],rax
+            red_table_idx = (red_table_idx ^ T) & table_idx_mask;
+     fec:	48 8b 44 24 70       	mov    rax,QWORD PTR [rsp+0x70]
+     ff1:	48 33 44 24 78       	xor    rax,QWORD PTR [rsp+0x78]
+     ff6:	48 23 44 24 68       	and    rax,QWORD PTR [rsp+0x68]
+     ffb:	48 89 44 24 70       	mov    QWORD PTR [rsp+0x70],rax
+
+            extract_multiplier(red_X, (const Ipp64u(*)[LEN52])red_table, (int)red_table_idx);
+    1000:	48 8b 44 24 70       	mov    rax,QWORD PTR [rsp+0x70]
+    1005:	89 c2                	mov    edx,eax
+    1007:	48 8d 8c 24 c0 02 00 	lea    rcx,[rsp+0x2c0]
+    100e:	00 
+    100f:	48 8d 84 24 00 02 00 	lea    rax,[rsp+0x200]
+    1016:	00 
+    1017:	48 89 ce             	mov    rsi,rcx
+    101a:	48 89 c7             	mov    rdi,rax
+    101d:	e8 1e f6 ff ff       	call   640 <extract_multiplier>
+            AMM(red_Y, red_Y, red_X, modulus, k0);
+    1022:	48 8b 3c 24          	mov    rdi,QWORD PTR [rsp]
+    1026:	48 8b 4c 24 10       	mov    rcx,QWORD PTR [rsp+0x10]
+    102b:	48 8d 94 24 00 02 00 	lea    rdx,[rsp+0x200]
+    1032:	00 
+    1033:	48 8d b4 24 40 01 00 	lea    rsi,[rsp+0x140]
+    103a:	00 
+    103b:	48 8d 84 24 40 01 00 	lea    rax,[rsp+0x140]
+    1042:	00 
+    1043:	49 89 f8             	mov    r8,rdi
+    1046:	48 89 c7             	mov    rdi,rax
+    1049:	e8 00 00 00 00       	call   104e <k1_ifma256_exp52x20+0x48e>
+      for (exp_bit_no -= EXP_WIN_SIZE; exp_bit_no >= 0; exp_bit_no -= EXP_WIN_SIZE) {
+    104e:	8b 44 24 50          	mov    eax,DWORD PTR [rsp+0x50]
+    1052:	83 e8 05             	sub    eax,0x5
+    1055:	89 44 24 50          	mov    DWORD PTR [rsp+0x50],eax
+    1059:	83 7c 24 50 00       	cmp    DWORD PTR [rsp+0x50],0x0
+    105e:	0f 89 64 fe ff ff    	jns    ec8 <k1_ifma256_exp52x20+0x308>
+         }
+      }
+   }
+
+   /* clear exponents */
+   PurgeBlock((Ipp64u*)expz, (LEN64+1)*(int)sizeof(Ipp64u));
+    1064:	48 8d 84 24 80 00 00 	lea    rax,[rsp+0x80]
+    106b:	00 
+    106c:	be 88 00 00 00       	mov    esi,0x88
+    1071:	48 89 c7             	mov    rdi,rax
+    1074:	e8 00 00 00 00       	call   1079 <k1_ifma256_exp52x20+0x4b9>
+
+   /* convert result back in regular 2^52 domain */
+   ZEXPAND_BNU(red_X, 0, LEN52);
+    1079:	c7 44 24 54 00 00 00 	mov    DWORD PTR [rsp+0x54],0x0
+    1080:	00 
+    1081:	eb 16                	jmp    1099 <k1_ifma256_exp52x20+0x4d9>
+    1083:	8b 44 24 54          	mov    eax,DWORD PTR [rsp+0x54]
+    1087:	48 98                	cdqe   
+    1089:	48 c7 84 c4 00 02 00 	mov    QWORD PTR [rsp+rax*8+0x200],0x0
+    1090:	00 00 00 00 00 
+    1095:	ff 44 24 54          	inc    DWORD PTR [rsp+0x54]
+    1099:	83 7c 24 54 13       	cmp    DWORD PTR [rsp+0x54],0x13
+    109e:	7e e3                	jle    1083 <k1_ifma256_exp52x20+0x4c3>
+   red_X[0] = 1ULL;
+    10a0:	48 c7 84 24 00 02 00 	mov    QWORD PTR [rsp+0x200],0x1
+    10a7:	00 01 00 00 00 
+   AMM(out, red_Y, red_X, modulus, k0);
+    10ac:	48 8b 3c 24          	mov    rdi,QWORD PTR [rsp]
+    10b0:	48 8b 4c 24 10       	mov    rcx,QWORD PTR [rsp+0x10]
+    10b5:	48 8d 94 24 00 02 00 	lea    rdx,[rsp+0x200]
+    10bc:	00 
+    10bd:	48 8d b4 24 40 01 00 	lea    rsi,[rsp+0x140]
+    10c4:	00 
+    10c5:	48 8b 44 24 28       	mov    rax,QWORD PTR [rsp+0x28]
+    10ca:	49 89 f8             	mov    r8,rdi
+    10cd:	48 89 c7             	mov    rdi,rax
+    10d0:	e8 00 00 00 00       	call   10d5 <k1_ifma256_exp52x20+0x515>
+}
+    10d5:	90                   	nop
+    10d6:	c9                   	leave  
+    10d7:	c3                   	ret    
+
+#endif
+
+#endif
 #endif
