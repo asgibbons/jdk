@@ -9197,7 +9197,7 @@ address generate_avx_ghash_processBlocks() {
       StubRoutines::_bigIntegerLeftShiftWorker = generate_bigIntegerLeftShift();
     }
     if (UseMontgomeryMultiplyIntrinsic) {
-      if (VM_Version::supports_avx512ifma()) {
+      if (!VM_Version::supports_avx512ifma()) {
         StubRoutines::_montgomeryMultiply50x20 = generate_montgomeryMultiply50x20();
         StubRoutines::_montgomeryMultiply = generate_montgomeryMultiply(false);
       } else {
@@ -9206,7 +9206,7 @@ address generate_avx_ghash_processBlocks() {
       }
     }
     if (UseMontgomerySquareIntrinsic) {
-      if (VM_Version::supports_avx512ifma()) {   // ASGASG
+      if (!VM_Version::supports_avx512ifma()) {   // ASGASG
         StubRoutines::_montgomerySquare = generate_montgomeryMultiply(true);
       } else {
         StubRoutines::_montgomerySquare

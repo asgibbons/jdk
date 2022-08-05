@@ -442,7 +442,7 @@ void MacroAssembler::montgomeryMultiply52x20(Register out, Register a, Register 
   pop(rbx);
 }
 
-
+#if 0
 void MacroAssembler::montgomeryMultiply52x30(Register out, Register a, Register b, Register m, Register inv)
 {
   // Windows regs    |  Linux regs
@@ -2469,5 +2469,6 @@ _mm256_xor_si256 (__m256i __A, __m256i __B)
 
 #endif
 
+#endif
 #endif
 #endif

@@ -3130,8 +3130,8 @@ public class BigInteger extends Number implements Comparable<BigInteger> {
         // Convert base to Montgomery form
         int[] a = leftShift(base, base.length, modLen << 5);
 
-	System.out.println("a length = " + a.length + ", base length = " + base.length + ", this length = " + mag.length + ", y length = " + y.mag.length);
-	System.out.println("modLen = " + modLen + ", exp length = " + exp.length + ", mod length = " + z.mag.length);
+	//System.out.println("a length = " + a.length + ", base length = " + base.length + ", this length = " + mag.length + ", y length = " + y.mag.length);
+	//System.out.println("modLen = " + modLen + ", exp length = " + exp.length + ", mod length = " + z.mag.length);
 
         MutableBigInteger q = new MutableBigInteger(),
                           a2 = new MutableBigInteger(a),
