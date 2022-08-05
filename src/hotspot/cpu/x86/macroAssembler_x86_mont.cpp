@@ -29,7 +29,7 @@
 #include "runtime/stubRoutines.hpp"
 #include "macroAssembler_x86.hpp"
 
-#if _LP64 || 1   // CHANGE THIS
+#if _LP64
 void MacroAssembler::montgomeryMultiply52x20(Register out, Register a, Register b, Register m, Register inv)
 {
   // Windows regs    |  Linux regs
