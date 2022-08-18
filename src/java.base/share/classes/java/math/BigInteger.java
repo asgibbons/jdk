@@ -3150,14 +3150,14 @@ public class BigInteger extends Number implements Comparable<BigInteger> {
            table[0] = t2;
         }
 
-	System.out.println("modLen = " + modLen + ", table[0] length = " + table[0].length + ", mod length = " + mod.length);
+	//System.out.println("modLen = " + modLen + ", table[0] length = " + table[0].length + ", mod length = " + mod.length);
         // Set b to the square of the base
         int[] b = montgomerySquare(table[0], mod, modLen, inv, null);
-	System.out.println("b length = " + b.length);
+	//System.out.println("b length = " + b.length);
 
         // Set t to high half of b
         int[] t = Arrays.copyOf(b, modLen);
-	System.out.println("t length = " + t.length);
+	//System.out.println("t length = " + t.length);
 
         // Fill in the table with odd powers of the base
         for (int i=1; i < tblmask; i++) {

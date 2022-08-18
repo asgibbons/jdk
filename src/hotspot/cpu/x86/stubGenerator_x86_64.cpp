@@ -7277,7 +7277,7 @@ address generate_avx_ghash_processBlocks() {
 
   /***
    *  Arguments:
-   *  void montgomeryMultiply50x20(jint *out_ints, jint *a_ints, jint *b_ints, jint *n_ints, jlong inv) {
+   *  void montgomeryMultiply52x20(jint *out_ints, jint *a_ints, jint *b_ints, jint *n_ints, jlong inv) {
    *
    *  Inputs:
    *   c_rarg0   - int   *out
@@ -7296,9 +7296,9 @@ address generate_avx_ghash_processBlocks() {
   // c_rarg2 (r8)    |  c_rarg2 (rdx)
   // c_rarg3 (r9)    |  c_rarg3 (rcx)
   // r10             |  c_rarg4 (r8)
-  address generate_montgomeryMultiply50x20() {
+  address generate_montgomeryMultiply52x20() {
     __ align(CodeEntryAlignment);
-    StubCodeMark mark(this, "StubRoutines", "montgomeryMultiply50x20");
+    StubCodeMark mark(this, "StubRoutines", "montgomeryMultiply52x20");
     address start = __ pc();
     const Register inv = c_rarg4;
 
@@ -7457,8 +7457,8 @@ address generate_avx_ghash_processBlocks() {
     __ movq(MM_m, m);
     __ movq(MM_res, rsp);
 
-    __ cmpl(len, 32);
-    __ jcc(Assembler::greater, L_30);
+    // __ cmpl(len, 32);
+    // __ jcc(Assembler::greater, L_30);
     // Transform all inputs to radix-52
     transform_r52x20();
 
@@ -7466,9 +7466,54 @@ address generate_avx_ghash_processBlocks() {
     __ movq(tmp_result, MM_res);
 //    __ movq(inv, MM_inv);
 
-#if 0
+#if 1
     __ mov64(inv, 0x3f529565d1fe2729);
+    __ shlq(inv, 12);
+    __ shrq(inv, 12);
+    __ movq(MM_inv, inv);
 
+    __ mov64(rdx, 0x00068a3dcd97bd4a);
+    __ movq(Address(tmp_result, 0x00 + 1 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x000ec49c4a07d867);
+    __ movq(Address(tmp_result, 0x08 + 1 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x000e94d298d39458);
+    __ movq(Address(tmp_result, 0x10 + 1 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x0002c6953b9fb3fe);
+    __ movq(Address(tmp_result, 0x18 + 1 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x000d8905a1cb7074);
+    __ movq(Address(tmp_result, 0x20 + 1 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x0001fccde64fc059);
+    __ movq(Address(tmp_result, 0x28 + 1 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x000b37879cb6b114);
+    __ movq(Address(tmp_result, 0x30 + 1 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x00040beaa85d37d8);
+    __ movq(Address(tmp_result, 0x38 + 1 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x000308b42ae0aa1d);
+    __ movq(Address(tmp_result, 0x40 + 1 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x0009bc61ad12412e);
+    __ movq(Address(tmp_result, 0x48 + 1 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x000396e6268b709c);
+    __ movq(Address(tmp_result, 0x50 + 1 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x0003b1630392f94f);
+    __ movq(Address(tmp_result, 0x58 + 1 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x00097370ce1ac939);
+    __ movq(Address(tmp_result, 0x60 + 1 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x0002baa268659d9b);
+    __ movq(Address(tmp_result, 0x68 + 1 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x000b67a1b1b878a6);
+    __ movq(Address(tmp_result, 0x70 + 1 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x000ad283742552d6);
+    __ movq(Address(tmp_result, 0x78 + 1 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x000c5bf6a69241bb);
+    __ movq(Address(tmp_result, 0x80 + 1 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x0003320b6f95cbb3);
+    __ movq(Address(tmp_result, 0x88 + 1 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x000a283fed413b89);
+    __ movq(Address(tmp_result, 0x90 + 1 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x00000007793ed9ec);
+    __ movq(Address(tmp_result, 0x98 + 1 * MM_XFORM_ARRAY_SIZE), rdx);
+
+#if 0
     __ mov64(rdx, 0x00081325874db68e);
     __ movq(Address(tmp_result, 0x00 + 1 * MM_XFORM_ARRAY_SIZE), rdx);
     __ mov64(rdx, 0x000e734f913bc3a0);
@@ -7509,7 +7554,9 @@ address generate_avx_ghash_processBlocks() {
     __ movq(Address(tmp_result, 0x90 + 1 * MM_XFORM_ARRAY_SIZE), rdx);
     __ mov64(rdx, 0x000000007ca8db6b);
     __ movq(Address(tmp_result, 0x98 + 1 * MM_XFORM_ARRAY_SIZE), rdx);
+#endif
 
+#if 0
     __ mov64(rdx, 0x000f7c8d37a23eac);
     __ movq(Address(tmp_result, 0x00 + 2 * MM_XFORM_ARRAY_SIZE), rdx);
     __ mov64(rdx, 0x000cca72b68594cf);
@@ -7550,6 +7597,92 @@ address generate_avx_ghash_processBlocks() {
     __ movq(Address(tmp_result, 0x90 + 2 * MM_XFORM_ARRAY_SIZE), rdx);
     __ mov64(rdx, 0x00000009cbae2dc6);
     __ movq(Address(tmp_result, 0x98 + 2 * MM_XFORM_ARRAY_SIZE), rdx);
+#endif
+
+#if 0
+    __ mov64(rdx, 0x0004327d982a7f27);
+    __ movq(Address(tmp_result, 0x00 + 2 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x00090930ab7d7c7a);
+    __ movq(Address(tmp_result, 0x08 + 2 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x0007cdf09496e575);
+    __ movq(Address(tmp_result, 0x10 + 2 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x000934e2e60cb812);
+    __ movq(Address(tmp_result, 0x18 + 2 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x0003b3088dc05f5e);
+    __ movq(Address(tmp_result, 0x20 + 2 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x0001864856d530bd);
+    __ movq(Address(tmp_result, 0x28 + 2 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x00037be23062bb47);
+    __ movq(Address(tmp_result, 0x30 + 2 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x0007cd28a33454c2);
+    __ movq(Address(tmp_result, 0x38 + 2 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x000bff34e5725090);
+    __ movq(Address(tmp_result, 0x40 + 2 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x0001b83d4ab6fac6);
+    __ movq(Address(tmp_result, 0x48 + 2 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x00059488d5c92aa2);
+    __ movq(Address(tmp_result, 0x50 + 2 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x000da4f106606f34);
+    __ movq(Address(tmp_result, 0x58 + 2 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x00015b16641f590c);
+    __ movq(Address(tmp_result, 0x60 + 2 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x000a631f28a8786a);
+    __ movq(Address(tmp_result, 0x68 + 2 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x000b18e053de713c);
+    __ movq(Address(tmp_result, 0x70 + 2 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x000f54b1ec224198);
+    __ movq(Address(tmp_result, 0x78 + 2 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x000a817226ffa9b8);
+    __ movq(Address(tmp_result, 0x80 + 2 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x0007363b5cd318f0);
+    __ movq(Address(tmp_result, 0x88 + 2 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x0007af4dfce2b592);
+    __ movq(Address(tmp_result, 0x90 + 2 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x00000008fbba1acd);
+    __ movq(Address(tmp_result, 0x98 + 2 * MM_XFORM_ARRAY_SIZE), rdx);
+#endif
+
+    __ mov64(rdx, 0x000d2814b643f22d);
+    __ movq(Address(tmp_result, 0x00 + 2 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x00006e71803aa251);
+    __ movq(Address(tmp_result, 0x08 + 2 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x000e6497923f5e24);
+    __ movq(Address(tmp_result, 0x10 + 2 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x000c08a3b2a8b510);
+    __ movq(Address(tmp_result, 0x18 + 2 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x000b82e170ce826f);
+    __ movq(Address(tmp_result, 0x20 + 2 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x000a334ab36847c2);
+    __ movq(Address(tmp_result, 0x28 + 2 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x00084d17ebd9411b);
+    __ movq(Address(tmp_result, 0x30 + 2 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x0000c9b00f2d20d3);
+    __ movq(Address(tmp_result, 0x38 + 2 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x0001dbfceaa23461);
+    __ movq(Address(tmp_result, 0x40 + 2 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x00030905867cf8c4);
+    __ movq(Address(tmp_result, 0x48 + 2 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x0001fe8683fcf83a);
+    __ movq(Address(tmp_result, 0x50 + 2 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x000ae39cecc1bbdb);
+    __ movq(Address(tmp_result, 0x58 + 2 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x000b4b8072f3a764);
+    __ movq(Address(tmp_result, 0x60 + 2 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x000c2bddfada9b93);
+    __ movq(Address(tmp_result, 0x68 + 2 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x000b46bf14d9394b);
+    __ movq(Address(tmp_result, 0x70 + 2 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x000359d4d04d19cb);
+    __ movq(Address(tmp_result, 0x78 + 2 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x000b525e74b957d7);
+    __ movq(Address(tmp_result, 0x80 + 2 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x0005e2d806314961);
+    __ movq(Address(tmp_result, 0x88 + 2 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x000151a6772d9b85);
+    __ movq(Address(tmp_result, 0x90 + 2 * MM_XFORM_ARRAY_SIZE), rdx);
+    __ mov64(rdx, 0x000000092599d913);
+    __ movq(Address(tmp_result, 0x98 + 2 * MM_XFORM_ARRAY_SIZE), rdx);
+
 
     __ mov64(rdx, 0x000e027aaebc9ae7);
     __ movq(Address(tmp_result, 0x00 + 3 * MM_XFORM_ARRAY_SIZE), rdx);
@@ -7623,7 +7756,7 @@ address generate_avx_ghash_processBlocks() {
     __ movq(c_rarg4, MM_inv);
 #endif
     // montgomeryMultiply52x20(c_rarg0, c_rarg1, c_rarg2, c_rarg3, inv);
-    __ call_VM_leaf(CAST_FROM_FN_PTR(address, StubRoutines::montgomeryMultiply50x20()), 5);
+    __ call_VM_leaf(CAST_FROM_FN_PTR(address, StubRoutines::montgomeryMultiply52x20()), 5);
 
     __ movq(r11, MM_res);
     __ movq(r12, MM_m);
@@ -9197,8 +9330,8 @@ address generate_avx_ghash_processBlocks() {
       StubRoutines::_bigIntegerLeftShiftWorker = generate_bigIntegerLeftShift();
     }
     if (UseMontgomeryMultiplyIntrinsic) {
-      if (!VM_Version::supports_avx512ifma()) {
-        StubRoutines::_montgomeryMultiply50x20 = generate_montgomeryMultiply50x20();
+      if (VM_Version::supports_avx512ifma()) {
+        StubRoutines::_montgomeryMultiply52x20 = generate_montgomeryMultiply52x20();
         StubRoutines::_montgomeryMultiply = generate_montgomeryMultiply(false);
       } else {
         StubRoutines::_montgomeryMultiply
@@ -9206,7 +9339,7 @@ address generate_avx_ghash_processBlocks() {
       }
     }
     if (UseMontgomerySquareIntrinsic) {
-      if (!VM_Version::supports_avx512ifma()) {   // ASGASG
+      if (VM_Version::supports_avx512ifma()) {   // ASGASG
         StubRoutines::_montgomerySquare = generate_montgomeryMultiply(true);
       } else {
         StubRoutines::_montgomerySquare
