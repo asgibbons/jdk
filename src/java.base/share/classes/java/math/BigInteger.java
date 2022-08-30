@@ -2925,7 +2925,20 @@ public class BigInteger extends Number implements Comparable<BigInteger> {
             product = multiplyToLen(a, len, b, len, product);
             return montReduce(product, n, len, (int)inv);
         } else {
-            return implMontgomeryMultiply(a, b, n, len, inv, materialize(product, len));
+            BigInteger toMont = ZERO.setBit(20*52*2);
+            toMont = toMont.mod(BigInteger(n));
+
+            int[] toMont52 = toRadix52(toMont.mag);
+            a = toRadix52(a);
+            b = toRadix52(b);
+            n = toRadix52(n);
+            int[] constONE = toRadix52(BigInteger.ONE);
+            a = implMontgomeryMultiply(a, toMont52, n, len, inv, materialize(product, len));
+            b = implMontgomeryMultiply(b, toMont52, n, len, inv, materialize(product, len));
+            BigInteger result = implMontgomeryMultiply(a, b, n, len, inv, materialize(product, len));
+            b = implMontgomeryMultiply(result, constONE, n, len, inv, materialize(product, len));
+
+            return toRadix64(result);
         }
     }
     private static int[] montgomerySquare(int[] a, int[] n, int len, long inv,
