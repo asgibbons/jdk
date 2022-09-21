@@ -7309,7 +7309,7 @@ address generate_avx_ghash_processBlocks() {
       inv = r10;
       __ movq(inv, inv_mem);
 #endif
-    __ montgomeryMultiply52x20(c_rarg0, c_rarg1, c_rarg2, c_rarg3, inv);
+//    __ montgomeryMultiply52x20(c_rarg0, c_rarg1, c_rarg2, c_rarg3, inv);
     __ leave();
     __ ret(0);
     return start;
@@ -7743,7 +7743,7 @@ address generate_avx_ghash_processBlocks() {
 
     __ movq(tmp_result, MM_res);
     __ movq(inv, MM_inv);
-    __ montgomeryMultiply52x20(tmp_result, inv);
+//    __ montgomeryMultiply52x20(tmp_result, inv);
 #endif
 
     __ lea(c_rarg0, Address(tmp_result, 0));     // Result stored here
@@ -7756,7 +7756,7 @@ address generate_avx_ghash_processBlocks() {
     __ movq(c_rarg4, MM_inv);
 #endif
     // montgomeryMultiply52x20(c_rarg0, c_rarg1, c_rarg2, c_rarg3, inv);
-    __ call_VM_leaf(CAST_FROM_FN_PTR(address, StubRoutines::montgomeryMultiply52x20()), 5);
+//    __ call_VM_leaf(CAST_FROM_FN_PTR(address, StubRoutines::montgomeryMultiply52x20()), 5);
 
     __ movq(r11, MM_res);
     __ movq(r12, MM_m);
@@ -9331,7 +9331,7 @@ address generate_avx_ghash_processBlocks() {
     }
     if (UseMontgomeryMultiplyIntrinsic) {
       if (VM_Version::supports_avx512ifma()) {
-        StubRoutines::_montgomeryMultiply52x20 = generate_montgomeryMultiply52x20();
+//        StubRoutines::_montgomeryMultiply52x20 = generate_montgomeryMultiply52x20();
         StubRoutines::_montgomeryMultiply = generate_montgomeryMultiply(false);
       } else {
         StubRoutines::_montgomeryMultiply
