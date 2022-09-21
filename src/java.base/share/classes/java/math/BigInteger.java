@@ -3071,36 +3071,36 @@ public class BigInteger extends Number implements Comparable<BigInteger> {
 
         // Accelerate common sizes if possible
         if (this.mag.length == 32) {
-            return oddModPow_20(this.mag, this.mag.length, y.mag, y.mag.length, z.mag, z.mag.length);
+            return new BigInteger(1, oddModPow_20(this.mag, this.mag.length, y.mag, y.mag.length, z.mag, z.mag.length));
         }
 
         if (this.mag.length == 48) {
-            return oddModPow_30(this.mag, this.mag.length, y.mag, y.mag.length, z.mag, z.mag.length);
+            return new BigInteger(1, oddModPow_30(this.mag, this.mag.length, y.mag, y.mag.length, z.mag, z.mag.length));
         }
 
         if (this.mag.length == 64) {
-            return oddModPow_40(this.mag, this.mag.length, y.mag, y.mag.length, z.mag, z.mag.length);
+            return new BigInteger(1, oddModPow_40(this.mag, this.mag.length, y.mag, y.mag.length, z.mag, z.mag.length));
         }
 
-        return oddModPow_default(this.mag.clone(), y.mag, z.mag);
+        return new BigInteger(1, oddModPow_default(this.mag.clone(), y.mag, z.mag));
     }
 
-//    @IntrinsicCandidate
-    private static BigInteger oddModPow_20(int[] x, int xlen, int[] y, int ylen, int[] z, int zlen) {
+    @IntrinsicCandidate
+    private static int[] oddModPow_20(int[] x, int xlen, int[] y, int ylen, int[] z, int zlen) {
         return oddModPow_default(x.clone(), y, z);
     }
 
-//    @IntrinsicCandidate
-    private static BigInteger oddModPow_30(int[] x, int xlen, int[] y, int ylen, int[] z, int zlen) {
+    @IntrinsicCandidate
+    private static int[] oddModPow_30(int[] x, int xlen, int[] y, int ylen, int[] z, int zlen) {
         return oddModPow_default(x.clone(), y, z);
     }
 
-//    @IntrinsicCandidate
-    private static BigInteger oddModPow_40(int[] x, int xlen, int[] y, int ylen, int[] z, int zlen) {
+    @IntrinsicCandidate
+    private static int[] oddModPow_40(int[] x, int xlen, int[] y, int ylen, int[] z, int zlen) {
         return oddModPow_default(x.clone(), y, z);
     }
 
-    private static BigInteger oddModPow_default(int[] base, int[] exp, int[] mod) {
+    private static int[] oddModPow_default(int[] base, int[] exp, int[] mod) {
         //int[] base = mag.clone();
         //int[] exp = y.mag;
         //int[] mod = z.mag;
@@ -3270,7 +3270,7 @@ public class BigInteger extends Number implements Comparable<BigInteger> {
 
         t2 = Arrays.copyOf(b, modLen);
 
-        return new BigInteger(1, t2);
+        return t2;
     }
 
     /**
