@@ -416,8 +416,8 @@ class StubRoutines: AllStatic {
   static address mulAdd()              { return _mulAdd; }
   static address montgomeryMultiply()  { return _montgomeryMultiply; }
   static address oddModPow_20()  { return _oddModPow_20; }
-  static address oddModPow_20()  { return _oddModPow_30; }
-  static address oddModPow_20()  { return _oddModPow_40; }
+  static address oddModPow_30()  { return _oddModPow_30; }
+  static address oddModPow_40()  { return _oddModPow_40; }
   static address montgomerySquare()    { return _montgomerySquare; }
   static address bigIntegerRightShift() { return _bigIntegerRightShiftWorker; }
   static address bigIntegerLeftShift()  { return _bigIntegerLeftShiftWorker; }
