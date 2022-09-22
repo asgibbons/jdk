@@ -592,6 +592,11 @@ bool LibraryCallKit::try_to_inline(int predicate) {
   case vmIntrinsics::_montgomerySquare:
     return inline_montgomerySquare();
 
+  case vmIntrinsics::_oddModPow_20:
+  case vmIntrinsics::_oddModPow_30:
+  case vmIntrinsics::_oddModPow_40:
+    return inline_oddModPow(intrinsic_id());
+
   case vmIntrinsics::_bigIntegerRightShiftWorker:
     return inline_bigIntegerShift(true);
   case vmIntrinsics::_bigIntegerLeftShiftWorker:
@@ -5877,6 +5882,69 @@ bool LibraryCallKit::inline_montgomerySquare() {
                                    m_start);
     set_result(m);
   }
+
+  return true;
+}
+
+//------------------------------inline_oddModPow-----------------------
+bool LibraryCallKit::inline_oddModPow(vmIntrinsics::ID id) {
+  address stubAddr = NULL;
+  const char *stubName;
+  // ASGASG assert(UseAES, "need AES instruction support");
+
+  switch(id) {
+  case vmIntrinsics::_oddModPow_20:
+    stubAddr = StubRoutines::oddModPow_20();
+    stubName = "oddModPow_20";
+    break;
+  case vmIntrinsics::_oddModPow_30:
+    stubAddr = StubRoutines::oddModPow_30();
+    stubName = "oddModPow_30";
+    break;
+  case vmIntrinsics::_oddModPow_40:
+    stubAddr = StubRoutines::oddModPow_40();
+    stubName = "oddModPow_40";
+    break;
+  default:
+    break;
+  }
+  if (stubAddr == NULL) return false;
+
+  Node* aescrypt_object = argument(0);
+  Node* src             = argument(1);
+  Node* src_offset      = argument(2);
+  Node* dest            = argument(3);
+  Node* dest_offset     = argument(4);
+
+  src = must_be_not_null(src, true);
+  dest = must_be_not_null(dest, true);
+
+  // (1) src and dest are arrays.
+  const Type* src_type = src->Value(&_gvn);
+  const Type* dest_type = dest->Value(&_gvn);
+  const TypeAryPtr* top_src = src_type->isa_aryptr();
+  const TypeAryPtr* top_dest = dest_type->isa_aryptr();
+  assert (top_src  != NULL && top_src->elem()  != Type::BOTTOM &&  top_dest != NULL && top_dest->elem() != Type::BOTTOM, "args are strange");
+
+  // for the quick and dirty code we will skip all the checks.
+  // we are just trying to get the call to be generated.
+  Node* src_start  = src;
+  Node* dest_start = dest;
+  if (src_offset != NULL || dest_offset != NULL) {
+    assert(src_offset != NULL && dest_offset != NULL, "");
+    src_start  = array_element_address(src,  src_offset,  T_BYTE);
+    dest_start = array_element_address(dest, dest_offset, T_BYTE);
+  }
+
+  // now need to get the start of its expanded key array
+  // this requires a newer class file that has this array as littleEndian ints, otherwise we revert to java
+  Node* k_start = get_key_start_from_aescrypt_object(aescrypt_object);
+  if (k_start == NULL) return false;
+
+  // Call the stub.
+  make_runtime_call(RC_LEAF|RC_NO_FP, OptoRuntime::aescrypt_block_Type(),
+                    stubAddr, stubName, TypePtr::BOTTOM,
+                    src_start, dest_start, k_start);
 
   return true;
 }

@@ -3057,33 +3057,33 @@ public class BigInteger extends Number implements Comparable<BigInteger> {
             return ZERO;
 
         // Accelerate common sizes if possible
-        if (this.mag.length == 32) {
-            return new BigInteger(1, oddModPow_20(this.mag, this.mag.length, y.mag, y.mag.length, z.mag, z.mag.length));
+        if ((this.mag.length == 32) && (y.mag.length == 32) && (z.mag.length == 32)) {
+            return new BigInteger(1, oddModPow_20(this.mag, y.mag, z.mag));
         }
 
-        if (this.mag.length == 48) {
-            return new BigInteger(1, oddModPow_30(this.mag, this.mag.length, y.mag, y.mag.length, z.mag, z.mag.length));
+        if ((this.mag.length == 48) && (y.mag.length == 48) && (z.mag.length == 48)) {
+            return new BigInteger(1, oddModPow_30(this.mag, y.mag, z.mag));
         }
 
-        if (this.mag.length == 64) {
-            return new BigInteger(1, oddModPow_40(this.mag, this.mag.length, y.mag, y.mag.length, z.mag, z.mag.length));
+        if ((this.mag.length == 64) && (y.mag.length == 64) && (z.mag.length == 64)) {
+            return new BigInteger(1, oddModPow_40(this.mag, y.mag, z.mag));
         }
 
         return new BigInteger(1, oddModPow_default(this.mag.clone(), y.mag, z.mag));
     }
 
     @IntrinsicCandidate
-    private static int[] oddModPow_20(int[] x, int xlen, int[] y, int ylen, int[] z, int zlen) {
+    private static int[] oddModPow_20(int[] x, int[] y, int[] z) {
         return oddModPow_default(x.clone(), y, z);
     }
 
     @IntrinsicCandidate
-    private static int[] oddModPow_30(int[] x, int xlen, int[] y, int ylen, int[] z, int zlen) {
+    private static int[] oddModPow_30(int[] x, int[] y, int[] z) {
         return oddModPow_default(x.clone(), y, z);
     }
 
     @IntrinsicCandidate
-    private static int[] oddModPow_40(int[] x, int xlen, int[] y, int ylen, int[] z, int zlen) {
+    private static int[] oddModPow_40(int[] x, int[] y, int[] z) {
         return oddModPow_default(x.clone(), y, z);
     }
 

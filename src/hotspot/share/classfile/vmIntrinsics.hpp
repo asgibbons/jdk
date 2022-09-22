@@ -432,15 +432,15 @@ class methodHandle;
                                                                                                                         \
   do_intrinsic(_oddModPow_20,            java_math_BigInteger, oddModPow_20_name, oddModPow_20_signature, F_S)          \
    do_name(     oddModPow_20_name,                             "oddModPow_20")                                          \
-   do_signature(oddModPow_20_signature,                        "([II[II[II)[I")                                         \
+   do_signature(oddModPow_20_signature,                        "([I[I[I)[I")                                            \
                                                                                                                         \
   do_intrinsic(_oddModPow_30,            java_math_BigInteger, oddModPow_30_name, oddModPow_30_signature, F_S)          \
    do_name(     oddModPow_30_name,                             "oddModPow_30")                                          \
-   do_signature(oddModPow_30_signature,                        "([II[II[II)[I")                                         \
+   do_signature(oddModPow_30_signature,                        "([I[I[I)[I")                                            \
                                                                                                                         \
   do_intrinsic(_oddModPow_40,            java_math_BigInteger, oddModPow_40_name, oddModPow_40_signature, F_S)          \
    do_name(     oddModPow_40_name,                             "oddModPow_40")                                          \
-   do_signature(oddModPow_40_signature,                        "([II[II[II)[I")                                         \
+   do_signature(oddModPow_40_signature,                        "([I[I[I)[I")                                            \
                                                                                                                         \
   do_class(jdk_internal_util_ArraysSupport, "jdk/internal/util/ArraysSupport")                                                          \
   do_intrinsic(_vectorizedMismatch, jdk_internal_util_ArraysSupport, vectorizedMismatch_name, vectorizedMismatch_signature, F_S)\
