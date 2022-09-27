@@ -9329,6 +9329,11 @@ address generate_avx_ghash_processBlocks() {
       StubRoutines::_bigIntegerRightShiftWorker = generate_bigIntegerRightShift();
       StubRoutines::_bigIntegerLeftShiftWorker = generate_bigIntegerLeftShift();
     }
+    if (VM_Version::supports_avx512ifma()) {
+      StubRoutines::_oddModPow_20 = CAST_FROM_FN_PTR(address, SharedRuntime::oddModPow_20);
+      StubRoutines::_oddModPow_30 = CAST_FROM_FN_PTR(address, SharedRuntime::oddModPow_30);
+      StubRoutines::_oddModPow_40 = CAST_FROM_FN_PTR(address, SharedRuntime::oddModPow_40);
+    }
     if (UseMontgomeryMultiplyIntrinsic) {
       if (VM_Version::supports_avx512ifma()) {
 //        StubRoutines::_montgomeryMultiply52x20 = generate_montgomeryMultiply52x20();

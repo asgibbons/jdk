@@ -660,6 +660,7 @@
   template(int_String_signature,                      "(I)Ljava/lang/String;")                                    \
   template(boolean_boolean_int_signature,             "(ZZ)I")                                                    \
   template(big_integer_shift_worker_signature,        "([I[IIII)V")                                               \
+  template(oddModPow_signature,                       "([I[I[I)[I")                                               \
   template(reflect_method_signature,                  "Ljava/lang/reflect/Method;")                               \
   template(getStackTrace_signature,                    "()[Ljava/lang/StackTraceElement;")                        \
                                                                                                                   \

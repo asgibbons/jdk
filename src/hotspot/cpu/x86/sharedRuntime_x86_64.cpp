@@ -3386,6 +3386,18 @@ void SharedRuntime::montgomery_square(jint *a_ints, jint *n_ints,
   }
 }
 
+jint *SharedRuntime::oddModPow_20(jint *base_ints, jint *exp_ints, jint *mod_ints) {
+  return NULL;
+}
+
+jint *SharedRuntime::oddModPow_30(jint *base_ints, jint *exp_ints, jint *mod_ints) {
+  return NULL;
+}
+
+jint *SharedRuntime::oddModPow_40(jint *base_ints, jint *exp_ints, jint *mod_ints) {
+  return NULL;
+}
+
 #ifdef COMPILER2
 // This is here instead of runtime_x86_64.cpp because it uses SimpleRuntimeFrame
 //
