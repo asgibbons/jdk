@@ -556,6 +556,9 @@
      static_field(StubRoutines,                _squareToLen,                                  address)                               \
      static_field(StubRoutines,                _bigIntegerRightShiftWorker,                   address)                               \
      static_field(StubRoutines,                _bigIntegerLeftShiftWorker,                    address)                               \
+     static_field(StubRoutines,                _oddModPow_20,                                 address)                               \
+     static_field(StubRoutines,                _oddModPow_30,                                 address)                               \
+     static_field(StubRoutines,                _oddModPow_40,                                 address)                               \
      static_field(StubRoutines,                _mulAdd,                                       address)                               \
      static_field(StubRoutines,                _dexp,                                         address)                               \
      static_field(StubRoutines,                _dlog,                                         address)                               \

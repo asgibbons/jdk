@@ -716,6 +716,9 @@ bool C2Compiler::is_intrinsic_supported(const methodHandle& method, bool is_virt
   case vmIntrinsics::_montgomerySquare:
   case vmIntrinsics::_bigIntegerRightShiftWorker:
   case vmIntrinsics::_bigIntegerLeftShiftWorker:
+  case vmIntrinsics::_oddModPow_20:
+  case vmIntrinsics::_oddModPow_30:
+  case vmIntrinsics::_oddModPow_40:
   case vmIntrinsics::_vectorizedMismatch:
   case vmIntrinsics::_ghash_processBlocks:
   case vmIntrinsics::_base64_encodeBlock:

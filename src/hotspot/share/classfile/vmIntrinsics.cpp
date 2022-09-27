@@ -544,6 +544,11 @@ bool vmIntrinsics::disabled_by_jvm_flags(vmIntrinsics::ID id) {
   case vmIntrinsics::_montgomeryMultiply:
     if (!UseMontgomeryMultiplyIntrinsic) return true;
     break;
+  case vmIntrinsics::_oddModPow_20:
+  case vmIntrinsics::_oddModPow_30:
+  case vmIntrinsics::_oddModPow_40:
+    if (!UseMontgomeryMultiplyIntrinsic) return true;
+    break;
   case vmIntrinsics::_montgomerySquare:
     if (!UseMontgomerySquareIntrinsic) return true;
     break;
