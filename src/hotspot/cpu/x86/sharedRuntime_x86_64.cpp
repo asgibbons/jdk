@@ -3560,6 +3560,45 @@ void SharedRuntime::montgomery_square(jint *a_ints, jint *n_ints,
   reverse_words(m, (julong *)m_ints, longwords);
 }
 
+#if 0
+//------------------------------Modular exponentiation------------------------
+//
+
+void SharedRuntime::impl_oddModPow(jint *base, jint len,
+                                   jint *exp, jlong expLen,
+                                   jint *modulus, jlong modLen,
+                                   jint *toMont, jlong montLen,
+                                   jlong inv) {
+  assert(len % 2 == 0, "array length in montgomery_square must be even");
+  int longwords = len/2;
+
+  // Make very sure we don't use so much space that the stack might
+  // overflow.  512 jints corresponds to an 16384-bit integer and
+  // will use here a total of 6k bytes of stack space.
+  int divisor = sizeof(julong) * 3;
+  guarantee(longwords <= (8192 / divisor), "must be");
+  int total_allocation = longwords * sizeof (julong) * 3;
+  julong *scratch = (julong *)alloca(total_allocation);
+
+  // Local scratch arrays
+  julong
+    *a = scratch + 0 * longwords,
+    *n = scratch + 1 * longwords,
+    *m = scratch + 2 * longwords;
+
+  reverse_words((julong *)a_ints, a, longwords);
+  reverse_words((julong *)n_ints, n, longwords);
+
+  if (len >= MONTGOMERY_SQUARING_THRESHOLD) {
+    ::montgomery_square(a, n, m, (julong)inv, longwords);
+  } else {
+    ::montgomery_multiply(a, a, n, m, (julong)inv, longwords);
+  }
+
+  reverse_words(m, (julong *)m_ints, longwords);
+}
+#endif
+
 #ifdef COMPILER2
 // This is here instead of runtime_x86_64.cpp because it uses SimpleRuntimeFrame
 //

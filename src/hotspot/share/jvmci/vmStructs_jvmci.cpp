@@ -337,6 +337,9 @@
   static_field(StubRoutines,                _mulAdd,                                          address)                               \
   static_field(StubRoutines,                _montgomeryMultiply,                              address)                               \
   static_field(StubRoutines,                _montgomerySquare,                                address)                               \
+  static_field(StubRoutines,                _oddModPowInner1K,                                address)                               \
+  static_field(StubRoutines,                _oddModPowInner1o5K,                              address)                               \
+  static_field(StubRoutines,                _oddModPowInner2K,                                address)                               \
   static_field(StubRoutines,                _vectorizedMismatch,                              address)                               \
   static_field(StubRoutines,                _bigIntegerRightShiftWorker,                      address)                               \
   static_field(StubRoutines,                _bigIntegerLeftShiftWorker,                       address)                               \

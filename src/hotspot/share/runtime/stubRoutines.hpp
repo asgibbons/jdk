@@ -233,6 +233,9 @@ class StubRoutines: AllStatic {
   static address _mulAdd;
   static address _montgomeryMultiply;
   static address _montgomerySquare;
+  static address _oddModPowInner1K;
+  static address _oddModPowInner1o5K;
+  static address _oddModPowInner2K;
   static address _bigIntegerRightShiftWorker;
   static address _bigIntegerLeftShiftWorker;
 
@@ -407,6 +410,9 @@ class StubRoutines: AllStatic {
   static address mulAdd()              { return _mulAdd; }
   static address montgomeryMultiply()  { return _montgomeryMultiply; }
   static address montgomerySquare()    { return _montgomerySquare; }
+  static address oddModPowInner1K()    { return _oddModPowInner1K; }
+  static address oddModPowInner1o5K()  { return _oddModPowInner1o5K; }
+  static address oddModPowInner2K()    { return _oddModPowInner2K; }
   static address bigIntegerRightShift() { return _bigIntegerRightShiftWorker; }
   static address bigIntegerLeftShift()  { return _bigIntegerLeftShiftWorker; }
   static address galoisCounterMode_AESCrypt()   { return _galoisCounterMode_AESCrypt; }

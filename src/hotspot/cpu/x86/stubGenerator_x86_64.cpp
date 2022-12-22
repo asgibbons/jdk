@@ -3893,6 +3893,16 @@ void StubGenerator::generate_all() {
       = CAST_FROM_FN_PTR(address, SharedRuntime::montgomery_square);
   }
 
+  if (VM_Version::supports_avx512ifma() &&
+      VM_Version::supports_avx512vl()) {
+    StubRoutines::_oddModPowInner1K
+      = CAST_FROM_FN_PTR(address, SharedRuntime::oddModPowInner1K);
+    StubRoutines::_oddModPowInner1o5K
+      = CAST_FROM_FN_PTR(address, SharedRuntime::oddModPowInner1o5K);
+    StubRoutines::_oddModPowInner2K
+      = CAST_FROM_FN_PTR(address, SharedRuntime::oddModPowInner2K);
+  }
+
   // Get svml stub routine addresses
   void *libjsvml = NULL;
   char ebuf[1024];

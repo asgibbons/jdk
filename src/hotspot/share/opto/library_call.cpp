@@ -598,6 +598,13 @@ bool LibraryCallKit::try_to_inline(int predicate) {
   case vmIntrinsics::_montgomerySquare:
     return inline_montgomerySquare();
 
+  case vmIntrinsics::_oddModPowInner1K:
+    return inline_oddModPowInner1K();
+  case vmIntrinsics::_oddModPowInner1o5K:
+    return inline_oddModPowInner1o5K();
+  case vmIntrinsics::_oddModPowInner2K:
+    return inline_oddModPowInner2K();
+
   case vmIntrinsics::_bigIntegerRightShiftWorker:
     return inline_bigIntegerShift(true);
   case vmIntrinsics::_bigIntegerLeftShiftWorker:
@@ -5684,6 +5691,18 @@ bool LibraryCallKit::inline_montgomeryMultiply() {
   }
 
   return true;
+}
+
+bool LibraryCallKit::inline_oddModPowInner1K() {
+  return false;
+}
+
+bool LibraryCallKit::inline_oddModPowInner1o5K() {
+  return false;
+}
+
+bool LibraryCallKit::inline_oddModPowInner2K() {
+  return false;
 }
 
 bool LibraryCallKit::inline_montgomerySquare() {

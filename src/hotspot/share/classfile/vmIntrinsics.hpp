@@ -442,6 +442,18 @@ class methodHandle;
    do_name(     montgomerySquare_name,                             "implMontgomerySquare")                              \
    do_signature(montgomerySquare_signature,                        "([I[IIJ[I)[I")                                      \
                                                                                                                         \
+  do_intrinsic(_oddModPowInner1K,      java_math_BigInteger, oddModPowInner1K_name, oddModPowInner1K_signature, F_S)    \
+   do_name(     oddModPowInner1K_name,                             "oddModPowInner1K")                                  \
+   do_signature(oddModPowInner1K_signature,                        "([I[I[II[IIJ)[I")                                   \
+                                                                                                                        \
+  do_intrinsic(_oddModPowInner1o5K,      java_math_BigInteger, oddModPowInner1o5K_name, oddModPowInner1o5K_signature, F_S) \
+   do_name(     oddModPowInner1o5K_name,                             "oddModPowInner1o5K")                              \
+   do_signature(oddModPowInner1o5K_signature,                        "([I[I[II[IIJ)[I")                                 \
+                                                                                                                        \
+  do_intrinsic(_oddModPowInner2K,      java_math_BigInteger, oddModPowInner2K_name, oddModPowInner2K_signature, F_S)    \
+   do_name(     oddModPowInner2K_name,                             "oddModPowInner2K")                                  \
+   do_signature(oddModPowInner2K_signature,                        "([I[I[II[IIJ)[I")                                   \
+                                                                                                                        \
   do_intrinsic(_bigIntegerRightShiftWorker, java_math_BigInteger, rightShift_name, big_integer_shift_worker_signature, F_S) \
    do_name(     rightShift_name,                                 "shiftRightImplWorker")                                \
                                                                                                                         \

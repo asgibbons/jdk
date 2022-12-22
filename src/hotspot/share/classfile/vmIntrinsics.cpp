@@ -557,6 +557,10 @@ bool vmIntrinsics::disabled_by_jvm_flags(vmIntrinsics::ID id) {
   case vmIntrinsics::_bigIntegerRightShiftWorker:
   case vmIntrinsics::_bigIntegerLeftShiftWorker:
     break;
+  case vmIntrinsics::_oddModPowInner1K:
+  case vmIntrinsics::_oddModPowInner1o5K:
+  case vmIntrinsics::_oddModPowInner2K:
+    break;
   case vmIntrinsics::_addExactI:
   case vmIntrinsics::_addExactL:
   case vmIntrinsics::_decrementExactI:

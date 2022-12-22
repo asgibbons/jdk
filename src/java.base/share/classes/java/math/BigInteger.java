@@ -3079,6 +3079,47 @@ public class BigInteger extends Number implements Comparable<BigInteger> {
             modLen++;
         }
 
+        // Compute the modular inverse of the least significant 64-bit
+        // digit of the modulus
+        long n0 = (mod[modLen-1] & LONG_MASK) + ((mod[modLen-2] & LONG_MASK) << 32);
+        long inv = -MutableBigInteger.inverseMod64(n0);
+
+        // Set up toMont to convert regular form to Montgomery form
+        int[] a = leftShift(base, base.length, modLen << 5);
+
+        // *********** Make call here, providing base, exponent, modulus, toMont value, and inverse
+
+        if(base.length == 32) {
+          return new BigInteger(1, oddModPowInner1K(base, exp, mod, modLen, a, a.length, inv));
+        }
+
+        if(base.length == 48) {
+          return new BigInteger(1, oddModPowInner1o5K(base, exp, mod, modLen, a, a.length, inv));
+        }
+
+        if(base.length == 64) {
+          return new BigInteger(1, oddModPowInner2K(base, exp, mod, modLen, a, a.length, inv));
+        }
+
+        return new BigInteger(1, oddModPowInner(base, exp, mod, modLen, a, a.length, inv));
+      }
+
+      @IntrinsicCandidate
+      private static int[] oddModPowInner1K(int[] base, int[] exp, int[] mod, int modLen, int[] a, int aLen, long inv) {
+        return oddModPowInner(base, exp, mod, modLen, a, a.length, inv);
+      }
+
+      @IntrinsicCandidate
+      private static int[] oddModPowInner1o5K(int[] base, int[] exp, int[] mod, int modLen, int[] a, int aLen, long inv) {
+        return oddModPowInner(base, exp, mod, modLen, a, a.length, inv);
+      }
+
+      @IntrinsicCandidate
+      private static int[] oddModPowInner2K(int[] base, int[] exp, int[] mod, int modLen, int[] a, int aLen, long inv) {
+        return oddModPowInner(base, exp, mod, modLen, a, a.length, inv);
+      }
+  
+      private static int[] oddModPowInner(int[] base, int[] exp, int[] mod, int modLen, int[] a, int aLen, long inv){
         // Select an appropriate window size
         int wbits = 0;
         int ebits = bitLength(exp, exp.length);
@@ -3097,13 +3138,8 @@ public class BigInteger extends Number implements Comparable<BigInteger> {
         for (int i=0; i < tblmask; i++)
             table[i] = new int[modLen];
 
-        // Compute the modular inverse of the least significant 64-bit
-        // digit of the modulus
-        long n0 = (mod[modLen-1] & LONG_MASK) + ((mod[modLen-2] & LONG_MASK) << 32);
-        long inv = -MutableBigInteger.inverseMod64(n0);
-
         // Convert base to Montgomery form
-        int[] a = leftShift(base, base.length, modLen << 5);
+        // Done above: int[] a = leftShift(base, base.length, modLen << 5);
 
         MutableBigInteger q = new MutableBigInteger(),
                           a2 = new MutableBigInteger(a),
@@ -3226,7 +3262,7 @@ public class BigInteger extends Number implements Comparable<BigInteger> {
 
         t2 = Arrays.copyOf(b, modLen);
 
-        return new BigInteger(1, t2);
+        return t2;
     }
 
     /**
