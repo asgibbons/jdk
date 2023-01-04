@@ -3090,36 +3090,36 @@ public class BigInteger extends Number implements Comparable<BigInteger> {
         // *********** Make call here, providing base, exponent, modulus, toMont value, and inverse
 
         if(base.length == 32) {
-          return new BigInteger(1, oddModPowInner1K(base, exp, mod, modLen, a, a.length, inv));
+          return new BigInteger(1, oddModPowInner1K(base, exp, mod, modLen, a, a.length, inv, materialize(result, 32)));
         }
 
         if(base.length == 48) {
-          return new BigInteger(1, oddModPowInner1o5K(base, exp, mod, modLen, a, a.length, inv));
+          return new BigInteger(1, oddModPowInner1o5K(base, exp, mod, modLen, a, a.length, inv, materialize(result, 48)));
         }
 
         if(base.length == 64) {
-          return new BigInteger(1, oddModPowInner2K(base, exp, mod, modLen, a, a.length, inv));
+          return new BigInteger(1, oddModPowInner2K(base, exp, mod, modLen, a, a.length, inv, materialize(result, 64)));
         }
 
-        return new BigInteger(1, oddModPowInner(base, exp, mod, modLen, a, a.length, inv));
+        return new BigInteger(1, oddModPowInner(base, exp, mod, modLen, a, a.length, inv, materialize(result, modLen)));
       }
 
       @IntrinsicCandidate
-      private static int[] oddModPowInner1K(int[] base, int[] exp, int[] mod, int modLen, int[] a, int aLen, long inv) {
-        return oddModPowInner(base, exp, mod, modLen, a, a.length, inv);
+      private static int[] oddModPowInner1K(int[] base, int[] exp, int[] mod, int modLen, int[] a, int aLen, long inv, int[] result) {
+        return oddModPowInner(base, exp, mod, modLen, a, a.length, inv, result);
       }
 
       @IntrinsicCandidate
-      private static int[] oddModPowInner1o5K(int[] base, int[] exp, int[] mod, int modLen, int[] a, int aLen, long inv) {
-        return oddModPowInner(base, exp, mod, modLen, a, a.length, inv);
+      private static int[] oddModPowInner1o5K(int[] base, int[] exp, int[] mod, int modLen, int[] a, int aLen, long inv, int[] result) {
+        return oddModPowInner(base, exp, mod, modLen, a, a.length, inv, result);
       }
 
       @IntrinsicCandidate
-      private static int[] oddModPowInner2K(int[] base, int[] exp, int[] mod, int modLen, int[] a, int aLen, long inv) {
-        return oddModPowInner(base, exp, mod, modLen, a, a.length, inv);
+      private static int[] oddModPowInner2K(int[] base, int[] exp, int[] mod, int modLen, int[] a, int aLen, long inv, int[] result) {
+        return oddModPowInner(base, exp, mod, modLen, a, a.length, inv, result);
       }
   
-      private static int[] oddModPowInner(int[] base, int[] exp, int[] mod, int modLen, int[] a, int aLen, long inv){
+      private static int[] oddModPowInner(int[] base, int[] exp, int[] mod, int modLen, int[] a, int aLen, long inv, int[] result){
         // Select an appropriate window size
         int wbits = 0;
         int ebits = bitLength(exp, exp.length);

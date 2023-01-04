@@ -1117,6 +1117,32 @@ const TypeFunc* OptoRuntime::mulAdd_Type() {
   return TypeFunc::make(domain, range);
 }
 
+const TypeFunc* OptoRuntime::oddModPow_Type() {
+  // create input type (domain)
+  int num_args      = 9;
+  int argcnt = num_args;
+  const Type** fields = TypeTuple::fields(argcnt);
+  int argp = TypeFunc::Parms;
+  fields[argp++] = TypePtr::NOTNULL;    // base
+  fields[argp++] = TypePtr::NOTNULL;    // exp
+  fields[argp++] = TypePtr::NOTNULL;    // mod
+  fields[argp++] = TypeInt::INT;        // modLen
+  fields[argp++] = TypePtr::NOTNULL;    // toMont
+  fields[argp++] = TypeInt::INT;        // montLen
+  fields[argp++] = TypeLong::LONG;      // inv
+  fields[argp++] = Type::HALF;
+  fields[argp++] = TypePtr::NOTNULL;    // result
+  assert(argp == TypeFunc::Parms+argcnt, "correct decoding");
+  const TypeTuple* domain = TypeTuple::make(TypeFunc::Parms+argcnt, fields);
+
+  // result type needed
+  fields = TypeTuple::fields(1);
+  fields[TypeFunc::Parms+0] = TypePtr::NOTNULL;
+
+  const TypeTuple* range = TypeTuple::make(TypeFunc::Parms, fields);
+  return TypeFunc::make(domain, range);
+}
+
 const TypeFunc* OptoRuntime::montgomeryMultiply_Type() {
   // create input type (domain)
   int num_args      = 7;

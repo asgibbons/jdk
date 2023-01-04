@@ -5694,15 +5694,98 @@ bool LibraryCallKit::inline_montgomeryMultiply() {
 }
 
 bool LibraryCallKit::inline_oddModPowInner1K() {
-  return false;
+  address stubAddr = StubRoutines::oddModPowInner1K();
+  if (stubAddr == NULL) {
+    return false; // Intrinsic's stub is not implemented on this platform
+  }
+
+  const char* stubName = "oddModPowInner1K";
+
+  assert(callee()->signature()->size() == 9, "oddModPowInner1K has 9 parameters");
+  return oddModPowInnerGeneric(stubAddr, stubName);
 }
 
 bool LibraryCallKit::inline_oddModPowInner1o5K() {
-  return false;
+  address stubAddr = StubRoutines::oddModPowInner1o5K();
+  if (stubAddr == NULL) {
+    return false; // Intrinsic's stub is not implemented on this platform
+  }
+
+  const char* stubName = "oddModPowInner1o5K";
+
+  assert(callee()->signature()->size() == 9, "oddModPowInner1o5K has 9 parameters");
+  return oddModPowInnerGeneric(stubAddr, stubName);
 }
 
 bool LibraryCallKit::inline_oddModPowInner2K() {
-  return false;
+  address stubAddr = StubRoutines::oddModPowInner2K();
+  if (stubAddr == NULL) {
+    return false; // Intrinsic's stub is not implemented on this platform
+  }
+
+  const char* stubName = "oddModPowInner2K";
+
+  assert(callee()->signature()->size() == 9, "oddModPowInner2K has 9 parameters");
+  return oddModPowInnerGeneric(stubAddr, stubName);
+}
+
+bool LibraryCallKit::oddModPowInnerGeneric(address stubAddr, const char* stubName) {
+  Node* base    = argument(0);
+  Node* exp     = argument(1);
+  Node* mod     = argument(2);
+  Node* modLen  = argument(3);
+  Node* toMont  = argument(4);
+  Node* montLen = argument(5);
+  Node* inv     = argument(7);
+  Node* result  = argument(8);
+
+  const Type* base_type = base->Value(&_gvn);
+  const TypeAryPtr* top_base = base_type->isa_aryptr();
+  const Type* exp_type = exp->Value(&_gvn);
+  const TypeAryPtr* top_exp = exp_type->isa_aryptr();
+  const Type* mod_type = mod->Value(&_gvn);
+  const TypeAryPtr* top_mod = mod_type->isa_aryptr();
+  const Type* toMont_type = toMont->Value(&_gvn);
+  const TypeAryPtr* top_toMont = toMont_type->isa_aryptr();
+  const Type* result_type = result->Value(&_gvn);
+  const TypeAryPtr* top_result = result_type->isa_aryptr();
+  if (top_base == NULL || top_base->elem()  == Type::BOTTOM ||
+      top_exp == NULL || top_expb->elem()  == Type::BOTTOM ||
+      top_mod == NULL || top_mod->elem()  == Type::BOTTOM ||
+      top_toMont == NULL || top_toMont->elem()  == Type::BOTTOM ||
+      top_result == NULL || top_result>elem()  == Type::BOTTOM) {
+    // failed array check
+    return false;
+  }
+
+  BasicType base_elem = base_type->isa_aryptr()->elem()->array_element_basic_type();
+  BasicType exp_elem = exp_type->isa_aryptr()->elem()->array_element_basic_type();
+  BasicType mod_elem = mod_type->isa_aryptr()->elem()->array_element_basic_type();
+  BasicType toMont_elem = toMont_type->isa_aryptr()->elem()->array_element_basic_type();
+  BasicType result_elem = result_type->isa_aryptr()->elem()->array_element_basic_type();
+  if ((base_elem != T_INT) || (exp_elem != T_INT) || (mod_elem != T_INT)
+      || (toMont_elem != T_INT) || (result_elem != T_INT)) {
+	  return false;
+  }
+
+  // Make the call
+  {
+    Node* base_start = array_element_address(base, intcon(0), a_elem);
+    Node* exp_start = array_element_address(exp, intcon(0), b_elem);
+    Node* mod_start = array_element_address(mod, intcon(0), n_elem);
+    Node* toMont_start = array_element_address(toMont, intcon(0), m_elem);
+    Node* result_start = array_element_address(result, intcon(0), m_elem);
+
+    Node* call = make_runtime_call(RC_LEAF,
+                                   OptoRuntime::oddModPow_Type(),
+                                   stubAddr, stubName, TypePtr::BOTTOM,
+                                   base_start, exp_start, mod_start, modLen,
+                                   toMont_start, montLen,
+                                   inv, top(), result_start);
+    set_result(result);
+  }
+
+  return true;
 }
 
 bool LibraryCallKit::inline_montgomerySquare() {
