@@ -5750,10 +5750,10 @@ bool LibraryCallKit::oddModPowInnerGeneric(address stubAddr, const char* stubNam
   const Type* result_type = result->Value(&_gvn);
   const TypeAryPtr* top_result = result_type->isa_aryptr();
   if (top_base == NULL || top_base->elem()  == Type::BOTTOM ||
-      top_exp == NULL || top_expb->elem()  == Type::BOTTOM ||
+      top_exp == NULL || top_exp->elem()  == Type::BOTTOM ||
       top_mod == NULL || top_mod->elem()  == Type::BOTTOM ||
       top_toMont == NULL || top_toMont->elem()  == Type::BOTTOM ||
-      top_result == NULL || top_result>elem()  == Type::BOTTOM) {
+      top_result == NULL || top_result->elem()  == Type::BOTTOM) {
     // failed array check
     return false;
   }
@@ -5770,11 +5770,11 @@ bool LibraryCallKit::oddModPowInnerGeneric(address stubAddr, const char* stubNam
 
   // Make the call
   {
-    Node* base_start = array_element_address(base, intcon(0), a_elem);
-    Node* exp_start = array_element_address(exp, intcon(0), b_elem);
-    Node* mod_start = array_element_address(mod, intcon(0), n_elem);
-    Node* toMont_start = array_element_address(toMont, intcon(0), m_elem);
-    Node* result_start = array_element_address(result, intcon(0), m_elem);
+    Node* base_start = array_element_address(base, intcon(0), base_elem);
+    Node* exp_start = array_element_address(exp, intcon(0), exp_elem);
+    Node* mod_start = array_element_address(mod, intcon(0), mod_elem);
+    Node* toMont_start = array_element_address(toMont, intcon(0), toMont_elem);
+    Node* result_start = array_element_address(result, intcon(0), result_elem);
 
     Node* call = make_runtime_call(RC_LEAF,
                                    OptoRuntime::oddModPow_Type(),
