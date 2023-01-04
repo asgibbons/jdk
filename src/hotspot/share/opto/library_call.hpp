@@ -321,6 +321,7 @@ class LibraryCallKit : public GraphKit {
   bool inline_oddModPowInner1K();
   bool inline_oddModPowInner1o5K();
   bool inline_oddModPowInner2K();
+  bool oddModPowInnerGeneric(address stubAddress, const char* stubName);
   bool inline_bigIntegerShift(bool isRightShift);
   bool inline_vectorizedMismatch();
   bool inline_fma(vmIntrinsics::ID id);

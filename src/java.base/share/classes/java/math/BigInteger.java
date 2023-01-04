@@ -3086,6 +3086,7 @@ public class BigInteger extends Number implements Comparable<BigInteger> {
 
         // Set up toMont to convert regular form to Montgomery form
         int[] a = leftShift(base, base.length, modLen << 5);
+        int[] result = new int[1];
 
         // *********** Make call here, providing base, exponent, modulus, toMont value, and inverse
 
