@@ -160,6 +160,16 @@ class SharedRuntime: AllStatic {
   static void montgomery_square(jint *a_ints, jint *n_ints,
                                 jint len, jlong inv, jint *m_ints);
 
+  // oddModPow
+  static void oddModPowInner1K(jint *base, jint *exp, jint *modulus, jlong modLen,
+                               jint *toMont, jlong montLen, jlong inv, jint *result);
+
+  static void oddModPowInner1o5K(jint *base, jint *exp, jint *modulus, jlong modLen,
+                               jint *toMont, jlong montLen, jlong inv, jint *result);
+
+  static void oddModPowInner2K(jint *base, jint *exp, jint *modulus, jlong modLen,
+                               jint *toMont, jlong montLen, jlong inv, jint *result);
+
 #ifdef __SOFTFP__
   // C++ compiler generates soft float instructions as well as passing
   // float and double in registers.
