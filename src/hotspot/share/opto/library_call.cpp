@@ -5736,7 +5736,7 @@ bool LibraryCallKit::oddModPowInnerGeneric(address stubAddr, const char* stubNam
   Node* modLen  = argument(3);
   Node* toMont  = argument(4);
   Node* montLen = argument(5);
-  Node* inv     = argument(7);
+  Node* inv     = argument(6);
   Node* result  = argument(8);
 
   const Type* base_type = base->Value(&_gvn);
