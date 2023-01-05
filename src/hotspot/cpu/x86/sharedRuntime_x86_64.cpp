@@ -3563,18 +3563,18 @@ void SharedRuntime::montgomery_square(jint *a_ints, jint *n_ints,
 //------------------------------Modular exponentiation------------------------
 //
 
-void SharedRuntime::oddModPowInner1K(jint *base, jint *exp, jint *modulus, jlong modLen,
-                                    jint *toMont, jlong montLen, jlong inv, jint *result) {
+void SharedRuntime::oddModPowInner1K(jint *base, jint *exp, jint *modulus, jint modLen,
+                                    jint *toMont, jint montLen, jlong inv, jint *result) {
   return;
 }
 
-void SharedRuntime::oddModPowInner1o5K(jint *base, jint *exp, jint *modulus, jlong modLen,
-                                    jint *toMont, jlong montLen, jlong inv, jint *result) {
+void SharedRuntime::oddModPowInner1o5K(jint *base, jint *exp, jint *modulus, jint modLen,
+                                    jint *toMont, jint montLen, jlong inv, jint *result) {
   return;
 }
 
 void SharedRuntime::oddModPowInner2K(jint *base, jint *exp, jint *modulus, jlong modLen,
-                                    jint *toMont, jlong montLen, jlong inv, jint *result) {
+                                    jint *toMont, jint montLen, jlong inv, jint *result) {
   return;
 }
 
