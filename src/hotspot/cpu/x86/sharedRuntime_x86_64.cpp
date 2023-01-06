@@ -3684,7 +3684,7 @@ static void dig52_regular(unsigned long* out, const unsigned long* in, int outBi
 static unsigned int *rev_words(unsigned int *out, const unsigned int *inp,
 				   int len)
 {
-	assert(((len % 0x3) == 0));
+	assert((len & 0x3) == 0, "");
 	len >>= 2;
 	if (out == inp) { // inplace
 		for (int i = 0; i < len / 2; i++) {
@@ -3734,18 +3734,18 @@ void SharedRuntime::oddModPowInner1K(jint *base, jint *exp, jint *modulus, jint 
 
 void SharedRuntime::oddModPowInner1o5K(jint *base, jint *exp, jint *modulus, jint modLen,
                                     jint *toMont, jint montLen, jlong inv, jint *result) {
-  // Space for translated arrays
+  // Space for translated arrays.  Need 2 extra quadwords to get radix-52 to even power of 2 qwords.
   unsigned long base52[LEN52(ODD_MOD_POW_BIT_SIZE) + 2] = {0};
   unsigned long exp52[LEN52(ODD_MOD_POW_BIT_SIZE) + 2] = {0};
   unsigned long mod52[LEN52(ODD_MOD_POW_BIT_SIZE) + 2] = {0};
   unsigned long toMont52[LEN52(montLen * 32)] = {0};
   unsigned long result52[LEN52(ODD_MOD_POW_BIT_SIZE) + 2] = {0};
 
-  rev_words((unsigned int *)base52, (const unsigned int *)base, LEN64(ODD_MOD_POW_BIT_SIZE) + 2);
+  rev_words((unsigned int *)base52, (const unsigned int *)base, LEN64(ODD_MOD_POW_BIT_SIZE));
   regular_dig52(base52, 16, base52, ODD_MOD_POW_BIT_SIZE + 2);
-  rev_words((unsigned int *)exp52, (const unsigned int *)exp, LEN64(ODD_MOD_POW_BIT_SIZE) + 2);
+  rev_words((unsigned int *)exp52, (const unsigned int *)exp, LEN64(ODD_MOD_POW_BIT_SIZE));
   regular_dig52(exp52, 16, exp52, ODD_MOD_POW_BIT_SIZE + 2);
-  rev_words((unsigned int *)mod52, (const unsigned int *)modulus, LEN64(ODD_MOD_POW_BIT_SIZE) + 2);
+  rev_words((unsigned int *)mod52, (const unsigned int *)modulus, LEN64(ODD_MOD_POW_BIT_SIZE));
   regular_dig52(mod52, 16, mod52, ODD_MOD_POW_BIT_SIZE + 2);
   rev_words((unsigned int *)toMont52, (const unsigned int *)toMont, LEN64(montLen * 32));
   regular_dig52(toMont52, montLen, toMont52, montLen * 32);

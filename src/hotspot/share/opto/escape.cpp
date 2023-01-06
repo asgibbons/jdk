@@ -1186,6 +1186,9 @@ void ConnectionGraph::process_call_arguments(CallNode *call) {
                   strcmp(call->as_CallLeaf()->_name, "mulAdd") == 0 ||
                   strcmp(call->as_CallLeaf()->_name, "montgomery_multiply") == 0 ||
                   strcmp(call->as_CallLeaf()->_name, "montgomery_square") == 0 ||
+                  strcmp(call->as_CallLeaf()->_name, "oddModPowInner1K") == 0 ||
+                  strcmp(call->as_CallLeaf()->_name, "oddModPowInner1o5K") == 0 ||
+                  strcmp(call->as_CallLeaf()->_name, "oddModPowInner2K") == 0 ||
                   strcmp(call->as_CallLeaf()->_name, "bigIntegerRightShiftWorker") == 0 ||
                   strcmp(call->as_CallLeaf()->_name, "bigIntegerLeftShiftWorker") == 0 ||
                   strcmp(call->as_CallLeaf()->_name, "vectorizedMismatch") == 0 ||
