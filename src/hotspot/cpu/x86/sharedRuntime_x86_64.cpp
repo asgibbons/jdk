@@ -3563,20 +3563,232 @@ void SharedRuntime::montgomery_square(jint *a_ints, jint *n_ints,
 //------------------------------Modular exponentiation------------------------
 //
 
+#define EXP_DIGIT_SIZE_AVX512 (52)
+#define EXP_DIGIT_BASE_AVX512 (1<<EXP_DIGIT_SIZE_AVX512)
+#define EXP_DIGIT_MASK_AVX512 ((unsigned long)0x000FFFFFFFFFFFFF)
+
+/* number of digits in "digsize" representation of "bitsize" value */
+#define NUMBER_OF_DIGITS(bitsize, digsize)   (((bitsize) + (digsize)-1)/(digsize))
+
+#define LEN52(bitsize) NUMBER_OF_DIGITS(bitsize, 52)
+#define LEN64(bitsize) NUMBER_OF_DIGITS(bitsize, 64)
+
+/* bit length -> byte/word length conversion */
+#define BITS2WORD8_SIZE(x)  (((x)+ 7)>>3)
+#define BITS2WORD16_SIZE(x) (((x)+15)>>4)
+#define BITS2WORD32_SIZE(x) (((x)+31)>>5)
+#define BITS2WORD64_SIZE(x) (((x)+63)>>6)
+
+#if 0
+static unsigned char* reverse_bytes(unsigned char* out,
+                                    const unsigned char* inp, int len) {
+  if (out == inp) {  // inplace
+    for (int i = 0; i < len / 2; i++) {
+      unsigned char a = inp[i];
+      out[i] = inp[len - 1 - i];
+      out[len - 1 - i] = a;
+    }
+  } else {  // not inplace
+    for (int i = 0; i < len; i++) {
+      out[i] = inp[len - 1 - i];
+    }
+  }
+  return out;
+}
+#endif
+
+/*
+   converts regular (base = 2^64) representation
+   into "redundant" (base = 2^DIGIT_SIZE) represenrartion
+*/
+
+/* pair of 52-bit digits occupys 13 bytes (the fact is used in implementation below) */
+unsigned long getDig52(const unsigned char* pStr, int strLen)
+{
+   unsigned long digit = 0;
+   for(; strLen>0; strLen--) {
+      digit <<= 8;
+      digit += (unsigned long)(pStr[strLen-1]);
+   }
+   return digit;
+}
+
+/* regular => redundant conversion */
+static void regular_dig52(unsigned long* out, int outLen /* in qwords */, const unsigned long* in, int inBitSize)
+{
+   unsigned char* inStr = (unsigned char*)in;
+
+   for(; inBitSize>=(2*EXP_DIGIT_SIZE_AVX512); inBitSize-=(2*EXP_DIGIT_SIZE_AVX512), out+=2) {
+      out[0] = (*(unsigned long*)inStr) & EXP_DIGIT_MASK_AVX512;
+      inStr += 6;
+      out[1] = ((*(unsigned long*)inStr) >> 4) & EXP_DIGIT_MASK_AVX512;
+      inStr += 7;
+      outLen -= 2;
+   }
+   if(inBitSize>EXP_DIGIT_SIZE_AVX512) {
+      unsigned long digit = getDig52(inStr, 7);
+      out[0] = digit & EXP_DIGIT_MASK_AVX512;
+      inStr += 6;
+      inBitSize -= EXP_DIGIT_SIZE_AVX512;
+      digit = getDig52(inStr, BITS2WORD8_SIZE(inBitSize));
+      out[1] = digit>>4;
+      out += 2;
+      outLen -= 2;
+   }
+   else if(inBitSize>0) {
+      out[0] = getDig52(inStr, BITS2WORD8_SIZE(inBitSize));
+      out++;
+      outLen--;
+   }
+   for(; outLen>0; outLen--,out++) out[0] = 0;
+}
+
+/*
+   converts "redundant" (base = 2^DIGIT_SIZE) representation
+   into regular (base = 2^64)
+*/
+static void putDig52(unsigned char* pStr, int strLen, unsigned long digit)
+{
+   for(; strLen>0; strLen--) {
+      *pStr++ = (unsigned char)(digit&0xFF);
+      digit >>= 8;
+   }
+}
+
+static void dig52_regular(unsigned long* out, const unsigned long* in, int outBitSize)
+{
+   int i;
+   int outLen = BITS2WORD64_SIZE(outBitSize);
+   for(i=0; i<outLen; i++) out[i] = 0;
+
+   {
+      unsigned char* outStr = (unsigned char*)out;
+      for(; outBitSize>=(2*EXP_DIGIT_SIZE_AVX512); outBitSize-=(2*EXP_DIGIT_SIZE_AVX512), in+=2) {
+         (*(unsigned long*)outStr) = in[0];
+         outStr+=6;
+         (*(unsigned long*)outStr) ^= in[1] << 4;
+         outStr+=7;
+      }
+      if(outBitSize>EXP_DIGIT_SIZE_AVX512) {
+         putDig52(outStr, 7, in[0]);
+         outStr+=6;
+         outBitSize -= EXP_DIGIT_SIZE_AVX512;
+         putDig52(outStr, BITS2WORD8_SIZE(outBitSize), (in[1]<<4 | in[0]>>48));
+      }
+      else if(outBitSize) {
+         putDig52(outStr, BITS2WORD8_SIZE(outBitSize), in[0]);
+      }
+   }
+}
+
+static unsigned int *rev_words(unsigned int *out, const unsigned int *inp,
+				   int len)
+{
+	assert(((len % 0x3) == 0));
+	len >>= 2;
+	if (out == inp) { // inplace
+		for (int i = 0; i < len / 2; i++) {
+			unsigned int a = inp[i];
+			out[i] = inp[len - 1 - i];
+			out[len - 1 - i] = a;
+		}
+	} else { // not inplace
+		for (int i = 0; i < len; i++) {
+			out[i] = inp[len - 1 - i];
+		}
+	}
+	return out;
+}
+
+#define ODD_MOD_POW_BIT_SIZE 1024
+
 void SharedRuntime::oddModPowInner1K(jint *base, jint *exp, jint *modulus, jint modLen,
                                     jint *toMont, jint montLen, jlong inv, jint *result) {
+  // Space for translated arrays
+  unsigned long base52[LEN52(ODD_MOD_POW_BIT_SIZE)] = {0};
+  unsigned long exp52[LEN52(ODD_MOD_POW_BIT_SIZE)] = {0};
+  unsigned long mod52[LEN52(ODD_MOD_POW_BIT_SIZE)] = {0};
+  unsigned long toMont52[LEN52(montLen * 32)] = {0};
+  unsigned long result52[LEN52(ODD_MOD_POW_BIT_SIZE)] = {0};
+
+  rev_words((unsigned int *)base52, (const unsigned int *)base, LEN64(ODD_MOD_POW_BIT_SIZE));
+  regular_dig52(base52, 16, base52, ODD_MOD_POW_BIT_SIZE);
+  rev_words((unsigned int *)exp52, (const unsigned int *)exp, LEN64(ODD_MOD_POW_BIT_SIZE));
+  regular_dig52(exp52, 16, exp52, ODD_MOD_POW_BIT_SIZE);
+  rev_words((unsigned int *)mod52, (const unsigned int *)modulus, LEN64(ODD_MOD_POW_BIT_SIZE));
+  regular_dig52(mod52, 16, mod52, ODD_MOD_POW_BIT_SIZE);
+  rev_words((unsigned int *)toMont52, (const unsigned int *)toMont, LEN64(montLen * 32));
+  regular_dig52(toMont52, montLen, toMont52, montLen * 32);
+
+  //ifmaExp52x20(result52, base52, exp52, mod52, toMont52, inv);
+
+  dig52_regular((unsigned long *) result, base52, ODD_MOD_POW_BIT_SIZE);
+  rev_words((unsigned int *) result, (unsigned int *) result, LEN52(ODD_MOD_POW_BIT_SIZE));
+
   return;
 }
+
+#undef ODD_MOD_POW_BIT_SIZE
+
+#define ODD_MOD_POW_BIT_SIZE 1536
 
 void SharedRuntime::oddModPowInner1o5K(jint *base, jint *exp, jint *modulus, jint modLen,
                                     jint *toMont, jint montLen, jlong inv, jint *result) {
+  // Space for translated arrays
+  unsigned long base52[LEN52(ODD_MOD_POW_BIT_SIZE) + 2] = {0};
+  unsigned long exp52[LEN52(ODD_MOD_POW_BIT_SIZE) + 2] = {0};
+  unsigned long mod52[LEN52(ODD_MOD_POW_BIT_SIZE) + 2] = {0};
+  unsigned long toMont52[LEN52(montLen * 32)] = {0};
+  unsigned long result52[LEN52(ODD_MOD_POW_BIT_SIZE) + 2] = {0};
+
+  rev_words((unsigned int *)base52, (const unsigned int *)base, LEN64(ODD_MOD_POW_BIT_SIZE) + 2);
+  regular_dig52(base52, 16, base52, ODD_MOD_POW_BIT_SIZE + 2);
+  rev_words((unsigned int *)exp52, (const unsigned int *)exp, LEN64(ODD_MOD_POW_BIT_SIZE) + 2);
+  regular_dig52(exp52, 16, exp52, ODD_MOD_POW_BIT_SIZE + 2);
+  rev_words((unsigned int *)mod52, (const unsigned int *)modulus, LEN64(ODD_MOD_POW_BIT_SIZE) + 2);
+  regular_dig52(mod52, 16, mod52, ODD_MOD_POW_BIT_SIZE + 2);
+  rev_words((unsigned int *)toMont52, (const unsigned int *)toMont, LEN64(montLen * 32));
+  regular_dig52(toMont52, montLen, toMont52, montLen * 32);
+
+  //ifmaExp52x30(result52, base52, exp52, mod52, toMont52, inv);
+
+  dig52_regular((unsigned long *) result, base52, ODD_MOD_POW_BIT_SIZE);
+  rev_words((unsigned int *) result, (unsigned int *) result, LEN52(ODD_MOD_POW_BIT_SIZE));
+
   return;
 }
 
-void SharedRuntime::oddModPowInner2K(jint *base, jint *exp, jint *modulus, jlong modLen,
+#undef ODD_MOD_POW_BIT_SIZE
+
+#define ODD_MOD_POW_BIT_SIZE 2048
+
+void SharedRuntime::oddModPowInner2K(jint *base, jint *exp, jint *modulus, jint modLen,
                                     jint *toMont, jint montLen, jlong inv, jint *result) {
+  // Space for translated arrays
+  unsigned long base52[LEN52(ODD_MOD_POW_BIT_SIZE)] = {0};
+  unsigned long exp52[LEN52(ODD_MOD_POW_BIT_SIZE)] = {0};
+  unsigned long mod52[LEN52(ODD_MOD_POW_BIT_SIZE)] = {0};
+  unsigned long toMont52[LEN52(montLen * 32)] = {0};
+  unsigned long result52[LEN52(ODD_MOD_POW_BIT_SIZE)] = {0};
+
+  rev_words((unsigned int *)base52, (const unsigned int *)base, LEN64(ODD_MOD_POW_BIT_SIZE));
+  regular_dig52(base52, 16, base52, ODD_MOD_POW_BIT_SIZE);
+  rev_words((unsigned int *)exp52, (const unsigned int *)exp, LEN64(ODD_MOD_POW_BIT_SIZE));
+  regular_dig52(exp52, 16, exp52, ODD_MOD_POW_BIT_SIZE);
+  rev_words((unsigned int *)mod52, (const unsigned int *)modulus, LEN64(ODD_MOD_POW_BIT_SIZE));
+  regular_dig52(mod52, 16, mod52, ODD_MOD_POW_BIT_SIZE);
+  rev_words((unsigned int *)toMont52, (const unsigned int *)toMont, LEN64(montLen * 32));
+  regular_dig52(toMont52, montLen, toMont52, montLen * 32);
+
+  //ifmaExp52x40(result52, base52, exp52, mod52, toMont52, inv);
+
+  dig52_regular((unsigned long *) result, base52, ODD_MOD_POW_BIT_SIZE);
+  rev_words((unsigned int *) result, (unsigned int *) result, LEN52(ODD_MOD_POW_BIT_SIZE));
+
   return;
 }
+
+#undef ODD_MOD_POW_BIT_SIZE
 
 #ifdef COMPILER2
 // This is here instead of runtime_x86_64.cpp because it uses SimpleRuntimeFrame

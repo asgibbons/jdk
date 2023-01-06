@@ -3091,6 +3091,12 @@ public class BigInteger extends Number implements Comparable<BigInteger> {
         // *********** Make call here, providing base, exponent, modulus, toMont value, and inverse
 
         if(base.length == 32) {
+          System.out.println(Arrays.toString(base));
+          System.out.println(Arrays.toString(exp));
+          System.out.println(exp.length);
+          System.out.println(Arrays.toString(mod));
+          System.out.println(Arrays.toString(a));
+          System.out.println(inv);
           return new BigInteger(1, oddModPowInner1K(base, exp, mod, modLen, a, a.length, inv, materialize(result, 32)));
         }
 
@@ -3102,7 +3108,7 @@ public class BigInteger extends Number implements Comparable<BigInteger> {
           return new BigInteger(1, oddModPowInner2K(base, exp, mod, modLen, a, a.length, inv, materialize(result, 64)));
         }
 
-        return new BigInteger(1, oddModPowInner(base, exp, mod, modLen, a, a.length, inv, materialize(result, modLen)));
+        return new BigInteger(1, oddModPowInner(base, exp, mod, modLen, a, a.length, inv, result));
       }
 
       @IntrinsicCandidate
