@@ -1898,6 +1898,8 @@ public:
                                 Register tmp1, Register tmp2, Label& L_barrett, Label& L_16B_reduction_loop,
                                 Label& L_get_last_two_xmms, Label& L_128_done, Label& L_cleanup);
   void montgomeryMultiply52x20(Register out, Register a, Register b, Register m, Register inv);
+  void montgomeryMultiply52x30(Register out, Register a, Register b, Register m, Register inv);
+  void montgomeryMultiply52x40(Register out, Register a, Register b, Register m, Register inv);
   void montgomerySquare52x20(Register out, Register a, Register m, Register inv);
   void extract_multiplier1K(Register out, Register tab, Register ndx);
   void ifmaExp52x20(Register out, Register base, Register exp, Register mod, Register toMont, Register inv);
