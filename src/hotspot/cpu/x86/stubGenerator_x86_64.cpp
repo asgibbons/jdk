@@ -2664,6 +2664,57 @@ address StubGenerator::generate_base64_decodeBlock() {
   return start;
 }
 
+// oddModPow support routines
+
+address StubGenerator::generate_montgomeryMultiply52x20() {
+  __ align(CodeEntryAlignment);
+  StubCodeMark mark(this, "StubRoutines", "montgomeryMultiply52x20");
+  address start = __ pc();
+  Register inv;
+
+  BLOCK_COMMENT("Entry:");
+  __ enter();
+#ifdef _WIN64
+  const Address inv_mem(rbp, 6 * wordSize);
+  inv = r10;
+  __ movq(inv, inv_mem);
+#else
+  inv = c_rarg4;
+#endif
+  __ montgomeryMultiply52x20(c_rarg0, c_rarg1, c_rarg2, c_rarg3, inv);
+  __ leave();
+  __ ret(0);
+  return start;
+}
+
+address StubGenerator::generate_montgomerySquare52x20() {
+  __ align(CodeEntryAlignment);
+  StubCodeMark mark(this, "StubRoutines", "montgomerySquare52x20");
+  address start = __ pc();
+
+  BLOCK_COMMENT("Entry:");
+  __ enter();
+
+  __ montgomerySquare52x20(c_rarg0, c_rarg1, c_rarg2, c_rarg3);
+  __ leave();
+  __ ret(0);
+  return start;
+}
+
+address StubGenerator::generate_extract_multiplier1K() {
+  __ align(CodeEntryAlignment);
+  StubCodeMark mark(this, "StubRoutines", "extract_multiplier1K");
+  address start = __ pc();
+
+  BLOCK_COMMENT("Entry:");
+  __ enter();
+
+  __ extract_multiplier1K(c_rarg0, c_rarg1, c_rarg2);
+  __ leave();
+  __ ret(0);
+  return start;
+}
+
 
 /**
  *  Arguments:
@@ -3895,6 +3946,9 @@ void StubGenerator::generate_all() {
 
   if (VM_Version::supports_avx512ifma() &&
       VM_Version::supports_avx512vl()) {
+    StubRoutines::_montgomeryMultiply52x20 = generate_montgomeryMultiply52x20();
+    StubRoutines::_montgomerySquare52x20 = generate_montgomerySquare52x20();
+    StubRoutines::_extract_multiplier1K = generate_extract_multiplier1K();
     StubRoutines::_oddModPowInner1K
       = CAST_FROM_FN_PTR(address, SharedRuntime::oddModPowInner1K);
     StubRoutines::_oddModPowInner1o5K

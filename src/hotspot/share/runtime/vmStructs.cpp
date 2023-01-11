@@ -552,6 +552,9 @@
      static_field(StubRoutines,                _updateBytesAdler32,                           address)                               \
      static_field(StubRoutines,                _multiplyToLen,                                address)                               \
      static_field(StubRoutines,                _squareToLen,                                  address)                               \
+     static_field(StubRoutines,                _montgomeryMultiply52x20,                      address)                               \
+     static_field(StubRoutines,                _montgomerySquare52x20,                        address)                               \
+     static_field(StubRoutines,                _extract_multiplier1K,                         address)                               \
      static_field(StubRoutines,                _bigIntegerRightShiftWorker,                   address)                               \
      static_field(StubRoutines,                _bigIntegerLeftShiftWorker,                    address)                               \
      static_field(StubRoutines,                _mulAdd,                                       address)                               \

@@ -288,17 +288,17 @@ void MacroAssembler::montgomeryMultiply52x20(Register out, Register a, Register 
   evalignq(xmm9, xmm9, xmm11, 3, Assembler::AVX_256bit);
   vpand(xmm6, xmm6, xmm2, Assembler::AVX_256bit);
   vpaddq(xmm6, xmm6, xmm10, Assembler::AVX_256bit);
-  evpcmpq(k6, knoreg, xmm2, xmm6, Assembler::noOverflow, false, Assembler::AVX_256bit);
+  evpcmpq(k6, k0, xmm2, xmm6, Assembler::noOverflow, false, Assembler::AVX_256bit);
   vpand(xmm0, xmm0, xmm2, Assembler::AVX_256bit);
   vpand(xmm1, xmm4, xmm2, Assembler::AVX_256bit);
   vpand(xmm5, xmm5, xmm2, Assembler::AVX_256bit);
   vpaddq(xmm0, xmm0, xmm8, Assembler::AVX_256bit);
   vpaddq(xmm1, xmm1, xmm12, Assembler::AVX_256bit);
   vpaddq(xmm5, xmm5, xmm3, Assembler::AVX_256bit);
-  evpcmpq(k0, knoreg, xmm2, xmm0, Assembler::noOverflow, false, Assembler::AVX_256bit);
-  evpcmpq(k1, knoreg, xmm2, xmm5, Assembler::noOverflow, false, Assembler::AVX_256bit);
-  evpcmpq(k4, knoreg, xmm2, xmm1, Assembler::overflow, false, Assembler::AVX_256bit);
-  evpcmpq(k7, knoreg, xmm2, xmm1, Assembler::noOverflow, false, Assembler::AVX_256bit);
+  evpcmpq(k0, k0, xmm2, xmm0, Assembler::noOverflow, false, Assembler::AVX_256bit);
+  evpcmpq(k1, k0, xmm2, xmm5, Assembler::noOverflow, false, Assembler::AVX_256bit);
+  evpcmpq(k4, k0, xmm2, xmm1, Assembler::overflow, false, Assembler::AVX_256bit);
+  evpcmpq(k7, k0, xmm2, xmm1, Assembler::noOverflow, false, Assembler::AVX_256bit);
 
 //  227:  c5 f9 93 f6            kmovb  esi,k6
 //  22b:  62 f3 ed 28 1e f5 00   vpcmpequq k6,ymm2,ymm5
@@ -311,15 +311,15 @@ void MacroAssembler::montgomeryMultiply52x20(Register out, Register a, Register 
 //  254:  c5 f9 93 c7            kmovb  eax,k7
 //  258:  62 f3 ed 28 1e c7 01   vpcmpltuq k0,ymm2,ymm7
   kmovbl(c_rarg1, k6);
-  evpcmpq(k6, knoreg, xmm2, xmm5, Assembler::overflow, false, Assembler::AVX_256bit);
+  evpcmpq(k6, k0, xmm2, xmm5, Assembler::overflow, false, Assembler::AVX_256bit);
   vpand(xmm7, xmm7, xmm2, Assembler::AVX_256bit);
-  evpcmpq(k2, knoreg, xmm2, xmm0, Assembler::overflow, false, Assembler::AVX_256bit);
-  evpcmpq(k3, knoreg, xmm2, xmm6, Assembler::overflow, false, Assembler::AVX_256bit);
+  evpcmpq(k2, k0, xmm2, xmm0, Assembler::overflow, false, Assembler::AVX_256bit);
+  evpcmpq(k3, k0, xmm2, xmm6, Assembler::overflow, false, Assembler::AVX_256bit);
   vpaddq(xmm7, xmm7, xmm9, Assembler::AVX_256bit);
-  evpcmpq(k5, knoreg, xmm2, xmm7, Assembler::overflow, false, Assembler::AVX_256bit);
+  evpcmpq(k5, k0, xmm2, xmm7, Assembler::overflow, false, Assembler::AVX_256bit);
   kmovbl(c_rarg4, k0);
   kmovbl(rtmp0, k7);
-  evpcmpq(k0, knoreg, xmm2, xmm7, Assembler::noOverflow, false, Assembler::AVX_256bit);
+  evpcmpq(k0, k0, xmm2, xmm7, Assembler::noOverflow, false, Assembler::AVX_256bit);
 
 //  25f:  c1 e0 10               shl    eax,0x10
 //  262:  c5 79 93 c9            kmovb  r9d,k1
@@ -447,6 +447,424 @@ void MacroAssembler::montgomeryMultiply52x20(Register out, Register a, Register 
   pop(rbx);
 }
 
+void MacroAssembler::extract_multiplier1K(Register out, Register tab, Register ndx)
+{
+
+// 0000000000000640 <extract_multiplier>:
+// #define AMS ifma256_ams52x20
+
+// __INLINE void extract_multiplier(Ipp64u *red_Y,
+//                            const Ipp64u red_table[1U << EXP_WIN_SIZE][LEN52],
+//                                  int red_table_idx)
+// {
+//      640:	4c 8d 54 24 08       	lea    r10,[rsp+0x8]
+//      645:	48 83 e4 e0          	and    rsp,0xffffffffffffffe0
+//      649:	41 ff 72 f8          	push   QWORD PTR [r10-0x8]
+//      64d:	55                   	push   rbp
+//      64e:	48 89 e5             	mov    rbp,rsp
+//      651:	41 52                	push   r10
+//      653:	48 81 ec 68 03 00 00 	sub    rsp,0x368
+//      65a:	48 89 bd b8 fc ff ff 	mov    QWORD PTR [rbp-0x348],rdi
+//      661:	48 89 b5 b0 fc ff ff 	mov    QWORD PTR [rbp-0x350],rsi
+//      668:	89 95 ac fc ff ff    	mov    DWORD PTR [rbp-0x354],edx
+//     U64 idx = set64(red_table_idx);
+//      66e:	8b 85 ac fc ff ff    	mov    eax,DWORD PTR [rbp-0x354]
+//      674:	48 98                	cdqe   
+//      676:	48 89 85 e0 fc ff ff 	mov    QWORD PTR [rbp-0x320],rax
+// }
+
+  lea(r10, Address(rsp, 0x8));
+  andq(rsp, -32);
+  pushq(Address(rsp, -8));
+  push(rbp);
+  movq(rbp, rsp);
+  push(r10);
+  subptr(rsp, 0x368);
+
+#ifdef _WIN64
+  movptr(rdi, rcx);
+  movptr(rsi, rdx);
+  movq(rdx, r8);
+#endif
+
+  movq(Address(rbp, -0x348), rdi);
+  movq(Address(rbp, -0x350), rsi);
+  movl(Address(rbp, -0x354), rdx);
+
+  movl(rax, Address(rbp, -0x354));
+  emit_int8((unsigned char) 0x48);
+  emit_int8((unsigned char) 0x98);
+  movq(Address(rbp, -0x320), rax);
+
+// extern __inline __m256i __attribute__((__gnu_inline__, __always_inline__, __artificial__))
+// _mm256_set1_epi64x (long long __A)
+// {
+//   return __extension__ (__m256i)(__v4di){ __A, __A, __A, __A };
+//      67d:	c4 e2 7d 59 85 e0 fc 	vpbroadcastq ymm0,QWORD PTR [rbp-0x320]
+//      684:	ff ff 
+//      686:	62 f1 fd 28 7f 85 b0 	vmovdqa64 YMMWORD PTR [rbp-0x250],ymm0
+//      68d:	fd ff ff 
+//      690:	48 c7 85 d8 fc ff ff 	mov    QWORD PTR [rbp-0x328],0x0
+//      697:	00 00 00 00 
+//      69b:	c4 e2 7d 59 85 d8 fc 	vpbroadcastq ymm0,QWORD PTR [rbp-0x328]
+//      6a2:	ff ff 
+//     U64 cur_idx = set64(0);
+//      6a4:	62 f1 fd 28 7f 85 f0 	vmovdqa64 YMMWORD PTR [rbp-0x310],ymm0
+//      6ab:	fc ff ff 
+
+  vpbroadcastq(xmm0, Address(rbp, -0x320), Assembler::AVX_256bit);
+  evmovdquq(Address(rbp, -0x250), xmm0, Assembler::AVX_256bit);
+  movq(Address(rbp, -0x328), 0);
+  vpbroadcastq(xmm0, Address(rbp, -0x328), Assembler::AVX_256bit);
+  evmovdquq(Address(rbp, -0x310), xmm0, Assembler::AVX_256bit);
+
+//     U64 t0, t1, t2, t3, t4;
+//     t0 = t1 = t2 = t3 = t4 = get_zero64();
+//      6ae:	b8 00 00 00 00       	mov    eax,0x0
+//      6b3:	e8 68 fe ff ff       	call   520 <get_zero64>
+//      6b8:	62 f1 fd 28 7f 85 90 	vmovdqa64 YMMWORD PTR [rbp-0x270],ymm0
+//      6bf:	fd ff ff 
+//      6c2:	62 f1 fd 28 6f 85 90 	vmovdqa64 ymm0,YMMWORD PTR [rbp-0x270]
+//      6c9:	fd ff ff 
+//      6cc:	62 f1 fd 28 7f 85 70 	vmovdqa64 YMMWORD PTR [rbp-0x290],ymm0
+//      6d3:	fd ff ff 
+//      6d6:	62 f1 fd 28 6f 85 70 	vmovdqa64 ymm0,YMMWORD PTR [rbp-0x290]
+//      6dd:	fd ff ff 
+//      6e0:	62 f1 fd 28 7f 85 50 	vmovdqa64 YMMWORD PTR [rbp-0x2b0],ymm0
+//      6e7:	fd ff ff 
+//      6ea:	62 f1 fd 28 6f 85 50 	vmovdqa64 ymm0,YMMWORD PTR [rbp-0x2b0]
+//      6f1:	fd ff ff 
+//      6f4:	62 f1 fd 28 7f 85 30 	vmovdqa64 YMMWORD PTR [rbp-0x2d0],ymm0
+//      6fb:	fd ff ff 
+//      6fe:	62 f1 fd 28 6f 85 30 	vmovdqa64 ymm0,YMMWORD PTR [rbp-0x2d0]
+//      705:	fd ff ff 
+//      708:	62 f1 fd 28 7f 85 10 	vmovdqa64 YMMWORD PTR [rbp-0x2f0],ymm0
+//      70f:	fd ff ff 
+
+  vpxor(xmm0, xmm0, xmm0, Assembler::AVX_256bit);
+  evmovdquq(Address(rbp, -0x270), xmm0, Assembler::AVX_256bit);
+  evmovdquq(Address(rbp, -0x290), xmm0, Assembler::AVX_256bit);
+  evmovdquq(Address(rbp, -0x2b0), xmm0, Assembler::AVX_256bit);
+  evmovdquq(Address(rbp, -0x2d0), xmm0, Assembler::AVX_256bit);
+  evmovdquq(Address(rbp, -0x2f0), xmm0, Assembler::AVX_256bit);
+
+//     for (int t = 0; t < (1U << EXP_WIN_SIZE); ++t, cur_idx = add64(cur_idx, set64(1))) {
+//      712:	c7 85 d4 fc ff ff 00 	mov    DWORD PTR [rbp-0x32c],0x0
+//      719:	00 00 00 
+//      71c:	e9 8b 03 00 00       	jmp    aac <extract_multiplier+0x46c>
+
+  Label L_e_aac, L_e_721;
+  movl(Address(rbp, -0x32c), 0);
+  jmp(L_e_aac);
+  bind(L_e_721);
+//         __mmask8 m = _mm256_cmp_epi64_mask(idx, cur_idx, _MM_CMPINT_EQ);
+//      721:	62 f1 fd 28 6f 85 b0 	vmovdqa64 ymm0,YMMWORD PTR [rbp-0x250]
+//      728:	fd ff ff 
+//      72b:	62 f1 fd 28 6f 8d f0 	vmovdqa64 ymm1,YMMWORD PTR [rbp-0x310]
+//      732:	fc ff ff 
+//      735:	c5 f5 46 c9          	kxnorb k1,k1,k1
+//      739:	62 f3 fd 29 1f c1 00 	vpcmpeqq k0{k1},ymm0,ymm1
+//      740:	c5 f9 91 85 ce fc ff 	kmovb  BYTE PTR [rbp-0x332],k0
+//      747:	ff 
+
+  evmovdquq(xmm0, Address(rbp, -0x250), Assembler::AVX_256bit);
+  evmovdquq(xmm1, Address(rbp, -0x310), Assembler::AVX_256bit);
+  kxnorbl(k1, k1, k1);
+  evcmppd(k0, k1, xmm0, xmm1, EQ_UQ, Assembler::AVX_256bit);
+  emit_int8((unsigned char) 0xc5);
+  emit_int8((unsigned char) 0xf9);
+  emit_int8((unsigned char) 0x91);
+  emit_int8((unsigned char) 0x85);
+  emit_int8((unsigned char) 0xce);
+  emit_int8((unsigned char) 0xfc);
+  emit_int8((unsigned char) 0xff);
+  emit_int8((unsigned char) 0xff);
+
+//         t0 = _mm256_mask_xor_epi64(t0, m, t0, loadu64(&red_table[t][4*0]));
+//      748:	8b 85 d4 fc ff ff    	mov    eax,DWORD PTR [rbp-0x32c]
+//      74e:	48 63 d0             	movsxd rdx,eax
+//      751:	48 89 d0             	mov    rax,rdx
+//      754:	48 c1 e0 02          	shl    rax,0x2
+//      758:	48 01 d0             	add    rax,rdx
+//      75b:	48 c1 e0 05          	shl    rax,0x5
+//      75f:	48 89 c2             	mov    rdx,rax
+//      762:	48 8b 85 b0 fc ff ff 	mov    rax,QWORD PTR [rbp-0x350]
+//      769:	48 01 d0             	add    rax,rdx
+//      76c:	48 89 c7             	mov    rdi,rax
+//      76f:	e8 cc fb ff ff       	call   340 <loadu64>
+//      774:	0f b6 85 ce fc ff ff 	movzx  eax,BYTE PTR [rbp-0x332]
+//      77b:	62 f1 fd 28 6f 8d 10 	vmovdqa64 ymm1,YMMWORD PTR [rbp-0x2f0]
+//      782:	fd ff ff 
+//      785:	62 f1 fd 28 7f 8d 50 	vmovdqa64 YMMWORD PTR [rbp-0xb0],ymm1
+//      78c:	ff ff ff 
+//      78f:	88 85 d3 fc ff ff    	mov    BYTE PTR [rbp-0x32d],al
+//      795:	62 f1 fd 28 6f 8d 10 	vmovdqa64 ymm1,YMMWORD PTR [rbp-0x2f0]
+//      79c:	fd ff ff 
+//      79f:	62 f1 fd 28 7f 8d 70 	vmovdqa64 YMMWORD PTR [rbp-0x90],ymm1
+//      7a6:	ff ff ff 
+//      7a9:	62 f1 fd 28 7f 85 90 	vmovdqa64 YMMWORD PTR [rbp-0x70],ymm0
+//      7b0:	ff ff ff 
+
+  movl(rax, Address(rbp, -0x32c));
+#define movsxd emit_int8((unsigned char) 0x48); emit_int8((unsigned char) 0x63); emit_int8((unsigned char) 0xd0)
+  movsxd;
+  movq(rax, rdx);
+  shlq(rax, 2);
+  addq(rax, rdx);
+  shlq(rax, 0x5);
+  movq(rdx, rax);
+  movq(rax, Address(rbp, -0x350));
+  addq(rax, rdx);
+  movq(rdi, rax);
+
+// extern __inline __m256i
+// __attribute__ ((__gnu_inline__, __always_inline__, __artificial__))
+// _mm256_mask_xor_epi64 (__m256i __W, __mmask8 __U, __m256i __A,
+// 		       __m256i __B)
+// {
+//   return (__m256i) __builtin_ia32_pxorq256_mask ((__v4di) __A,
+//      7b3:	0f b6 85 d3 fc ff ff 	movzx  eax,BYTE PTR [rbp-0x32d]
+//      7ba:	62 f1 fd 28 6f 8d 90 	vmovdqa64 ymm1,YMMWORD PTR [rbp-0x70]
+//      7c1:	ff ff ff 
+//      7c4:	62 f1 fd 28 6f 85 50 	vmovdqa64 ymm0,YMMWORD PTR [rbp-0xb0]
+//      7cb:	ff ff ff 
+//      7ce:	c5 f9 92 d0          	kmovb  k2,eax
+//      7d2:	62 f1 f5 2a ef 85 70 	vpxorq ymm0{k2},ymm1,YMMWORD PTR [rbp-0x90]
+//      7d9:	ff ff ff 
+//      7dc:	90                   	nop
+//      7dd:	62 f1 fd 28 7f 85 10 	vmovdqa64 YMMWORD PTR [rbp-0x2f0],ymm0
+//      7e4:	fd ff ff 
+//         t1 = _mm256_mask_xor_epi64(t1, m, t1, loadu64(&red_table[t][4*1]));
+//      7e7:	8b 85 d4 fc ff ff    	mov    eax,DWORD PTR [rbp-0x32c]
+//      7ed:	48 63 d0             	movsxd rdx,eax
+//      7f0:	48 89 d0             	mov    rax,rdx
+//      7f3:	48 c1 e0 02          	shl    rax,0x2
+//      7f7:	48 01 d0             	add    rax,rdx
+//      7fa:	48 c1 e0 05          	shl    rax,0x5
+//      7fe:	48 89 c2             	mov    rdx,rax
+//      801:	48 8b 85 b0 fc ff ff 	mov    rax,QWORD PTR [rbp-0x350]
+//      808:	48 01 d0             	add    rax,rdx
+//      80b:	48 83 c0 20          	add    rax,0x20
+//      80f:	48 89 c7             	mov    rdi,rax
+//      812:	e8 29 fb ff ff       	call   340 <loadu64>
+//      817:	0f b6 85 ce fc ff ff 	movzx  eax,BYTE PTR [rbp-0x332]
+//      81e:	62 f1 fd 28 6f 8d 30 	vmovdqa64 ymm1,YMMWORD PTR [rbp-0x2d0]
+//      825:	fd ff ff 
+//      828:	62 f1 fd 28 7f 8d f0 	vmovdqa64 YMMWORD PTR [rbp-0x110],ymm1
+//      82f:	fe ff ff 
+//      832:	88 85 d2 fc ff ff    	mov    BYTE PTR [rbp-0x32e],al
+//      838:	62 f1 fd 28 6f 8d 30 	vmovdqa64 ymm1,YMMWORD PTR [rbp-0x2d0]
+//      83f:	fd ff ff 
+//      842:	62 f1 fd 28 7f 8d 10 	vmovdqa64 YMMWORD PTR [rbp-0xf0],ymm1
+//      849:	ff ff ff 
+//      84c:	62 f1 fd 28 7f 85 30 	vmovdqa64 YMMWORD PTR [rbp-0xd0],ymm0
+//      853:	ff ff ff 
+//      856:	0f b6 85 d2 fc ff ff 	movzx  eax,BYTE PTR [rbp-0x32e]
+//      85d:	62 f1 fd 28 6f 8d 30 	vmovdqa64 ymm1,YMMWORD PTR [rbp-0xd0]
+//      864:	ff ff ff 
+//      867:	62 f1 fd 28 6f 85 f0 	vmovdqa64 ymm0,YMMWORD PTR [rbp-0x110]
+//      86e:	fe ff ff 
+//      871:	c5 f9 92 d8          	kmovb  k3,eax
+//      875:	62 f1 f5 2b ef 85 10 	vpxorq ymm0{k3},ymm1,YMMWORD PTR [rbp-0xf0]
+//      87c:	ff ff ff 
+//      87f:	90                   	nop
+//      880:	62 f1 fd 28 7f 85 30 	vmovdqa64 YMMWORD PTR [rbp-0x2d0],ymm0
+//      887:	fd ff ff 
+//         t2 = _mm256_mask_xor_epi64(t2, m, t2, loadu64(&red_table[t][4*2]));
+//      88a:	8b 85 d4 fc ff ff    	mov    eax,DWORD PTR [rbp-0x32c]
+//      890:	48 63 d0             	movsxd rdx,eax
+//      893:	48 89 d0             	mov    rax,rdx
+//      896:	48 c1 e0 02          	shl    rax,0x2
+//      89a:	48 01 d0             	add    rax,rdx
+//      89d:	48 c1 e0 05          	shl    rax,0x5
+//      8a1:	48 89 c2             	mov    rdx,rax
+//      8a4:	48 8b 85 b0 fc ff ff 	mov    rax,QWORD PTR [rbp-0x350]
+//      8ab:	48 01 d0             	add    rax,rdx
+//      8ae:	48 83 c0 40          	add    rax,0x40
+//      8b2:	48 89 c7             	mov    rdi,rax
+//      8b5:	e8 86 fa ff ff       	call   340 <loadu64>
+//      8ba:	0f b6 85 ce fc ff ff 	movzx  eax,BYTE PTR [rbp-0x332]
+//      8c1:	62 f1 fd 28 6f 8d 50 	vmovdqa64 ymm1,YMMWORD PTR [rbp-0x2b0]
+//      8c8:	fd ff ff 
+//      8cb:	62 f1 fd 28 7f 8d 90 	vmovdqa64 YMMWORD PTR [rbp-0x170],ymm1
+//      8d2:	fe ff ff 
+//      8d5:	88 85 d1 fc ff ff    	mov    BYTE PTR [rbp-0x32f],al
+//      8db:	62 f1 fd 28 6f 8d 50 	vmovdqa64 ymm1,YMMWORD PTR [rbp-0x2b0]
+//      8e2:	fd ff ff 
+//      8e5:	62 f1 fd 28 7f 8d b0 	vmovdqa64 YMMWORD PTR [rbp-0x150],ymm1
+//      8ec:	fe ff ff 
+//      8ef:	62 f1 fd 28 7f 85 d0 	vmovdqa64 YMMWORD PTR [rbp-0x130],ymm0
+//      8f6:	fe ff ff 
+//      8f9:	0f b6 85 d1 fc ff ff 	movzx  eax,BYTE PTR [rbp-0x32f]
+//      900:	62 f1 fd 28 6f 8d d0 	vmovdqa64 ymm1,YMMWORD PTR [rbp-0x130]
+//      907:	fe ff ff 
+//      90a:	62 f1 fd 28 6f 85 90 	vmovdqa64 ymm0,YMMWORD PTR [rbp-0x170]
+//      911:	fe ff ff 
+//      914:	c5 f9 92 e0          	kmovb  k4,eax
+//      918:	62 f1 f5 2c ef 85 b0 	vpxorq ymm0{k4},ymm1,YMMWORD PTR [rbp-0x150]
+//      91f:	fe ff ff 
+//      922:	90                   	nop
+//      923:	62 f1 fd 28 7f 85 50 	vmovdqa64 YMMWORD PTR [rbp-0x2b0],ymm0
+//      92a:	fd ff ff 
+//         t3 = _mm256_mask_xor_epi64(t3, m, t3, loadu64(&red_table[t][4*3]));
+//      92d:	8b 85 d4 fc ff ff    	mov    eax,DWORD PTR [rbp-0x32c]
+//      933:	48 63 d0             	movsxd rdx,eax
+//      936:	48 89 d0             	mov    rax,rdx
+//      939:	48 c1 e0 02          	shl    rax,0x2
+//      93d:	48 01 d0             	add    rax,rdx
+//      940:	48 c1 e0 05          	shl    rax,0x5
+//      944:	48 89 c2             	mov    rdx,rax
+//      947:	48 8b 85 b0 fc ff ff 	mov    rax,QWORD PTR [rbp-0x350]
+//      94e:	48 01 d0             	add    rax,rdx
+//      951:	48 83 c0 60          	add    rax,0x60
+//      955:	48 89 c7             	mov    rdi,rax
+//      958:	e8 e3 f9 ff ff       	call   340 <loadu64>
+//      95d:	0f b6 85 ce fc ff ff 	movzx  eax,BYTE PTR [rbp-0x332]
+//      964:	62 f1 fd 28 6f 8d 70 	vmovdqa64 ymm1,YMMWORD PTR [rbp-0x290]
+//      96b:	fd ff ff 
+//      96e:	62 f1 fd 28 7f 8d 30 	vmovdqa64 YMMWORD PTR [rbp-0x1d0],ymm1
+//      975:	fe ff ff 
+//      978:	88 85 d0 fc ff ff    	mov    BYTE PTR [rbp-0x330],al
+//      97e:	62 f1 fd 28 6f 8d 70 	vmovdqa64 ymm1,YMMWORD PTR [rbp-0x290]
+//      985:	fd ff ff 
+//      988:	62 f1 fd 28 7f 8d 50 	vmovdqa64 YMMWORD PTR [rbp-0x1b0],ymm1
+//      98f:	fe ff ff 
+//      992:	62 f1 fd 28 7f 85 70 	vmovdqa64 YMMWORD PTR [rbp-0x190],ymm0
+//      999:	fe ff ff 
+//      99c:	0f b6 85 d0 fc ff ff 	movzx  eax,BYTE PTR [rbp-0x330]
+//      9a3:	62 f1 fd 28 6f 8d 70 	vmovdqa64 ymm1,YMMWORD PTR [rbp-0x190]
+//      9aa:	fe ff ff 
+//      9ad:	62 f1 fd 28 6f 85 30 	vmovdqa64 ymm0,YMMWORD PTR [rbp-0x1d0]
+//      9b4:	fe ff ff 
+//      9b7:	c5 f9 92 e8          	kmovb  k5,eax
+//      9bb:	62 f1 f5 2d ef 85 50 	vpxorq ymm0{k5},ymm1,YMMWORD PTR [rbp-0x1b0]
+//      9c2:	fe ff ff 
+//      9c5:	90                   	nop
+//      9c6:	62 f1 fd 28 7f 85 70 	vmovdqa64 YMMWORD PTR [rbp-0x290],ymm0
+//      9cd:	fd ff ff 
+//         t4 = _mm256_mask_xor_epi64(t4, m, t4, loadu64(&red_table[t][4*4]));
+//      9d0:	8b 85 d4 fc ff ff    	mov    eax,DWORD PTR [rbp-0x32c]
+//      9d6:	48 63 d0             	movsxd rdx,eax
+//      9d9:	48 89 d0             	mov    rax,rdx
+//      9dc:	48 c1 e0 02          	shl    rax,0x2
+//      9e0:	48 01 d0             	add    rax,rdx
+//      9e3:	48 c1 e0 05          	shl    rax,0x5
+//      9e7:	48 89 c2             	mov    rdx,rax
+//      9ea:	48 8b 85 b0 fc ff ff 	mov    rax,QWORD PTR [rbp-0x350]
+//      9f1:	48 01 d0             	add    rax,rdx
+//      9f4:	48 83 e8 80          	sub    rax,0xffffffffffffff80
+//      9f8:	48 89 c7             	mov    rdi,rax
+//      9fb:	e8 40 f9 ff ff       	call   340 <loadu64>
+//      a00:	0f b6 85 ce fc ff ff 	movzx  eax,BYTE PTR [rbp-0x332]
+//      a07:	62 f1 fd 28 6f 8d 90 	vmovdqa64 ymm1,YMMWORD PTR [rbp-0x270]
+//      a0e:	fd ff ff 
+//      a11:	62 f1 fd 28 7f 8d d0 	vmovdqa64 YMMWORD PTR [rbp-0x230],ymm1
+//      a18:	fd ff ff 
+//      a1b:	88 85 cf fc ff ff    	mov    BYTE PTR [rbp-0x331],al
+//      a21:	62 f1 fd 28 6f 8d 90 	vmovdqa64 ymm1,YMMWORD PTR [rbp-0x270]
+//      a28:	fd ff ff 
+//      a2b:	62 f1 fd 28 7f 8d f0 	vmovdqa64 YMMWORD PTR [rbp-0x210],ymm1
+//      a32:	fd ff ff 
+//      a35:	62 f1 fd 28 7f 85 10 	vmovdqa64 YMMWORD PTR [rbp-0x1f0],ymm0
+//      a3c:	fe ff ff 
+//      a3f:	0f b6 85 cf fc ff ff 	movzx  eax,BYTE PTR [rbp-0x331]
+//      a46:	62 f1 fd 28 6f 8d 10 	vmovdqa64 ymm1,YMMWORD PTR [rbp-0x1f0]
+//      a4d:	fe ff ff 
+//      a50:	62 f1 fd 28 6f 85 d0 	vmovdqa64 ymm0,YMMWORD PTR [rbp-0x230]
+//      a57:	fd ff ff 
+//      a5a:	c5 f9 92 f0          	kmovb  k6,eax
+//      a5e:	62 f1 f5 2e ef 85 f0 	vpxorq ymm0{k6},ymm1,YMMWORD PTR [rbp-0x210]
+//      a65:	fd ff ff 
+//      a68:	90                   	nop
+//      a69:	62 f1 fd 28 7f 85 90 	vmovdqa64 YMMWORD PTR [rbp-0x270],ymm0
+//      a70:	fd ff ff 
+//     for (int t = 0; t < (1U << EXP_WIN_SIZE); ++t, cur_idx = add64(cur_idx, set64(1))) {
+//      a73:	ff 85 d4 fc ff ff    	inc    DWORD PTR [rbp-0x32c]
+//      a79:	48 c7 85 e8 fc ff ff 	mov    QWORD PTR [rbp-0x318],0x1
+//      a80:	01 00 00 00 
+//      a84:	c4 e2 7d 59 85 e8 fc 	vpbroadcastq ymm0,QWORD PTR [rbp-0x318]
+//      a8b:	ff ff 
+//      a8d:	62 f1 fd 28 6f c8    	vmovdqa64 ymm1,ymm0
+//      a93:	62 f1 fd 28 6f 85 f0 	vmovdqa64 ymm0,YMMWORD PTR [rbp-0x310]
+//      a9a:	fc ff ff 
+//      a9d:	e8 fe f9 ff ff       	call   4a0 <add64>
+//      aa2:	62 f1 fd 28 7f 85 f0 	vmovdqa64 YMMWORD PTR [rbp-0x310],ymm0
+//      aa9:	fc ff ff 
+
+bind(L_e_aac);
+//      aac:	8b 85 d4 fc ff ff    	mov    eax,DWORD PTR [rbp-0x32c]
+//      ab2:	83 f8 1f             	cmp    eax,0x1f
+//      ab5:	0f 86 66 fc ff ff    	jbe    721 <extract_multiplier+0xe1>
+//      abb:	62 f1 fd 28 6f 85 b0 	vmovdqa64 ymm0,YMMWORD PTR [rbp-0x250]
+//      ac2:	fd ff ff 
+//      ac5:	62 f1 fd 28 7f 85 b0 	vmovdqa64 YMMWORD PTR [rbp-0x50],ymm0
+//      acc:	ff ff ff 
+//      acf:	62 f1 fd 28 6f 85 b0 	vmovdqa64 ymm0,YMMWORD PTR [rbp-0x250]
+//      ad6:	fd ff ff 
+//      ad9:	62 f1 fd 28 7f 85 d0 	vmovdqa64 YMMWORD PTR [rbp-0x30],ymm0
+//      ae0:	ff ff ff 
+
+// extern __inline __m256i
+// __attribute__ ((__gnu_inline__, __always_inline__, __artificial__))
+// _mm256_xor_si256 (__m256i __A, __m256i __B)
+// {
+//   return (__m256i) ((__v4du)__A ^ (__v4du)__B);
+//      ae3:	62 f1 fd 28 6f 8d b0 	vmovdqa64 ymm1,YMMWORD PTR [rbp-0x50]
+//      aea:	ff ff ff 
+//      aed:	62 f1 fd 28 6f 85 d0 	vmovdqa64 ymm0,YMMWORD PTR [rbp-0x30]
+//      af4:	ff ff ff 
+//      af7:	c5 f5 ef c0          	vpxor  ymm0,ymm1,ymm0
+//     }
+
+//     /* Clear index */
+//     idx = xor64(idx, idx);
+//      afb:	62 f1 fd 28 7f 85 b0 	vmovdqa64 YMMWORD PTR [rbp-0x250],ymm0
+//      b02:	fd ff ff 
+
+//     storeu64(&red_Y[4*0], t0);
+//      b05:	62 f1 fd 28 6f 85 10 	vmovdqa64 ymm0,YMMWORD PTR [rbp-0x2f0]
+//      b0c:	fd ff ff 
+//      b0f:	48 8b 85 b8 fc ff ff 	mov    rax,QWORD PTR [rbp-0x348]
+//      b16:	48 89 c7             	mov    rdi,rax
+//      b19:	e8 62 f8 ff ff       	call   380 <storeu64>
+//     storeu64(&red_Y[4*1], t1);
+//      b1e:	48 8b 85 b8 fc ff ff 	mov    rax,QWORD PTR [rbp-0x348]
+//      b25:	48 83 c0 20          	add    rax,0x20
+//      b29:	62 f1 fd 28 6f 85 30 	vmovdqa64 ymm0,YMMWORD PTR [rbp-0x2d0]
+//      b30:	fd ff ff 
+//      b33:	48 89 c7             	mov    rdi,rax
+//      b36:	e8 45 f8 ff ff       	call   380 <storeu64>
+//     storeu64(&red_Y[4*2], t2);
+//      b3b:	48 8b 85 b8 fc ff ff 	mov    rax,QWORD PTR [rbp-0x348]
+//      b42:	48 83 c0 40          	add    rax,0x40
+//      b46:	62 f1 fd 28 6f 85 50 	vmovdqa64 ymm0,YMMWORD PTR [rbp-0x2b0]
+//      b4d:	fd ff ff 
+//      b50:	48 89 c7             	mov    rdi,rax
+//      b53:	e8 28 f8 ff ff       	call   380 <storeu64>
+//     storeu64(&red_Y[4*3], t3);
+//      b58:	48 8b 85 b8 fc ff ff 	mov    rax,QWORD PTR [rbp-0x348]
+//      b5f:	48 83 c0 60          	add    rax,0x60
+//      b63:	62 f1 fd 28 6f 85 70 	vmovdqa64 ymm0,YMMWORD PTR [rbp-0x290]
+//      b6a:	fd ff ff 
+//      b6d:	48 89 c7             	mov    rdi,rax
+//      b70:	e8 0b f8 ff ff       	call   380 <storeu64>
+//     storeu64(&red_Y[4*4], t4);
+//      b75:	48 8b 85 b8 fc ff ff 	mov    rax,QWORD PTR [rbp-0x348]
+//      b7c:	48 83 e8 80          	sub    rax,0xffffffffffffff80
+//      b80:	62 f1 fd 28 6f 85 90 	vmovdqa64 ymm0,YMMWORD PTR [rbp-0x270]
+//      b87:	fd ff ff 
+//      b8a:	48 89 c7             	mov    rdi,rax
+//      b8d:	e8 ee f7 ff ff       	call   380 <storeu64>
+// }
+//      b92:	90                   	nop
+//      b93:	48 81 c4 68 03 00 00 	add    rsp,0x368
+//      b9a:	41 5a                	pop    r10
+//      b9c:	5d                   	pop    rbp
+//      b9d:	49 8d 62 f8          	lea    rsp,[r10-0x8]
+//      ba1:	c3                   	ret    
+}
+
+
 void MacroAssembler::ifmaExp52x20(Register a, Register b, Register c, Register d, Register e, Register f)
 {
   // Windows regs    |  Linux regs
@@ -544,6 +962,8 @@ void MacroAssembler::ifmaExp52x20(Register a, Register b, Register c, Register d
   jmp(L_c1c);
   bind(L_c06);
   movl(rax, Address(rsp, 0x3c));
+  emit_int8((unsigned char) 0x48);
+  emit_int8((unsigned char) 0x98);
   movq(Address(rsp, rax, Address::times_8, 0x140), 0x00);
   incl(Address(rsp, 0x3c));
   bind(L_c1c);
@@ -570,6 +990,8 @@ void MacroAssembler::ifmaExp52x20(Register a, Register b, Register c, Register d
   jmp(L_c51);
   bind(L_c2d);
   movl(rax, Address(rsp, 0x40));
+  emit_int8((unsigned char) 0x48);
+  emit_int8((unsigned char) 0x98);
   lea(rdx, Address(rax, 0, Address::times_8));
   lea(rax, Address(rsp, 0x2c0));
   addptr(rax, rdx);
@@ -595,6 +1017,8 @@ void MacroAssembler::ifmaExp52x20(Register a, Register b, Register c, Register d
   jmp(L_c7c);
   bind(L_c66);
   movl(rax, Address(rsp, 0x44));
+  emit_int8((unsigned char) 0x48);
+  emit_int8((unsigned char) 0x98);
   movq(Address(rsp, rax, Address::times_8, 0x200), 0x00);
   incl(Address(rsp, 0x44));
   bind(L_c7c);
@@ -629,6 +1053,7 @@ void MacroAssembler::ifmaExp52x20(Register a, Register b, Register c, Register d
   movptr(r8, rdi);
   movptr(rdi, rax);
   montgomeryMultiply52x20(rdi, rsi, rdx, rcx, r8);
+//  call ????
 //    AMM(red_table[1], base, toMont, modulus, k0);
 //      cb8:	4c 8b 04 24          	mov    r8,QWORD PTR [rsp]
 //      cbc:	48 8b 4c 24 10       	mov    rcx,QWORD PTR [rsp+0x10]
@@ -653,6 +1078,11 @@ void MacroAssembler::ifmaExp52x20(Register a, Register b, Register c, Register d
 //      ce2:	c7 44 24 48 01 00 00 	mov    DWORD PTR [rsp+0x48],0x1
 //      ce9:	00 
 //      cea:	e9 c7 00 00 00       	jmp    db6 <k1_ifma256_exp52x20+0x1f6>
+
+  Label L_db6, L_cef;
+  movl(Address(rsp, 0x48), 0x01);
+  jmp(L_db6);
+  bind(L_cef);
 //       AMS(red_table[2*idx],   red_table[idx],  modulus, k0);
 //      cef:	48 8d 8c 24 c0 02 00 	lea    rcx,[rsp+0x2c0]
 //      cf6:	00 
@@ -678,6 +1108,35 @@ void MacroAssembler::ifmaExp52x20(Register a, Register b, Register c, Register d
 //      d3c:	48 89 d1             	mov    rcx,rdx
 //      d3f:	48 89 c2             	mov    rdx,rax
 //      d42:	e8 00 00 00 00       	call   d47 <k1_ifma256_exp52x20+0x187>  // ASG - AMS
+  lea(rcx, Address(rsp, 0x2c0));
+  movl(rax, Address(rsp, 0x48));
+  emit_int8((unsigned char) 0x48);
+  emit_int8((unsigned char) 0x63);
+  emit_int8((unsigned char) 0xd0);
+  //movswl(rdx, rax);
+  movq(rax, rdx);
+  shlq(rax, 0x2);
+  addq(rax, rdx);
+  shlq(rax, 0x5);
+  lea(rsi, Address(rcx, rax, Address::times_1));
+  movl(rax, Address(rsp, 0x48));
+  addl(rax, rax);
+  lea(rcx, Address(rsp, 0x2c0));
+  emit_int8((unsigned char) 0x48);
+  emit_int8((unsigned char) 0x63);
+  emit_int8((unsigned char) 0xd0);
+  //movswl(rdx, rax);
+  movq(rax, rdx);
+  shlq(rax, 2);
+  addq(rax, rdx);
+  shlq(rax, 0x5);
+  lea(rdi, Address(rcx, rax, Address::times_1));
+  movq(rdx, Address(rsp, 0));
+  movq(rax, Address(rsp, 0x10));
+  movq(rcx, rdx);
+  movq(rdx, rax);
+  montgomerySquare52x20(rdi, rsi, rdx, rcx);
+
 //       AMM(red_table[2*idx+1], red_table[2*idx],red_table[1], modulus, k0);
 //      d47:	8b 44 24 48          	mov    eax,DWORD PTR [rsp+0x48]
 //      d4b:	01 c0                	add    eax,eax
@@ -710,9 +1169,47 @@ void MacroAssembler::ifmaExp52x20(Register a, Register b, Register c, Register d
 //      dad:	e8 00 00 00 00       	call   db2 <k1_ifma256_exp52x20+0x1f2>  // ASG AMM
 //    for (idx = 1; idx < (1U << EXP_WIN_SIZE)/2; idx++) {
 //      db2:	ff 44 24 48          	inc    DWORD PTR [rsp+0x48]
+  movl(rax, Address(rsp, 0x48));
+  addl(rax, rax);
+  lea(rcx, Address(rsp, 0x2c0));
+  emit_int8((unsigned char) 0x48);
+  emit_int8((unsigned char) 0x63);
+  emit_int8((unsigned char) 0xd0);
+//  movswl(rdx, rax);
+  movq(rax, rdx);
+  shlq(rax, 2);
+  addq(rax, rdx);
+  shlq(rax, 0x5);
+  lea(rsi, Address(rax, rax, Address::times_1));
+  movl(rax, Address(rsp, 0x48));
+  addq(rax, rax);
+  incq(rax);
+  lea(rcx, Address(rsp, 0x2c0));
+  emit_int8((unsigned char) 0x48);
+  emit_int8((unsigned char) 0x63);
+  emit_int8((unsigned char) 0xd0);
+//  movswl(rdx, rax);
+  movq(rax, rdx);
+  shlq(rax, 2);
+  addq(rax, rdx);
+  shlq(rax, 0x5);
+  lea(rdi, Address(rcx, rax, Address::times_1));
+  movq(rcx, Address(rsp, 0));
+  movq(rax, Address(rsp, 0x10));
+  lea(rdx, Address(rsp, 0x2c0));
+  addq(rdx, 0xa0);
+  movq(r8, rdx);
+  movq(rcx, rax);
+  montgomeryMultiply52x20(rdi, rsi, rdx, rcx, r8);
+
+  incl(Address(rsp, 0x48));
+  bind(L_db6);
 //      db6:	8b 44 24 48          	mov    eax,DWORD PTR [rsp+0x48]
 //      dba:	83 f8 0f             	cmp    eax,0xf
 //      dbd:	0f 86 2c ff ff ff    	jbe    cef <k1_ifma256_exp52x20+0x12f>
+  movl(rax, Address(rsp, 0x48));
+  cmpl(rax, 0x0f);
+  jcc(Assembler::below, L_cef);
 //    }
 
 //    /* copy and expand exponents */

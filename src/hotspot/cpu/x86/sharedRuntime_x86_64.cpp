@@ -3579,6 +3579,29 @@ void SharedRuntime::montgomery_square(jint *a_ints, jint *n_ints,
 #define BITS2WORD32_SIZE(x) (((x)+31)>>5)
 #define BITS2WORD64_SIZE(x) (((x)+63)>>6)
 
+#define BITSIZE_MODULUS (1024)
+
+#define EXP_WIN_SIZE (5U)
+#define EXP_WIN_MASK ((1U << EXP_WIN_SIZE) - 1)
+
+// #define AMM ifma256_amm52x20
+// #define AMS ifma256_ams52x20
+
+/* expand by zeros */
+#define ZEXPAND_BNU(srcdst,srcLen, dstLen) \
+{ \
+   int __idx; \
+   for(__idx=(srcLen); __idx<(dstLen); __idx++) (srcdst)[__idx] = 0; \
+}
+
+/* copy and expand by zeros */
+#define ZEXPAND_COPY_BNU(dst,dstLen, src,srcLen) \
+{ \
+   int __idx; \
+   for(__idx=0; __idx<(srcLen); __idx++) (dst)[__idx] = (src)[__idx]; \
+   for(; __idx<(dstLen); __idx++)    (dst)[__idx] = 0; \
+}
+
 #if 0
 static unsigned char* reverse_bytes(unsigned char* out,
                                     const unsigned char* inp, int len) {
@@ -3703,7 +3726,7 @@ static unsigned int *rev_words(unsigned int *out, const unsigned int *inp,
 #define ODD_MOD_POW_BIT_SIZE 1024
 
 void SharedRuntime::oddModPowInner1K(jint *base, jint *exp, jint *modulus, jint modLen,
-                                    jint *toMont, jint montLen, jlong inv, jint *result) {
+                                     jint *toMont, jint montLen, jlong inv, jint *result) {
   // Space for translated arrays
   unsigned long base52[LEN52(ODD_MOD_POW_BIT_SIZE)] = {0};
   unsigned long exp52[LEN52(ODD_MOD_POW_BIT_SIZE)] = {0};
@@ -3720,10 +3743,109 @@ void SharedRuntime::oddModPowInner1K(jint *base, jint *exp, jint *modulus, jint 
   rev_words((unsigned int *)toMont52, (const unsigned int *)toMont, LEN64(montLen * 32));
   regular_dig52(toMont52, montLen, toMont52, montLen * 32);
 
-  //ifmaExp52x20(result52, base52, exp52, mod52, toMont52, inv);
+  // ifmaExp52x20(result52, base52, exp52, mod52, toMont52, inv);    //ASGASG
+  {
+    /// Expo in Montgomery domain
+    //    void ifma256_exp52x20(unsigned long * out, const unsigned long *base, const unsigned long *exp, const unsigned long *modulus, const unsigned long *toMont, const unsigned long k0)
+//#define AMM StubRoutines::_montgomeryMultiply52x20
+    typedef void(*mmfptr)(long unsigned*, long unsigned*, long unsigned*, long unsigned*, long);
+    mmfptr AMM = (mmfptr) StubRoutines::_montgomeryMultiply52x20;
+//#define AMS StubRoutines::_montgomerySquare52x20
+    typedef void(*msfptr)(long unsigned*, long unsigned*, long unsigned*, long);
+    msfptr AMS = (msfptr) StubRoutines::_montgomerySquare52x20;
+    {
+      /* allocate stack for red(undant) result Y and multiplier X */
+      unsigned long red_Y[LEN52(ODD_MOD_POW_BIT_SIZE)];
+      unsigned long red_X[LEN52(ODD_MOD_POW_BIT_SIZE)];
 
-  dig52_regular((unsigned long *) result, base52, ODD_MOD_POW_BIT_SIZE);
-  rev_words((unsigned int *) result, (unsigned int *) result, LEN52(ODD_MOD_POW_BIT_SIZE));
+      /* allocate expanded exponent */
+      unsigned long expz[LEN64(ODD_MOD_POW_BIT_SIZE) + 1];
+
+      /* pre-computed table of base powers */
+      unsigned long red_table[1U << EXP_WIN_SIZE][LEN52(ODD_MOD_POW_BIT_SIZE)];
+
+      /* zero all temp buffers (due to zero padding) */
+      ZEXPAND_BNU(red_Y, 0, LEN52(ODD_MOD_POW_BIT_SIZE));
+      ZEXPAND_BNU((unsigned long *)red_table, 0, (int)(LEN52(ODD_MOD_POW_BIT_SIZE) * (1U << EXP_WIN_SIZE)));
+      ZEXPAND_BNU(red_X, 0, LEN52(ODD_MOD_POW_BIT_SIZE)); /* table[0] = mont(x^0) = mont(1) */
+
+      int idx;
+
+      /*
+      // compute table of powers base^i, i=0, ..., (2^EXP_WIN_SIZE) -1
+      */
+      red_X[0] = 1ULL;
+      AMM(red_table[0], red_X, toMont52, mod52, inv);
+      AMM(red_table[1], base52, toMont52, mod52, inv);
+
+      for (unsigned idx = 1; idx < (1U << EXP_WIN_SIZE) / 2; idx++)
+      {
+        AMS(red_table[2 * idx], red_table[idx], mod52, inv);
+        AMM(red_table[2 * idx + 1], red_table[2 * idx], red_table[1], mod52, inv);
+      }
+
+      /* copy and expand exponents */
+      ZEXPAND_COPY_BNU(expz, LEN64(ODD_MOD_POW_BIT_SIZE) + 1, exp52, LEN64(ODD_MOD_POW_BIT_SIZE));
+
+      /* exponentiation */
+      {
+        int rem = BITSIZE_MODULUS % EXP_WIN_SIZE;
+        int delta = rem ? rem : EXP_WIN_SIZE;
+        unsigned long table_idx_mask = EXP_WIN_MASK;
+
+        int exp_bit_no = BITSIZE_MODULUS - delta;
+        int exp_chunk_no = exp_bit_no / 64;
+        int exp_chunk_shift = exp_bit_no % 64;
+
+        /* process 1-st exp window - just init result */
+        unsigned long red_table_idx = expz[exp_chunk_no];
+        red_table_idx = red_table_idx >> exp_chunk_shift;
+
+        typedef void(*fptr)(long unsigned*, const long unsigned[][20], int);
+        fptr func = (fptr) StubRoutines::_extract_multiplier1K;
+        func(red_Y, (const unsigned long(*)[LEN52(1024)])red_table, (int)red_table_idx);
+
+        /* process other exp windows */
+        for (exp_bit_no -= EXP_WIN_SIZE; exp_bit_no >= 0; exp_bit_no -= EXP_WIN_SIZE)
+        {
+          /* series of squaring */
+          AMS(red_Y, red_Y, mod52, inv);
+          AMS(red_Y, red_Y, mod52, inv);
+          AMS(red_Y, red_Y, mod52, inv);
+          AMS(red_Y, red_Y, mod52, inv);
+          AMS(red_Y, red_Y, mod52, inv);
+
+          /* extract pre-computed multiplier from the table */
+          {
+            unsigned long T;
+            exp_chunk_no = exp_bit_no / 64;
+            exp_chunk_shift = exp_bit_no % 64;
+
+            red_table_idx = expz[exp_chunk_no];
+            T = expz[exp_chunk_no + 1];
+
+            red_table_idx = red_table_idx >> exp_chunk_shift;
+            T = exp_chunk_shift == 0 ? 0 : T << (64 - exp_chunk_shift);
+            red_table_idx = (red_table_idx ^ T) & table_idx_mask;
+
+            func(red_X, (const unsigned long(*)[LEN52(ODD_MOD_POW_BIT_SIZE)])red_table, (int)red_table_idx);
+            AMM(red_Y, red_Y, red_X, mod52, inv);
+          }
+        }
+      }
+
+      /* clear exponents */
+      // PurgeBlock((unsigned long *)expz, (LEN64 + 1) * (int)sizeof(unsigned long));
+
+      /* convert result back in regular 2^52 domain */
+      ZEXPAND_BNU(red_X, 0, LEN52(ODD_MOD_POW_BIT_SIZE));
+      red_X[0] = 1ULL;
+      AMM(result52, red_Y, red_X, mod52, inv);
+    }
+  }
+  // ASGASG
+  dig52_regular((unsigned long *)result52, base52, ODD_MOD_POW_BIT_SIZE);
+  rev_words((unsigned int *)result, (unsigned int *)result52, LEN52(ODD_MOD_POW_BIT_SIZE));
 
   return;
 }

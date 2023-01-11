@@ -450,6 +450,11 @@ class StubGenerator: public StubCodeGenerator {
   // private void decodeBlock(byte[] src, int sp, int sl, byte[] dst, int dp, boolean isURL, isMIME);
   address generate_base64_decodeBlock();
 
+  address generate_montgomeryMultiply52x20();
+  address generate_montgomerySquare52x20();
+
+  address generate_extract_multiplier1K();
+
   address generate_updateBytesCRC32();
   address generate_updateBytesCRC32C(bool is_pclmulqdq_supported);
 

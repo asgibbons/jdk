@@ -233,6 +233,9 @@ class StubRoutines: AllStatic {
   static address _mulAdd;
   static address _montgomeryMultiply;
   static address _montgomerySquare;
+  static address _montgomeryMultiply52x20;
+  static address _montgomerySquare52x20;
+  static address _extract_multiplier1K;
   static address _oddModPowInner1K;
   static address _oddModPowInner1o5K;
   static address _oddModPowInner2K;
@@ -410,6 +413,9 @@ class StubRoutines: AllStatic {
   static address mulAdd()              { return _mulAdd; }
   static address montgomeryMultiply()  { return _montgomeryMultiply; }
   static address montgomerySquare()    { return _montgomerySquare; }
+  static address montgomeryMultiply52x20()  { return _montgomeryMultiply52x20; }
+  static address montgomerySquare52x20()    { return _montgomerySquare52x20; }
+  static address extract_multiplier1K()    { return _extract_multiplier1K; }
   static address oddModPowInner1K()    { return _oddModPowInner1K; }
   static address oddModPowInner1o5K()  { return _oddModPowInner1o5K; }
   static address oddModPowInner2K()    { return _oddModPowInner2K; }
