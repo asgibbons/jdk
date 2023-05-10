@@ -4448,9 +4448,7 @@ void MacroAssembler::check_klass_subtype_slow_path(Register sub_klass,
 
   // a couple of useful fields in sub_klass:
   int ss_offset = in_bytes(Klass::secondary_supers_offset());
-  int sc_offset = in_bytes(Klass::secondary_super_cache_offset());
   Address secondary_supers_addr(sub_klass, ss_offset);
-  Address super_cache_addr(     sub_klass, sc_offset);
 
   // Do a linear scan of the secondary super-klass chain.
   // This code is rarely used, so simplicity is a virtue here.
@@ -4509,7 +4507,11 @@ void MacroAssembler::check_klass_subtype_slow_path(Register sub_klass,
   else  jcc(Assembler::notEqual, *L_failure);
 
   // Success.  Cache the super we found and proceed in triumph.
-  movptr(super_cache_addr, super_klass);
+  if (!DisableSecondarySuperCacheWrite) {
+    int sc_offset = in_bytes(Klass::secondary_super_cache_offset());
+    Address super_cache_addr(sub_klass, sc_offset);
+    movptr(super_cache_addr, super_klass);
+  }
 
   if (L_success != &L_fallthrough) {
     jmp(*L_success);

@@ -1698,6 +1698,8 @@ const int ObjectAlignmentInBytes = 8;
           "Enable tiered compilation")                                      \
                                                                             \
   /* Properties for Java libraries  */                                      \
+  product(bool, DisableSecondarySuperCacheWrite, false,                     \
+          "Disable write to secondary super cache.")                        \
                                                                             \
   product(uint64_t, MaxDirectMemorySize, 0,                                 \
           "Maximum total size of NIO direct-buffer allocations. "           \
