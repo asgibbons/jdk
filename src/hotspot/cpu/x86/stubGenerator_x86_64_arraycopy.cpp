@@ -2679,7 +2679,7 @@ address StubGenerator::generate_unsafe_setmemory(const char *name,
     }
 
     __ BIND(L_fillBytes);
-#ifdef MUSL_LIBC
+#ifndef MUSL_LIBC_XXX
     {
       Label L_byteLoop, L_longByteLoop, L_byteTail, L_byteTailLoop;
 
