@@ -2796,6 +2796,16 @@ LONG WINAPI topLevelExceptionFilter(struct _EXCEPTION_POINTERS* exceptionInfo) {
         }
         return Handle_Exception(exceptionInfo, SharedRuntime::handle_unsafe_access(thread, next_pc));
       }
+
+      bool is_unsafe_setmemory = (in_native || in_java) && UnsafeSetMemory::contains_pc(pc);
+      if (((in_vm || in_native || is_unsafe_setmemory) && thread->doing_unsafe_access()) ||
+          (nm != nullptr && nm->has_unsafe_access())) {
+        address next_pc =  Assembler::locate_next_instruction(pc);
+        if (is_unsafe_setmemory) {
+          next_pc = UnsafeSetMemory::page_error_continue_pc(pc);
+        }
+        return Handle_Exception(exceptionInfo, SharedRuntime::handle_unsafe_access(thread, next_pc));
+      }
     }
 
 #ifdef _M_ARM64

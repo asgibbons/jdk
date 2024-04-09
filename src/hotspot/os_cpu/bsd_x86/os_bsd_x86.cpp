@@ -449,6 +449,14 @@ bool PosixSignals::pd_hotspot_signal_handler(int sig, siginfo_t* info,
           }
           stub = SharedRuntime::handle_unsafe_access(thread, next_pc);
         }
+        bool is_unsafe_setmemory = thread->doing_unsafe_access() && UnsafeSetMemory::contains_pc(pc);
+        if ((nm != nullptr && nm->has_unsafe_access()) || is_unsafe_setmemory) {
+          address next_pc = Assembler::locate_next_instruction(pc);
+          if (is_unsafe_setmemory) {
+            next_pc = UnsafeSetMemory::page_error_continue_pc(pc);
+          }
+          stub = SharedRuntime::handle_unsafe_access(thread, next_pc);
+        }
       }
       else
 
@@ -525,6 +533,9 @@ bool PosixSignals::pd_hotspot_signal_handler(int sig, siginfo_t* info,
         address next_pc = Assembler::locate_next_instruction(pc);
         if (UnsafeCopyMemory::contains_pc(pc)) {
           next_pc = UnsafeCopyMemory::page_error_continue_pc(pc);
+        }
+        if (UnsafeSetMemory::contains_pc(pc)) {
+          next_pc = UnsafeSetMemory::page_error_continue_pc(pc);
         }
         stub = SharedRuntime::handle_unsafe_access(thread, next_pc);
     }

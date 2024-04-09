@@ -233,6 +233,7 @@ class StubGenerator: public StubCodeGenerator {
   address generate_disjoint_short_copy(bool aligned, address *entry, const char *name);
 
   address generate_fill(BasicType t, bool aligned, const char *name);
+  void generate_unsafe_fill(BasicType t, bool aligned, const char *name);
 
   address generate_conjoint_short_copy(bool aligned, address nooverlap_target,
                                        address *entry, const char *name);
