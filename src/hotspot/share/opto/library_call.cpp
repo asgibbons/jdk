@@ -4953,6 +4953,8 @@ bool LibraryCallKit::inline_unsafe_setMemory() {
 
   C->set_has_unsafe_access(true);  // Mark eventual nmethod as "unsafe".
 
+  if (StubRoutines::unsafe_setmemory() == nullptr) return false;
+
   // printf("In inline_unsafe_setMemory\n");
 
   Node* dst_base =         argument(1);  // type: oop
