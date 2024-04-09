@@ -258,9 +258,11 @@ bool PosixSignals::pd_hotspot_signal_handler(int sig, siginfo_t* info,
         // BugId 4454115: A read from a MappedByteBuffer can fault
         // here if the underlying file has been truncated.
         // Do not crash the VM in such a case.
+        fprintf(stderr, "doing_unsafe_access = %d\n", thread->doing_unsafe_access()); fflush(stderr);
         CodeBlob* cb = CodeCache::find_blob(pc);
         CompiledMethod* nm = (cb != nullptr) ? cb->as_compiled_method_or_null() : nullptr;
         bool is_unsafe_arraycopy = thread->doing_unsafe_access() && UnsafeCopyMemory::contains_pc(pc);
+        fprintf(stderr, "is_unsafe_arraycopy = %d\n", is_unsafe_arraycopy); fflush(stderr);
         if ((nm != nullptr && nm->has_unsafe_access()) || is_unsafe_arraycopy) {
           address next_pc = Assembler::locate_next_instruction(pc);
           if (is_unsafe_arraycopy) {
@@ -269,10 +271,12 @@ bool PosixSignals::pd_hotspot_signal_handler(int sig, siginfo_t* info,
           stub = SharedRuntime::handle_unsafe_access(thread, next_pc);
         }
         bool is_unsafe_setmemory = thread->doing_unsafe_access() && UnsafeSetMemory::contains_pc(pc);
+        fprintf(stderr, "is_unsafe_setmemory = %d\n", is_unsafe_setmemory); fflush(stderr);
         if ((nm != nullptr && nm->has_unsafe_access()) || is_unsafe_setmemory) {
           address next_pc = Assembler::locate_next_instruction(pc);
           if (is_unsafe_setmemory) {
-            next_pc = UnsafeSetMemory::page_error_continue_pc(pc);
+           next_pc = UnsafeSetMemory::page_error_continue_pc(pc);
+           fprintf(stderr, "next_pc = %p\n", next_pc); fflush(stderr);
           }
           stub = SharedRuntime::handle_unsafe_access(thread, next_pc);
         }
@@ -326,10 +330,14 @@ bool PosixSignals::pd_hotspot_signal_handler(int sig, siginfo_t* info,
                thread->doing_unsafe_access())) {
         address next_pc = Assembler::locate_next_instruction(pc);
         if (UnsafeCopyMemory::contains_pc(pc)) {
+           printf("copy pc 2 = %p\n", pc); fflush(stdout);
           next_pc = UnsafeCopyMemory::page_error_continue_pc(pc);
+           printf("copy next_pc 2 = %p\n", next_pc); fflush(stdout);
         }
         if (UnsafeSetMemory::contains_pc(pc)) {
+           printf("pc 2 = %p\n", pc); fflush(stdout);
           next_pc = UnsafeSetMemory::page_error_continue_pc(pc);
+           printf("next_pc 2 = %p\n", next_pc); fflush(stdout);
         }
         stub = SharedRuntime::handle_unsafe_access(thread, next_pc);
     }

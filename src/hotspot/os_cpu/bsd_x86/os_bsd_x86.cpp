@@ -450,10 +450,12 @@ bool PosixSignals::pd_hotspot_signal_handler(int sig, siginfo_t* info,
           stub = SharedRuntime::handle_unsafe_access(thread, next_pc);
         }
         bool is_unsafe_setmemory = thread->doing_unsafe_access() && UnsafeSetMemory::contains_pc(pc);
+        fprintf(stderr, "is_unsafe_setmemory 2 = %d\n", is_unsafe_setmemory); fflush(stderr);
         if ((nm != nullptr && nm->has_unsafe_access()) || is_unsafe_setmemory) {
           address next_pc = Assembler::locate_next_instruction(pc);
           if (is_unsafe_setmemory) {
             next_pc = UnsafeSetMemory::page_error_continue_pc(pc);
+           fprintf(stderr, "next_pc 3 = %p\n", next_pc); fflush(stderr);
           }
           stub = SharedRuntime::handle_unsafe_access(thread, next_pc);
         }
