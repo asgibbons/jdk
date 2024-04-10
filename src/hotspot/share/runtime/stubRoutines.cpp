@@ -45,7 +45,7 @@ int UnsafeCopyMemory::_table_length                             = 0;
 int UnsafeCopyMemory::_table_max_length                         = 0;
 address UnsafeCopyMemory::_common_exit_stub_pc                  = nullptr;
 
-UnsafeSetMemory* UnsafeSetMemory::_table                      = nullptr;
+UnsafeSetMemory* UnsafeSetMemory::_table                       = nullptr;
 int UnsafeSetMemory::_table_length                             = 0;
 int UnsafeSetMemory::_table_max_length                         = 0;
 address UnsafeSetMemory::_common_exit_stub_pc                  = nullptr;
