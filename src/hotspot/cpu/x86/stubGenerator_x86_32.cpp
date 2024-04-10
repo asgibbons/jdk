@@ -1212,6 +1212,7 @@ class StubGenerator: public StubCodeGenerator {
       } else {
       __ BIND(L_copy_2_bytes);
       }
+      __ emit_int8(0x90);
     }
 
     __ movl(count, Address(rsp, 12+12)); // reread 'count'
@@ -1412,6 +1413,8 @@ class StubGenerator: public StubCodeGenerator {
       } else {
       __ BIND(L_copy_2_bytes);
       }
+      __ emit_int8(0x90);
+      __ emit_int8(0x90);
     }
 
     __ movl2ptr(count, Address(rsp, 12+12)); // reread count
@@ -1466,6 +1469,9 @@ class StubGenerator: public StubCodeGenerator {
         __ decrement(count);
         __ jcc(Assembler::greaterEqual, L_copy_8_bytes_loop);
       }
+      __ emit_int8(0x90);
+      __ emit_int8(0x90);
+      __ emit_int8(0x90);
     }
     inc_copy_counter_np(T_LONG);
     __ leave(); // required for proper stackwalking of RuntimeStub frame
@@ -1523,6 +1529,10 @@ class StubGenerator: public StubCodeGenerator {
       __ decrement(count);
       __ jcc(Assembler::greaterEqual, L_copy_8_bytes_loop);
 
+      __ emit_int8(0x90);
+      __ emit_int8(0x90);
+      __ emit_int8(0x90);
+      __ emit_int8(0x90);
     }
     inc_copy_counter_np(T_LONG);
     __ leave(); // required for proper stackwalking of RuntimeStub frame
