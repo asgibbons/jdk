@@ -90,13 +90,15 @@ public class InternalErrorTest {
         long allocMem = unsafe.allocateMemory(4000);
 
         for (int i = 0; i < NUM_TESTS; i++) {
-            test(buffer, unsafe, mapAddr, allocMem, i);
+          System.out.println("main 1");
+          test(buffer, unsafe, mapAddr, allocMem, i);
         }
 
         Files.write(file.toPath(), "2".getBytes());
         buffer.position(buffer.position() + pageSize);
         for (int i = 0; i < NUM_TESTS; i++) {
             try {
+                System.out.println("main 2");
                 test(buffer, unsafe, mapAddr, allocMem, i);
                 WhiteBox.getWhiteBox().forceSafepoint();
                 throw new RuntimeException(failureMsg1);
@@ -112,6 +114,7 @@ public class InternalErrorTest {
 
         for (int i = 0; i < NUM_TESTS; i++) {
             try {
+                System.out.println("main 3");
                 test(buffer, unsafe, mapAddr, allocMem, i);
                 WhiteBox.getWhiteBox().forceSafepoint();
                 throw new RuntimeException(failureMsg1);
@@ -126,6 +129,7 @@ public class InternalErrorTest {
 
         for (int i = 0; i < NUM_TESTS; i++) {
             try {
+                System.out.println("main 4");
                 test(buffer, unsafe, mapAddr, allocMem, i);
                 WhiteBox.getWhiteBox().forceSafepoint();
                 throw new RuntimeException(failureMsg1);
@@ -143,19 +147,23 @@ public class InternalErrorTest {
         switch (type) {
             case 0:
                 // testing Unsafe.copyMemory, trying to access a word from next page after truncation.
+                System.out.println("test 0");
                 buffer.get(new byte[8]);
                 break;
             case 1:
                 // testing Unsafe.copySwapMemory, trying to access next page after truncation.
+                System.out.println("test 1");
                 unsafe.copySwapMemory(null, mapAddr + pageSize, new byte[4000], 16, 2000, 2);
                 break;
             case 2:
                 // testing Unsafe.copySwapMemory, trying to access next page after truncation.
+                System.out.println("test 2");
                 unsafe.copySwapMemory(null, mapAddr + pageSize, null, allocMem, 2000, 2);
                 break;
             case 3:
                 MemorySegment segment = MemorySegment.ofBuffer(buffer);
                 // testing Unsafe.setMemory, trying to access next page after truncation.
+                System.out.println("test 3");
                 segment.fill((byte) 0xF0);
                 break;
         }
