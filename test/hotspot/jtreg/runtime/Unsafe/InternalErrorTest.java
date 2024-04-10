@@ -90,7 +90,7 @@ public class InternalErrorTest {
         long allocMem = unsafe.allocateMemory(4000);
 
         for (int i = 0; i < NUM_TESTS; i++) {
-          System.out.println("main 1");
+          System.out.println("main 1 " + System.currentTimeMillis());
           test(buffer, unsafe, mapAddr, allocMem, i);
         }
 
@@ -98,7 +98,7 @@ public class InternalErrorTest {
         buffer.position(buffer.position() + pageSize);
         for (int i = 0; i < NUM_TESTS; i++) {
             try {
-                System.out.println("main 2");
+                System.out.println("main 2 " + System.currentTimeMillis());
                 test(buffer, unsafe, mapAddr, allocMem, i);
                 WhiteBox.getWhiteBox().forceSafepoint();
                 throw new RuntimeException(failureMsg1);
@@ -163,8 +163,9 @@ public class InternalErrorTest {
             case 3:
                 MemorySegment segment = MemorySegment.ofBuffer(buffer);
                 // testing Unsafe.setMemory, trying to access next page after truncation.
-                System.out.println("test 3");
+                System.out.println("test 3 " + System.currentTimeMillis());
                 segment.fill((byte) 0xF0);
+                System.out.println("test 3 done " + System.currentTimeMillis());
                 break;
         }
     }
