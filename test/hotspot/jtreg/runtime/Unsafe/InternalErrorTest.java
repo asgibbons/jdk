@@ -103,6 +103,7 @@ public class InternalErrorTest {
                 WhiteBox.getWhiteBox().forceSafepoint();
                 throw new RuntimeException(failureMsg1);
             } catch (InternalError e) {
+                System.out.println("main 2 " + e.getMessage());
                 if (!e.getMessage().contains(expectedErrorMsg)) {
                     throw new RuntimeException(failureMsg2 + e.getMessage());
                 }
@@ -114,11 +115,12 @@ public class InternalErrorTest {
 
         for (int i = 0; i < NUM_TESTS; i++) {
             try {
-                System.out.println("main 3");
+                System.out.println("main 3 " + System.currentTimeMillis());
                 test(buffer, unsafe, mapAddr, allocMem, i);
                 WhiteBox.getWhiteBox().forceSafepoint();
                 throw new RuntimeException(failureMsg1);
             } catch (InternalError e) {
+                System.out.println("main 3 " + e.getMessage());
                 if (!e.getMessage().contains(expectedErrorMsg)) {
                     throw new RuntimeException(failureMsg2 + e.getMessage());
                 }
@@ -129,11 +131,12 @@ public class InternalErrorTest {
 
         for (int i = 0; i < NUM_TESTS; i++) {
             try {
-                System.out.println("main 4");
+                System.out.println("main 4 " + System.currentTimeMillis());
                 test(buffer, unsafe, mapAddr, allocMem, i);
                 WhiteBox.getWhiteBox().forceSafepoint();
                 throw new RuntimeException(failureMsg1);
             } catch (InternalError e) {
+                System.out.println("main 4 " + e.getMessage());
                 if (!e.getMessage().contains(expectedErrorMsg)) {
                     throw new RuntimeException(failureMsg2 + e.getMessage());
                 }
