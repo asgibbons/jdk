@@ -147,18 +147,21 @@ public class InternalErrorTest {
         switch (type) {
             case 0:
                 // testing Unsafe.copyMemory, trying to access a word from next page after truncation.
-                System.out.println("test 0");
+                System.out.println("test 0 " + System.currentTimeMillis());
                 buffer.get(new byte[8]);
+                System.out.println("test 0 done " + System.currentTimeMillis());
                 break;
             case 1:
                 // testing Unsafe.copySwapMemory, trying to access next page after truncation.
-                System.out.println("test 1");
+                System.out.println("test 1 " + System.currentTimeMillis());
                 unsafe.copySwapMemory(null, mapAddr + pageSize, new byte[4000], 16, 2000, 2);
+                System.out.println("test 1 done " + System.currentTimeMillis());
                 break;
             case 2:
                 // testing Unsafe.copySwapMemory, trying to access next page after truncation.
-                System.out.println("test 2");
+                System.out.println("test 2 " + System.currentTimeMillis());
                 unsafe.copySwapMemory(null, mapAddr + pageSize, null, allocMem, 2000, 2);
+                System.out.println("test 2 done " + System.currentTimeMillis());
                 break;
             case 3:
                 MemorySegment segment = MemorySegment.ofBuffer(buffer);
