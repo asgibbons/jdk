@@ -442,32 +442,32 @@ bool PosixSignals::pd_hotspot_signal_handler(int sig, siginfo_t* info,
         CodeBlob* cb = CodeCache::find_blob(pc);
         CompiledMethod* nm = (cb != nullptr) ? cb->as_compiled_method_or_null() : nullptr;
         bool is_unsafe_arraycopy = thread->doing_unsafe_access() && UnsafeCopyMemory::contains_pc(pc);
-        if ((nm != nullptr && nm->has_unsafe_access()) || is_unsafe_arraycopy) {
+        bool is_unsafe_setmemory = thread->doing_unsafe_access() && UnsafeSetMemory::contains_pc(pc);
+        fprintf(stderr, "is_unsafe_setmemory 2 = %d\n", is_unsafe_setmemory); fflush(stderr);
+        if ((nm != nullptr && nm->has_unsafe_access()) || is_unsafe_arraycopy ||
+            is_unsafe_setmemory) {
           address next_pc = Assembler::locate_next_instruction(pc);
           if (is_unsafe_arraycopy) {
             next_pc = UnsafeCopyMemory::page_error_continue_pc(pc);
           }
-          stub = SharedRuntime::handle_unsafe_access(thread, next_pc);
-        }
-        bool is_unsafe_setmemory = thread->doing_unsafe_access() && UnsafeSetMemory::contains_pc(pc);
-        fprintf(stderr, "is_unsafe_setmemory 2 = %d\n", is_unsafe_setmemory); fflush(stderr);
-        if ((nm != nullptr && nm->has_unsafe_access()) || is_unsafe_setmemory) {
-          address next_pc = Assembler::locate_next_instruction(pc);
           if (is_unsafe_setmemory) {
             next_pc = UnsafeSetMemory::page_error_continue_pc(pc);
-           fprintf(stderr, "next_pc 3 = %p\n", next_pc); fflush(stderr);
+            fprintf(stderr, "next_pc 3 = %p\n", next_pc); fflush(stderr);
           }
           stub = SharedRuntime::handle_unsafe_access(thread, next_pc);
         }
-      }
-      else
-
+      } else
 #ifdef AMD64
-      if (sig == SIGFPE  &&
-          (info->si_code == FPE_INTDIV || info->si_code == FPE_FLTDIV
-           // Workaround for macOS ARM incorrectly reporting FPE_FLTINV for "div by 0"
-           // instead of the expected FPE_FLTDIV when running x86_64 binary under Rosetta emulation
-           MACOS_ONLY(|| (VM_Version::is_cpu_emulated() && info->si_code == FPE_FLTINV)))) {
+          if (sig == SIGFPE &&
+              (info->si_code == FPE_INTDIV ||
+               info->si_code ==
+                   FPE_FLTDIV
+                       // Workaround for macOS ARM incorrectly reporting
+                       // FPE_FLTINV for "div by 0" instead of the expected
+                       // FPE_FLTDIV when running x86_64 binary under Rosetta
+                       // emulation
+                           MACOS_ONLY(|| (VM_Version::is_cpu_emulated() &&
+                                          info->si_code == FPE_FLTINV)))) {
         stub =
           SharedRuntime::
           continuation_for_implicit_exception(thread,
@@ -497,7 +497,7 @@ bool PosixSignals::pd_hotspot_signal_handler(int sig, siginfo_t* info,
 #endif /* __APPLE__ */
 
 #else
-      if (sig == SIGFPE /* && info->si_code == FPE_INTDIV */) {
+          if (sig == SIGFPE /* && info->si_code == FPE_INTDIV */) {
         // HACK: si_code does not work on bsd 2.2.12-20!!!
         int op = pc[0];
         if (op == 0xDB) {

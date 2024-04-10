@@ -263,29 +263,24 @@ bool PosixSignals::pd_hotspot_signal_handler(int sig, siginfo_t* info,
         CompiledMethod* nm = (cb != nullptr) ? cb->as_compiled_method_or_null() : nullptr;
         bool is_unsafe_arraycopy = thread->doing_unsafe_access() && UnsafeCopyMemory::contains_pc(pc);
         fprintf(stderr, "is_unsafe_arraycopy = %d\n", is_unsafe_arraycopy); fflush(stderr);
-        if ((nm != nullptr && nm->has_unsafe_access()) || is_unsafe_arraycopy) {
+        bool is_unsafe_setmemory = thread->doing_unsafe_access() && UnsafeSetMemory::contains_pc(pc);
+        fprintf(stderr, "is_unsafe_setmemory = %d\n", is_unsafe_setmemory); fflush(stderr);
+        if ((nm != nullptr && nm->has_unsafe_access()) || is_unsafe_arraycopy ||
+            is_unsafe_setmemory) {
           address next_pc = Assembler::locate_next_instruction(pc);
           if (is_unsafe_arraycopy) {
             next_pc = UnsafeCopyMemory::page_error_continue_pc(pc);
           }
-          stub = SharedRuntime::handle_unsafe_access(thread, next_pc);
-        }
-        bool is_unsafe_setmemory = thread->doing_unsafe_access() && UnsafeSetMemory::contains_pc(pc);
-        fprintf(stderr, "is_unsafe_setmemory = %d\n", is_unsafe_setmemory); fflush(stderr);
-        if ((nm != nullptr && nm->has_unsafe_access()) || is_unsafe_setmemory) {
-          address next_pc = Assembler::locate_next_instruction(pc);
           if (is_unsafe_setmemory) {
-           next_pc = UnsafeSetMemory::page_error_continue_pc(pc);
-           fprintf(stderr, "next_pc = %p\n", next_pc); fflush(stderr);
+            next_pc = UnsafeSetMemory::page_error_continue_pc(pc);
+            fprintf(stderr, "next_pc = %p\n", next_pc); fflush(stderr);
           }
           stub = SharedRuntime::handle_unsafe_access(thread, next_pc);
         }
-      }
-      else
-
+      } else
 #ifdef AMD64
-      if (sig == SIGFPE  &&
-          (info->si_code == FPE_INTDIV || info->si_code == FPE_FLTDIV)) {
+          if (sig == SIGFPE &&
+              (info->si_code == FPE_INTDIV || info->si_code == FPE_FLTDIV)) {
         stub =
           SharedRuntime::
           continuation_for_implicit_exception(thread,
@@ -293,7 +288,7 @@ bool PosixSignals::pd_hotspot_signal_handler(int sig, siginfo_t* info,
                                               SharedRuntime::
                                               IMPLICIT_DIVIDE_BY_ZERO);
 #else
-      if (sig == SIGFPE /* && info->si_code == FPE_INTDIV */) {
+          if (sig == SIGFPE /* && info->si_code == FPE_INTDIV */) {
         // HACK: si_code does not work on linux 2.2.12-20!!!
         int op = pc[0];
         if (op == 0xDB) {
