@@ -294,7 +294,7 @@ bool PosixSignals::pd_hotspot_signal_handler(int sig, siginfo_t* info,
         next_pc = UnsafeCopyMemory::page_error_continue_pc(pc);
       }
       if (UnsafeSetMemory::contains_pc(pc)) {
-        next_pc = UnsafeetMemory::page_error_continue_pc(pc);
+        next_pc = UnsafeSetMemory::page_error_continue_pc(pc);
       }
       stub = SharedRuntime::handle_unsafe_access(thread, next_pc);
     }
