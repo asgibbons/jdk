@@ -740,43 +740,9 @@ public final class Unsafe {
           return;
         }
 
-        if (bytes <= 128) {
-          if (o != null) {
-            if (o.getClass() == byte[].class) {
-              offset -= ARRAY_BYTE_BASE_OFFSET;
-              fillOnHeapMemory((byte[]) o, (int) offset, (int) (offset + bytes), value);
-              return;
-            }
-          } else {
-            if (UNALIGNED_ACCESS) {
-              setUnalignedOffHeapMemory(offset, bytes, value);
-              return;
-            }
-          }
-        }
         setMemory0(o, offset, bytes, value);
       }
-      
-      @ForceInline
-      private void fillOnHeapMemory(byte[] a, int from, int to, byte value) {
-          for (int i = from; i < to; ++i) {
-              a[i] = value;
-          }
-      }
 
-      @ForceInline
-      private void setUnalignedOffHeapMemory(long offset, long bytes, byte value) {
-          long batchValue = value == 0 ? value : ((long) value & 255L) * 0x101010101010101L;
-          int longBatch = (int) (bytes / 8);
-          for (int i = 0; i < longBatch; i++) {
-              putLong(null, offset, batchValue);
-              offset += 8;
-          }
-          int remaining = (int) (bytes % 8);
-          for (int i = 0; i < remaining; i++) {
-              putByte(null, offset + i, value);
-          }
-      }
     /**
      * Sets all bytes in a given block of memory to a fixed value
      * (usually zero).  This provides a <em>single-register</em> addressing mode,

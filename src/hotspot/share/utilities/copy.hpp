@@ -288,7 +288,6 @@ class Copy : AllStatic {
                                            jubyte value) {
     address dst = (address)to;
     uintptr_t bits = (uintptr_t)to | (uintptr_t)size;
-    printf("fill_to_memory_atomic: bits=0x%lx, dst=%p\n", (long unsigned int)bits, dst);
     if (bits % sizeof(jlong) == 0) {
       jlong fill = (julong)((jubyte)value);  // zero-extend
       if (fill != 0) {

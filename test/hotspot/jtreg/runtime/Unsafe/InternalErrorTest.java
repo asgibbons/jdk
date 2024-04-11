@@ -90,7 +90,6 @@ public class InternalErrorTest {
         long allocMem = unsafe.allocateMemory(4000);
 
         for (int i = 0; i < NUM_TESTS; i++) {
-          System.out.println("main 1 " + System.currentTimeMillis());
           test(buffer, unsafe, mapAddr, allocMem, i);
         }
 
@@ -98,12 +97,10 @@ public class InternalErrorTest {
         buffer.position(buffer.position() + pageSize);
         for (int i = 0; i < NUM_TESTS; i++) {
             try {
-                System.out.println("main 2 " + System.currentTimeMillis());
                 test(buffer, unsafe, mapAddr, allocMem, i);
                 WhiteBox.getWhiteBox().forceSafepoint();
                 throw new RuntimeException(failureMsg1);
             } catch (InternalError e) {
-                System.out.println("main 2 " + e.getMessage());
                 if (!e.getMessage().contains(expectedErrorMsg)) {
                     throw new RuntimeException(failureMsg2 + e.getMessage());
                 }
@@ -115,12 +112,10 @@ public class InternalErrorTest {
 
         for (int i = 0; i < NUM_TESTS; i++) {
             try {
-                System.out.println("main 3 " + System.currentTimeMillis());
                 test(buffer, unsafe, mapAddr, allocMem, i);
                 WhiteBox.getWhiteBox().forceSafepoint();
                 throw new RuntimeException(failureMsg1);
             } catch (InternalError e) {
-                System.out.println("main 3 " + e.getMessage());
                 if (!e.getMessage().contains(expectedErrorMsg)) {
                     throw new RuntimeException(failureMsg2 + e.getMessage());
                 }
@@ -131,12 +126,10 @@ public class InternalErrorTest {
 
         for (int i = 0; i < NUM_TESTS; i++) {
             try {
-                System.out.println("main 4 " + System.currentTimeMillis());
                 test(buffer, unsafe, mapAddr, allocMem, i);
                 WhiteBox.getWhiteBox().forceSafepoint();
                 throw new RuntimeException(failureMsg1);
             } catch (InternalError e) {
-                System.out.println("main 4 " + e.getMessage());
                 if (!e.getMessage().contains(expectedErrorMsg)) {
                     throw new RuntimeException(failureMsg2 + e.getMessage());
                 }
@@ -150,28 +143,20 @@ public class InternalErrorTest {
         switch (type) {
             case 0:
                 // testing Unsafe.copyMemory, trying to access a word from next page after truncation.
-                System.out.println("test 0 " + System.currentTimeMillis());
                 buffer.get(new byte[8]);
-                System.out.println("test 0 done " + System.currentTimeMillis());
                 break;
             case 1:
                 // testing Unsafe.copySwapMemory, trying to access next page after truncation.
-                System.out.println("test 1 " + System.currentTimeMillis());
                 unsafe.copySwapMemory(null, mapAddr + pageSize, new byte[4000], 16, 2000, 2);
-                System.out.println("test 1 done " + System.currentTimeMillis());
                 break;
             case 2:
                 // testing Unsafe.copySwapMemory, trying to access next page after truncation.
-                System.out.println("test 2 " + System.currentTimeMillis());
                 unsafe.copySwapMemory(null, mapAddr + pageSize, null, allocMem, 2000, 2);
-                System.out.println("test 2 done " + System.currentTimeMillis());
                 break;
             case 3:
                 MemorySegment segment = MemorySegment.ofBuffer(buffer);
                 // testing Unsafe.setMemory, trying to access next page after truncation.
-                System.out.println("test 3 " + System.currentTimeMillis());
                 segment.fill((byte) 0xF0);
-                System.out.println("test 3 done " + System.currentTimeMillis());
                 break;
         }
     }

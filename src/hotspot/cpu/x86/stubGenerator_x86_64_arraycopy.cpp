@@ -2746,9 +2746,6 @@ address StubGenerator::generate_unsafe_setmemory(const char *name,
       __ movq(c_rarg2, rax);
 
       __ xchgq(c_rarg1, c_rarg2);
-#if 0
-      __ jump(RuntimeAddress(byte_fill_entry));
-#else
       // generate_unsafe_fill(T_BYTE, false, "unsafe_set_memory");
       __ mov(r11, c_rarg2);
 
@@ -2763,7 +2760,6 @@ address StubGenerator::generate_unsafe_setmemory(const char *name,
       __ vzeroupper();
       __ leave(); // required for proper stackwalking of RuntimeStub frame
       __ ret(0);
-#endif
     }
 #endif  // MUSL_LIBC
 
@@ -2775,33 +2771,6 @@ address StubGenerator::generate_unsafe_setmemory(const char *name,
   }
 
   return start;
-}
-
-void StubGenerator::generate_unsafe_fill(BasicType t, bool aligned, const char *name) {
-  // __ align(CodeEntryAlignment);
-  StubCodeMark mark(this, "StubRoutines", name);
-  // address start = __ pc();
-
-  BLOCK_COMMENT("Entry:");
-
-  const Register to       = c_rarg0;  // destination array address
-  const Register value    = c_rarg1;  // value
-  const Register count    = c_rarg2;  // elements count
-  __ mov(r11, count);
-
-  __ enter(); // required for proper stackwalking of RuntimeStub frame
-
-  {
-    UnsafeSetMemoryMark usmm(this, true, true);
-
-    __ generate_fill(t, aligned, to, value, r11, rax, xmm0);
-  }
-
-  __ vzeroupper();
-  __ leave(); // required for proper stackwalking of RuntimeStub frame
-  __ ret(0);
-
-  return;
 }
 
 // Perform range checks on the proposed arraycopy.
