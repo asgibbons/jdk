@@ -334,7 +334,6 @@ bool PosixSignals::pd_hotspot_signal_handler(int sig, siginfo_t* info,
     if ((sig == SIGSEGV) || (sig == SIGBUS)) {
       address addr = JNI_FastGetField::find_slowcase_pc(pc);
       if (addr != (address)-1) {
-        printf("addr = %p\n", addr);
         stub = addr;
       }
     }

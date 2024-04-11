@@ -4015,7 +4015,6 @@ void StubGenerator::generate_initial_stubs() {
 
   // Initialize table for unsafe set memeory check.
   if (UnsafeSetMemory::_table == nullptr) {
-    // fprintf(stderr, "Creating UnsafeSetMemory\n"); fflush(stderr);
     UnsafeSetMemory::create_table(16);
   }
 

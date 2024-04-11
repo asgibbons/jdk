@@ -741,7 +741,7 @@ public final class Unsafe {
         }
 
         setMemory0(o, offset, bytes, value);
-      }
+    }
 
     /**
      * Sets all bytes in a given block of memory to a fixed value

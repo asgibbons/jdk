@@ -90,7 +90,7 @@ public class InternalErrorTest {
         long allocMem = unsafe.allocateMemory(4000);
 
         for (int i = 0; i < NUM_TESTS; i++) {
-          test(buffer, unsafe, mapAddr, allocMem, i);
+            test(buffer, unsafe, mapAddr, allocMem, i);
         }
 
         Files.write(file.toPath(), "2".getBytes());

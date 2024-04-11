@@ -2789,7 +2789,6 @@ LONG WINAPI topLevelExceptionFilter(struct _EXCEPTION_POINTERS* exceptionInfo) {
 
       bool is_unsafe_arraycopy = (in_native || in_java) && UnsafeCopyMemory::contains_pc(pc);
       bool is_unsafe_setmemory = (in_native || in_java) && UnsafeSetMemory::contains_pc(pc);
-        fprintf(stderr, "is_unsafe_setmemory 5 = %d\n", is_unsafe_setmemory); fflush(stderr);
       if (((in_vm || in_native || is_unsafe_arraycopy || is_unsafe_setmemory) && thread->doing_unsafe_access()) ||
           (nm != nullptr && nm->has_unsafe_access())) {
         address next_pc =  Assembler::locate_next_instruction(pc);
@@ -2798,7 +2797,6 @@ LONG WINAPI topLevelExceptionFilter(struct _EXCEPTION_POINTERS* exceptionInfo) {
         }
         if (is_unsafe_setmemory) {
           next_pc = UnsafeSetMemory::page_error_continue_pc(pc);
-           fprintf(stderr, "next_pc 5 = %p\n", next_pc); fflush(stderr);
         }
         return Handle_Exception(exceptionInfo, SharedRuntime::handle_unsafe_access(thread, next_pc));
       }
