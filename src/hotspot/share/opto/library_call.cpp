@@ -4955,8 +4955,6 @@ bool LibraryCallKit::inline_unsafe_setMemory() {
 
   C->set_has_unsafe_access(true);  // Mark eventual nmethod as "unsafe".
 
-  // printf("In inline_unsafe_setMemory\n");
-
   Node* dst_base =         argument(1);  // type: oop
   Node* dst_off  = ConvL2X(argument(2)); // type: long
   Node* size     = ConvL2X(argument(4)); // type: long

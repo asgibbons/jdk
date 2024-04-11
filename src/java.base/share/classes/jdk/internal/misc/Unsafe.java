@@ -737,7 +737,7 @@ public final class Unsafe {
         setMemoryChecks(o, offset, bytes, value);
 
         if (bytes == 0) {
-          return;
+            return;
         }
 
         setMemory0(o, offset, bytes, value);
